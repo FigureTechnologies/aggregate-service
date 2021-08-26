@@ -2,13 +2,13 @@ package io.provenance.aggregate.service
 
 import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.PropertySource
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.tinder.scarlet.Scarlet
 import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
-import io.provenance.aggregate.service.stream.EventStreamConsumer
-import io.provenance.aggregate.service.stream.EventStreamFactory
-import io.provenance.aggregate.service.stream.StreamBlock
+import io.provenance.aggregate.service.stream.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
@@ -37,24 +37,27 @@ fun main(args: Array<String>) {
         .loadConfig<Config>()
         .getUnsafe()
 
-    val wsStreamBuilder = configureEventStreamBuilder(config.event.stream.websocket_uri)
-
-    val eventStream = EventStreamFactory(config, wsStreamBuilder)
-
     val lastHeight: Long? = args.firstOrNull()?.let { it.toLongOrNull() }
+    val moshi: Moshi = Moshi.Builder()
+        .addLast(KotlinJsonAdapterFactory())
+        .build()
+    val wsStreamBuilder = configureEventStreamBuilder(config.event.stream.websocket_uri)
+    val tendermintService = TendermintServiceClient(config.event.stream.rpc_uri)
+    val factory = EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService)
 
     runBlocking(Dispatchers.Default) {
-        EventStreamConsumer(eventStream, lastHeight, skipEmptyBlocks = true)
-            .consume { b: StreamBlock ->
-                println(
-                    "BLOCK = ${b.block.header?.height ?: "--"}:${b.block.header?.dataHash} (${
-                        if (b.historical) {
-                            "historical"
-                        } else {
-                            "live"
-                        }
-                    })"
-                )
+        EventStreamConsumer(factory, lastHeight, skipEmptyBlocks = true)
+            .consume { b: StreamBlock, serialize: (StreamBlock) -> String ->
+                println(serialize(b))
+//                println(
+//                    "BLOCK = ${b.block.header?.height ?: "--"}:${b.block.header?.dataHash} (${
+//                        if (b.historical) {
+//                            "historical"
+//                        } else {
+//                            "live"
+//                        }
+//                    })"
+//                )
             }
     }
 }

@@ -1,17 +1,18 @@
 package io.provenance.aggregate.service.stream
 
 import arrow.core.Either
+import com.squareup.moshi.*
+import com.tinder.scarlet.Message
+import com.tinder.scarlet.Scarlet
+import com.tinder.scarlet.WebSocket
+import com.tinder.scarlet.lifecycle.LifecycleRegistry
+import io.provenance.aggregate.service.Config
+import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.extensions.blockEvents
 import io.provenance.aggregate.service.stream.extensions.txEvents
 import io.provenance.aggregate.service.stream.extensions.txHash
-import io.provenance.aggregate.service.stream.models.*
-import com.squareup.moshi.*
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import com.tinder.scarlet.Lifecycle
-import com.tinder.scarlet.Message
-import com.tinder.scarlet.WebSocket
-import com.tinder.scarlet.lifecycle.LifecycleRegistry
-import io.provenance.aggregate.service.logger
+import io.provenance.aggregate.service.stream.models.Block
+import io.provenance.aggregate.service.stream.models.Event
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -38,41 +39,49 @@ data class TxEvent(
     val attributes: List<Event>,
 )
 
-interface ABCIApiClient {
-    suspend fun abciInfo(): ABCIInfoResponse
-}
-
-interface InfoApiClient {
-    suspend fun block(height: Long?): BlockResponse
-    suspend fun blockResults(height: Long?): BlockResultsResponse
-    suspend fun blockchain(minHeight: Long?, maxHeight: Long?): BlockchainResponse
-}
-
 open class EventStream(
-    private val lifecycle: LifecycleRegistry,
     private val eventStreamService: EventStreamService,
-    private val abciApi: ABCIApiClient,
-    private val infoApi: InfoApiClient,
+    private val tendermintService: TendermintService,
+    private val moshi: Moshi,
     private val batchSize: Int = 4,
     private val skipIfEmpty: Boolean = true
 ) {
     companion object {
-        private const val TENDERMINT_MAX_QUERY_RANGE = 20
+        const val TENDERMINT_MAX_QUERY_RANGE = 20
     }
 
-    protected val moshi: Moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+    data class Factory(
+        private val config: Config,
+        private val moshi: Moshi,
+        private val eventStreamBuilder: Scarlet.Builder,
+        private val tendermintService: TendermintService
+    ) {
+        fun getStream(skipEmptyBlocks: Boolean = true): EventStream {
+            val lifecycle = LifecycleRegistry(config.event.stream.throttle_duration_ms)
+            val scarlet: Scarlet = eventStreamBuilder.lifecycle(lifecycle).build()
+            val tendermintRpc: TendermintRPCStream = scarlet.create()
+            val eventStreamService = TendermintEventStreamService(tendermintRpc, lifecycle)
+            return EventStream(
+                eventStreamService,
+                tendermintService,
+                moshi,
+                batchSize = config.event.stream.batch_size,
+                skipIfEmpty = skipEmptyBlocks
+            )
+        }
+    }
 
     private val log = logger()
 
-    private fun getBlockHeightRanges(minHeight: Long, maxHeight: Long): Sequence<Pair<Long, Long>> {
+    private fun getBlockHeightQueryRanges(minHeight: Long, maxHeight: Long): Sequence<Pair<Long, Long>> {
         val step = TENDERMINT_MAX_QUERY_RANGE
         return sequence {
             var i = minHeight
-            var j = i + step
+            var j = i + step - 1
             while (j <= maxHeight) {
                 yield(Pair(i, j))
                 i = j + 1
-                j = i + step
+                j = i + step - 1
             }
             // If there's a gap between the last range and `maxHeight`, yield one last pair to fill it:
             if (i <= maxHeight) {
@@ -86,7 +95,7 @@ open class EventStream(
         skipIfNoTxs: Boolean = true
     ): StreamBlock? {
         val block: Block? = when (heightOrBlock) {
-            is Either.Left<Long> -> infoApi.block(heightOrBlock.value).result?.block
+            is Either.Left<Long> -> tendermintService.block(heightOrBlock.value).result?.block
             is Either.Right<Block> -> heightOrBlock.value
         }
 
@@ -95,7 +104,7 @@ open class EventStream(
         }
 
         return block?.run {
-            val blockResponse = infoApi.blockResults(block.header?.height).result
+            val blockResponse = tendermintService.blockResults(block.header?.height).result
             val blockEvents: List<BlockEvent> = blockResponse.blockEvents()
             val txEvents: List<TxEvent> = blockResponse.txEvents { index: Int -> block.txHash(index) ?: "" }
             return StreamBlock(this, blockEvents, txEvents)
@@ -109,7 +118,7 @@ open class EventStream(
 
         // Only take blocks with transactions:
         val blockHeightsInRange: List<Long> =
-            infoApi.blockchain(minHeight, maxHeight)
+            (tendermintService.blockchain(minHeight, maxHeight)
                 .result
                 ?.blockMetas
                 .let {
@@ -119,16 +128,23 @@ open class EventStream(
                         it
                     }
                 }
-                ?.map { it.header!!.height }
-                ?: emptyList()
+                ?.map { it.header?.height }
+                ?.filterNotNull()
+                ?: emptyList<Long>())
+                .sortedWith(naturalOrder<Long>())
+
+        log.info("Found blocks in range ($minHeight, $maxHeight) = $blockHeightsInRange")
 
         // Chunk up the heights of returned blocks, then for the heights in each block,
         // concurrently fetch the events for each block at the given height:
-        return blockHeightsInRange
-            .chunked(batchSize)
+        val chunked = blockHeightsInRange.chunked(batchSize)
+
+        log.info("($minHeight, $maxHeight) chunks = $chunked")
+
+        return chunked
             .asFlow()
             .transform { chunkOfHeights: List<Long> ->
-                val blocks: List<StreamBlock> = withContext(Dispatchers.IO) {
+                val blocks: List<StreamBlock> = withContext(Dispatchers.Default) {
                     coroutineScope {
                         chunkOfHeights.map { height: Long ->
                             async {
@@ -145,35 +161,36 @@ open class EventStream(
             }
     }
 
+    /**
+     * Serialize data of a given class type
+     */
+    fun <T> serialize(clazz: Class<T>, data: T) = moshi.adapter<T>(clazz).toJson(data)
+
     @kotlinx.coroutines.FlowPreview
     @kotlinx.coroutines.ExperimentalCoroutinesApi
-    protected suspend fun streamHistoricalBlocks(fromHeight: Long): Flow<Either<Throwable, StreamBlock>> {
-        val lastBlockHeight: Long = abciApi.abciInfo().result?.response?.lastBlockHeight ?: 0
-        return getBlockHeightRanges(fromHeight, lastBlockHeight - 1)
-            .chunked(batchSize)
+    suspend fun streamHistoricalBlocks(
+        fromHeight: Long,
+        concurrency: Int = DEFAULT_CONCURRENCY
+    ): Flow<Either<Throwable, StreamBlock>> {
+        val lastBlockHeight: Long = tendermintService.abciInfo().result?.response?.lastBlockHeight ?: 0
+        log.info("streamHistoricalBlocks::streaming blocks: $fromHeight to $lastBlockHeight")
+        return getBlockHeightQueryRanges(fromHeight, lastBlockHeight)
             .asFlow()
-            .flatMapConcat { heightRanges ->
-                withContext(Dispatchers.IO) {
-                    coroutineScope {
-                        heightRanges.map { (minHeight: Long, maxHeight: Long) ->
-                            async {
-                                //log.info("streamHistoricalBlocks::async<${Thread.currentThread().id}>")
-                                queryBlockRange(minHeight, maxHeight).onStart {
-                                    log.info("streamHistoricalBlocks::querying range ($minHeight, $maxHeight")
-                                }
-                            }
-                        }
-                    }
+            .flatMapMerge(concurrency) { (minHeight: Long, maxHeight: Long) ->
+                queryBlockRange(minHeight, maxHeight).onStart {
+                    log.info("streamHistoricalBlocks::querying range ($minHeight, $maxHeight)")
                 }
-                    .awaitAll()
-                    .merge()
             }
-            .map { Either.Right(it.copy(historical = true)) }
+            .map {
+                Either.Right(it.copy(historical = true))
+            }
             .catch { e -> Either.Left(e) }
     }
 
     suspend fun streamLiveBlocks(): Flow<Either<Throwable, StreamBlock>> {
-        lifecycle.onNext(Lifecycle.State.Started)
+        // Toggle the Lifecycle register start state :
+        eventStreamService.startListening()
+
         return flow {
             for (event in eventStreamService.observeWebSocketEvent()) {
                 when (event) {

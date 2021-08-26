@@ -39,6 +39,7 @@ repositories {
 
 object Version {
     val arrow = "0.12.1"
+    val apacheCommons = "1.9"
     val grpc = "1.39.0"
     val hoplite = "1.4.7"
     val junit = "5.1.0"
@@ -56,6 +57,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.kotlinx)
 
     testImplementation("org.junit.jupiter", "junit-jupiter-engine", Version.junit)
+    testImplementation("org.apache.commons", "commons-text", Version.apacheCommons)
 
     implementation("io.arrow-kt", "arrow-core", Version.arrow)
 
@@ -78,8 +80,6 @@ dependencies {
     kapt("com.squareup.moshi:moshi-kotlin-codegen:${Version.moshi}")
 
     implementation("com.sksamuel.hoplite", "hoplite-core", Version.hoplite)
-
-
 
 //    implementation("org.springframework.boot:spring-boot-starter-web")
 //    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

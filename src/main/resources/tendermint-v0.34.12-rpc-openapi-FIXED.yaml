@@ -1530,7 +1530,7 @@ components:
         - "timestamp"
         - "validator_address"
         # - "validator_index"
-        - "signature"
+        # - "signature"
       properties:
         type:
           type: integer
@@ -1731,16 +1731,20 @@ components:
                 properties:
                   pub_key:
                     type: object
-                    required:
-                      - "type"
-                      - "value"
-                    properties:
-                      type:
-                        type: string
-                        example: "tendermint/PubKeyEd25519"
-                      value:
-                        type: string
-                        example: "9tK9IT+FPdf2qm+5c2qaxi10sWP+3erWTKgftn2PaQM="
+                    additionalProperties:
+                      type: object
+                      required:
+                        - "type"
+                        - "value"
+                      properties:
+                        type:
+                          type: string
+                          example: "tendermint/PubKeyEd25519"
+                        value:
+                          type: object
+                          additionalProperties:
+                            type: string
+                            example: "9tK9IT+FPdf2qm+5c2qaxi10sWP+3erWTKgftn2PaQM="
                   power:
                     type: string
                     example: "300"
@@ -2554,6 +2558,7 @@ components:
                   format: int64
                 last_block_app_hash:
                   type: string
+                  example: "zSnml3UrKCfSFvBm+/wYuAK1kFOgDgxX55Hf8aMH6J0="
               type: object
           type: object
 
