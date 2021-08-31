@@ -9,12 +9,14 @@ import com.tinder.scarlet.lifecycle.LifecycleRegistry
 import io.provenance.aggregate.service.Config
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.extensions.blockEvents
+import io.provenance.aggregate.service.stream.extensions.isEmpty
 import io.provenance.aggregate.service.stream.extensions.txEvents
 import io.provenance.aggregate.service.stream.extensions.txHash
 import io.provenance.aggregate.service.stream.models.Block
 import io.provenance.aggregate.service.stream.models.Event
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.json.JSONObject
 
 @JsonClass(generateAdapter = true)
 data class StreamBlock(
@@ -39,7 +41,7 @@ data class TxEvent(
     val attributes: List<Event>,
 )
 
-open class EventStream(
+class EventStream(
     private val eventStreamService: EventStreamService,
     private val tendermintService: TendermintService,
     private val moshi: Moshi,
@@ -48,6 +50,11 @@ open class EventStream(
 ) {
     companion object {
         const val TENDERMINT_MAX_QUERY_RANGE = 20
+    }
+
+    sealed class MessageType {
+        object Empty : MessageType()
+        data class NewBlock(val block: NewBlockResult) : MessageType()
     }
 
     data class Factory(
@@ -73,6 +80,41 @@ open class EventStream(
 
     private val log = logger()
 
+    // We have to build a reified, parameterized type suitable to pass to `moshi.adapter`
+    // because it's not possible to do something like `RpcResponse<NewBlockResult>::class.java`:
+    // See https://stackoverflow.com/questions/46193355/moshi-generic-type-adapter
+    val rpcEmptyResponseReader: JsonAdapter<RpcResponse<JSONObject>> = moshi.adapter(
+        Types.newParameterizedType(
+            RpcResponse::class.java,
+            JSONObject::class.java
+        )
+    )
+
+    val rpcNewBlockResponseReader: JsonAdapter<RpcResponse<NewBlockResult>> = moshi.adapter(
+        Types.newParameterizedType(
+            RpcResponse::class.java,
+            NewBlockResult::class.java
+        )
+    )
+
+    /**
+     * Serialize data of a given class type
+     */
+    fun <T> serialize(clazz: Class<T>, data: T) = moshi.adapter<T>(clazz).toJson(data)
+
+    private fun deserializeMessage(input: String): MessageType? {
+        try {
+            if (rpcEmptyResponseReader.fromJson(input)?.isEmpty() ?: true) {
+                return MessageType.Empty
+            }
+        } catch (_: JsonDataException) {
+        }
+        return rpcNewBlockResponseReader.fromJson(input)
+            ?.let {
+                it.result?.let { MessageType.NewBlock(it) }
+            } ?: throw JsonDataException("malformed input: $input")
+    }
+
     private fun getBlockHeightQueryRanges(minHeight: Long, maxHeight: Long): Sequence<Pair<Long, Long>> {
         val step = TENDERMINT_MAX_QUERY_RANGE
         return sequence {
@@ -90,6 +132,13 @@ open class EventStream(
         }
     }
 
+    /**
+     * Query a block by height, returning any events associated with the block.
+     *
+     *  @param heightOrBlock Fetch a block, plus its events, by its height or the `Block` model itself.
+     *  @param skipIfNoTxs If `skipIfNoTxs` is true, if the block at the given height has no transactions, null will
+     *  be returned in its place.
+     */
     private suspend fun queryBlock(
         heightOrBlock: Either<Long, Block>,
         skipIfNoTxs: Boolean = true
@@ -111,6 +160,14 @@ open class EventStream(
         }
     }
 
+    /***
+     * Query a range of blocks by a given minimum and maximum height range (inclusive), returning a flow of
+     * found historical blocks along with events associated with each block, if any.
+     *
+     * @param minHeight The minimum block height in the query range, inclusive.
+     * @param maxHeight The maximum block height in the query range, inclusive.
+     * @return A flow of found historical blocks along with events associated with each block, if any.
+     */
     private suspend fun queryBlockRange(minHeight: Long, maxHeight: Long): Flow<StreamBlock> {
         if (minHeight > maxHeight) {
             return emptyFlow()
@@ -133,15 +190,16 @@ open class EventStream(
                 ?: emptyList<Long>())
                 .sortedWith(naturalOrder<Long>())
 
-        log.info("Found blocks in range ($minHeight, $maxHeight) = $blockHeightsInRange")
+        if (blockHeightsInRange.isEmpty()) {
+            //log.info("No block found in range ($minHeight, $maxHeight)")
+            return emptyFlow()
+        }
+
+        log.info("Found ${blockHeightsInRange.size} block(s) in range ($minHeight, $maxHeight) = $blockHeightsInRange")
 
         // Chunk up the heights of returned blocks, then for the heights in each block,
         // concurrently fetch the events for each block at the given height:
-        val chunked = blockHeightsInRange.chunked(batchSize)
-
-        log.info("($minHeight, $maxHeight) chunks = $chunked")
-
-        return chunked
+        return blockHeightsInRange.chunked(batchSize)
             .asFlow()
             .transform { chunkOfHeights: List<Long> ->
                 val blocks: List<StreamBlock> = withContext(Dispatchers.Default) {
@@ -162,10 +220,14 @@ open class EventStream(
     }
 
     /**
-     * Serialize data of a given class type
+     * Constructs a flow of historical blocks and associated events based on a starting height. Blocks will be streamed
+     * from the given starting height up to the latest block height, as determined by the start of the flow.
+     *
+     * @param fromHeight Stream blocks from the given starting height.
+     * @param concurrency The concurrency limit for the flow's `flatMapMerge` operation. See
+     * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/flat-map-merge.html
+     * @return A flow of historical blocks and associated events
      */
-    fun <T> serialize(clazz: Class<T>, data: T) = moshi.adapter<T>(clazz).toJson(data)
-
     @kotlinx.coroutines.FlowPreview
     @kotlinx.coroutines.ExperimentalCoroutinesApi
     suspend fun streamHistoricalBlocks(
@@ -174,19 +236,26 @@ open class EventStream(
     ): Flow<Either<Throwable, StreamBlock>> {
         val lastBlockHeight: Long = tendermintService.abciInfo().result?.response?.lastBlockHeight ?: 0
         log.info("streamHistoricalBlocks::streaming blocks: $fromHeight to $lastBlockHeight")
+        log.info("streamHistoricalBlocks::batch size = $batchSize")
         return getBlockHeightQueryRanges(fromHeight, lastBlockHeight)
             .asFlow()
             .flatMapMerge(concurrency) { (minHeight: Long, maxHeight: Long) ->
                 queryBlockRange(minHeight, maxHeight).onStart {
-                    log.info("streamHistoricalBlocks::querying range ($minHeight, $maxHeight)")
+                    //log.info("streamHistoricalBlocks::querying range ($minHeight, $maxHeight)")
                 }
             }
             .map {
                 Either.Right(it.copy(historical = true))
             }
             .catch { e -> Either.Left(e) }
+            .flowOn(Dispatchers.Default)
     }
 
+    /**
+     * Constructs a flow of newly minted blocks and associated events as the blocks are added to the chain.
+     *
+     * @return A flow of newly minted blocks and associated events
+     */
     suspend fun streamLiveBlocks(): Flow<Either<Throwable, StreamBlock>> {
         // Toggle the Lifecycle register start state :
         eventStreamService.startListening()
@@ -203,24 +272,21 @@ open class EventStream(
                         when (event.message) {
                             is Message.Text -> {
                                 val message = event.message as Message.Text
-                                // We have to build a reified, parameterized type suitable to pass to `moshi.adapter`
-                                // because it's not possible to do something like `RpcResponse<NewBlockResult>::class.java`:
-                                // See https://stackoverflow.com/questions/46193355/moshi-generic-type-adapter
-                                val rpcResponse: JsonAdapter<RpcResponse<NewBlockResult>> = moshi.adapter(
-                                    Types.newParameterizedType(
-                                        RpcResponse::class.java,
-                                        NewBlockResult::class.java
-                                    )
-                                )
-                                val newBlockEventResponse: RpcResponse<NewBlockResult>? =
-                                    rpcResponse.fromJson(message.value)
-                                if (newBlockEventResponse != null) {
-                                    val streamBlock: StreamBlock? =
-                                        newBlockEventResponse.result?.data?.value?.block?.let {
-                                            queryBlock(Either.Right(it), skipIfNoTxs = false)
+                                val messageType = deserializeMessage(message.value)
+                                if (messageType != null) {
+                                    when (messageType) {
+                                        is MessageType.Empty -> {
+                                            log.info("received empty ACK message => ${message.value}")
                                         }
-                                    if (streamBlock != null) {
-                                        emit(Either.Right(streamBlock))
+                                        is MessageType.NewBlock -> {
+                                            val streamBlock: StreamBlock? =
+                                                messageType.block.data.value.block.let {
+                                                    queryBlock(Either.Right(it), skipIfNoTxs = false)
+                                                }
+                                            if (streamBlock != null) {
+                                                emit(Either.Right(streamBlock))
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -239,6 +305,7 @@ open class EventStream(
                 }
             }
         }
+            .flowOn(Dispatchers.Default)
             .onStart {
                 log.info("streamLiveBlocks::thread<${Thread.currentThread().id}>")
             }
@@ -254,14 +321,29 @@ open class EventStream(
             }
     }
 
+    /**
+     * Constructs a flow of live and historical blocks, plus associated event data.
+     *
+     * If a starting height is provided, historical blocks will be included in the flow from the starting height, up
+     * to the latest block height determined at the start of the collection of the flow.
+     *
+     * @param fromHeight The optional block height to start streaming from for historical block data.
+     * @param concurrency The concurrency limit for the flow's `flatMapMerge` operation. See
+     * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/flat-map-merge.html
+     * @return A flow of live and historical blocks, plus associated event data.
+     */
     @kotlinx.coroutines.FlowPreview
     @kotlinx.coroutines.ExperimentalCoroutinesApi
-    suspend fun streamBlocks(fromHeight: Long? = null): Flow<Either<Throwable, StreamBlock>> {
+    suspend fun streamBlocks(
+        fromHeight: Long? = null,
+        concurrency: Int = DEFAULT_CONCURRENCY
+    ): Flow<Either<Throwable, StreamBlock>> {
         return if (fromHeight != null) {
-            merge(streamHistoricalBlocks(fromHeight), streamLiveBlocks())
+            merge(streamHistoricalBlocks(fromHeight, concurrency), streamLiveBlocks())
         } else {
             streamLiveBlocks()
         }
+            .flowOn(Dispatchers.Default)
     }
 }
 

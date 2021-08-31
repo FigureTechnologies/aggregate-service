@@ -81,6 +81,8 @@ dependencies {
 
     implementation("com.sksamuel.hoplite", "hoplite-core", Version.hoplite)
 
+    implementation("org.json", "json", "20210307")
+
 //    implementation("org.springframework.boot:spring-boot-starter-web")
 //    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 //    testImplementation("org.springframework.boot:spring-boot-starter-test")

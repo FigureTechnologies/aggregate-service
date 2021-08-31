@@ -9,6 +9,7 @@ import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
 import io.provenance.aggregate.service.stream.*
+import io.provenance.aggregate.service.stream.json.JSONObjectAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
@@ -37,9 +38,12 @@ fun main(args: Array<String>) {
         .loadConfig<Config>()
         .getUnsafe()
 
+    val log = object{}.logger()
+
     val lastHeight: Long? = args.firstOrNull()?.let { it.toLongOrNull() }
     val moshi: Moshi = Moshi.Builder()
-        .addLast(KotlinJsonAdapterFactory())
+        .add(KotlinJsonAdapterFactory())
+        .add(JSONObjectAdapter())
         .build()
     val wsStreamBuilder = configureEventStreamBuilder(config.event.stream.websocket_uri)
     val tendermintService = TendermintServiceClient(config.event.stream.rpc_uri)
@@ -48,16 +52,16 @@ fun main(args: Array<String>) {
     runBlocking(Dispatchers.Default) {
         EventStreamConsumer(factory, lastHeight, skipEmptyBlocks = true)
             .consume { b: StreamBlock, serialize: (StreamBlock) -> String ->
-                println(serialize(b))
-//                println(
-//                    "BLOCK = ${b.block.header?.height ?: "--"}:${b.block.header?.dataHash} (${
-//                        if (b.historical) {
-//                            "historical"
-//                        } else {
-//                            "live"
-//                        }
-//                    })"
-//                )
+                //println(serialize(b))
+                log.info(
+                    "BLOCK = ${b.block.header?.height ?: "--"}:${b.block.header?.dataHash} (${
+                        if (b.historical) {
+                            "historical"
+                        } else {
+                            "live"
+                        }
+                    })"
+                )
             }
     }
 }

@@ -6,13 +6,12 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
 import io.provenance.aggregate.service.stream.*
+import io.provenance.aggregate.service.stream.json.JSONObjectAdapter
 import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
 import io.provenance.aggregate.service.stream.models.BlockResponse
 import io.provenance.aggregate.service.stream.models.BlockResultsResponse
 import io.provenance.aggregate.service.stream.models.BlockchainResponse
-import io.provenance.aggregate.service.stream.templates.readAll
-import io.provenance.aggregate.service.stream.templates.readAs
-import io.provenance.aggregate.service.stream.templates.unsafeReadAs
+import io.provenance.aggregate.service.stream.templates.Template
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.take
@@ -37,6 +36,7 @@ class StreamTests {
         .map { Pair(it.minOrNull()!!, it.maxOrNull()!!) }
 
     lateinit var moshi: Moshi
+    lateinit var templates: Template
     lateinit var blockResponses: Array<BlockResponse>
     lateinit var blockResultsResponses: Array<BlockResultsResponse>
     lateinit var blockchainResponses: Array<BlockchainResponse>
@@ -45,36 +45,53 @@ class StreamTests {
     @BeforeAll
     fun setUpFixtures() {
         moshi = Moshi.Builder()
-            .addLast(KotlinJsonAdapterFactory())
+            .add(KotlinJsonAdapterFactory())
+            .add(JSONObjectAdapter())
             .build()
+
+        templates = Template(moshi)
 
         blockResponses =
             heights
-                .map { unsafeReadAs<BlockResponse>("block/${it}.json") }
+                .map { templates.unsafeReadAs(BlockResponse::class.java, "block/${it}.json") }
                 .toTypedArray()
 
         blockResultsResponses =
             heights
-                .map { unsafeReadAs<BlockResultsResponse>("block_results/${it}.json") }
+                .map { templates.unsafeReadAs(BlockResultsResponse::class.java, "block_results/${it}.json") }
                 .toTypedArray()
 
         blockchainResponses =
             heightChunks
-                .map { (minHeight, maxHeight) -> unsafeReadAs<BlockchainResponse>("blockchain/${minHeight}-${maxHeight}.json") }
+                .map { (minHeight, maxHeight) ->
+                    templates.unsafeReadAs(
+                        BlockchainResponse::class.java,
+                        "blockchain/${minHeight}-${maxHeight}.json"
+                    )
+                }
                 .toTypedArray()
 
         defaultTendermintServiceBuilder = ServiceMocker.Builder()
             .doFor("abciInfo") {
-                readAs<ABCIInfoResponse>("abci_info/success.json", mapOf("last_block_height" to MAX_BLOCK_HEIGHT))
+                templates.readAs(
+                    ABCIInfoResponse::class.java,
+                    "abci_info/success.json",
+                    mapOf("last_block_height" to MAX_BLOCK_HEIGHT)
+                )
             }
-            .doFor("block") { readAs<BlockResponse>("block/${it[0]}.json") }
-            .doFor("blockResults") { readAs<BlockResultsResponse>("block_results/${it[0]}.json") }
-            .doFor("blockchain") { readAs<BlockchainResponse>("blockchain/${it[0]}-${it[1]}.json") }
+            .doFor("block") { templates.readAs(BlockResponse::class.java, "block/${it[0]}.json") }
+            .doFor("blockResults") { templates.readAs(BlockResultsResponse::class.java, "block_results/${it[0]}.json") }
+            .doFor("blockchain") {
+                templates.readAs(
+                    BlockchainResponse::class.java,
+                    "blockchain/${it[0]}-${it[1]}.json"
+                )
+            }
     }
 
     @Test
     fun testAbciInfoSerialization() {
-        assert(readAs<ABCIInfoResponse>("abci_info/success.json") != null)
+        assert(templates.readAs(ABCIInfoResponse::class.java, "abci_info/success.json") != null)
     }
 
     @Test
@@ -83,7 +100,11 @@ class StreamTests {
 
         val tm = ServiceMocker.Builder()
             .doFor("abciInfo") {
-                readAs<ABCIInfoResponse>("abci_info/success.json", mapOf("last_block_height" to expectBlockHeight))
+                templates.readAs(
+                    ABCIInfoResponse::class.java,
+                    "abci_info/success.json",
+                    mapOf("last_block_height" to expectBlockHeight)
+                )
             }
             .build(MockTendermintService::class.java)
 
@@ -95,7 +116,7 @@ class StreamTests {
     @Test
     fun testBlockResponse() {
         val tm = ServiceMocker.Builder()
-            .doFor("block") { readAs<BlockResponse>("block/${it[0]}.json") }
+            .doFor("block") { templates.readAs(BlockResponse::class.java, "block/${it[0]}.json") }
             .build(MockTendermintService::class.java)
 
         val expectedHeight = MIN_BLOCK_HEIGHT
@@ -120,7 +141,7 @@ class StreamTests {
     @Test
     fun testBlockResultsResponse() {
         val tm = ServiceMocker.Builder()
-            .doFor("blockResults") { readAs<BlockResultsResponse>("block_results/${it[0]}.json") }
+            .doFor("blockResults") { templates.readAs(BlockResultsResponse::class.java, "block_results/${it[0]}.json") }
             .build(MockTendermintService::class.java)
 
         val expectedHeight = MIN_BLOCK_HEIGHT
@@ -145,7 +166,12 @@ class StreamTests {
     @Test
     fun testBlockchainResponse() {
         val tm = ServiceMocker.Builder()
-            .doFor("blockchain") { readAs<BlockchainResponse>("blockchain/${it[0]}-${it[1]}.json") }
+            .doFor("blockchain") {
+                templates.readAs(
+                    BlockchainResponse::class.java,
+                    "blockchain/${it[0]}-${it[1]}.json"
+                )
+            }
             .build(MockTendermintService::class.java)
 
         val expectedMinHeight: Long = MIN_BLOCK_HEIGHT
@@ -175,7 +201,7 @@ class StreamTests {
         )
         val blocks: Array<BlockResponse> =
             heights
-                .map { unsafeReadAs<BlockResponse>("block/${it}.json") }
+                .map { templates.unsafeReadAs(BlockResponse::class.java, "block/${it}.json") }
                 .toTypedArray()
 
         // set up:
@@ -244,7 +270,7 @@ class StreamTests {
     fun testLiveBlockStreaming() {
         val eventStreamService: MockEventStreamService = runBlocking {
             val serviceBuilder = MockEventStreamService.Builder(moshi)
-            for (liveBlockResponse in readAll("live")) {
+            for (liveBlockResponse in templates.readAll("live")) {
                 serviceBuilder.addResponse(liveBlockResponse)
             }
             serviceBuilder.build()
@@ -277,7 +303,7 @@ class StreamTests {
     fun testCombinedBlockStreaming() {
         val eventStreamService: MockEventStreamService = runBlocking {
             val serviceBuilder = MockEventStreamService.Builder(moshi)
-            for (liveBlockResponse in readAll("live")) {
+            for (liveBlockResponse in templates.readAll("live")) {
                 serviceBuilder.addResponse(liveBlockResponse)
             }
             serviceBuilder.build()

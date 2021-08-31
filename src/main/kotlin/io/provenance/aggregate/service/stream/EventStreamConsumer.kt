@@ -35,7 +35,7 @@ class EventStreamConsumer(
         val serializer = { b: StreamBlock -> eventStream.serialize(StreamBlock::class.java, b) }
 
         eventStream.streamBlocks(lastHeight)
-            .buffer(1000)
+            .buffer()
             .collect {
                 when (it) {
                     is Either.Left -> error(it.value)

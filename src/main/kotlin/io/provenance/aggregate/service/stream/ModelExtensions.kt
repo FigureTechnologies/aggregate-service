@@ -1,23 +1,13 @@
 package io.provenance.aggregate.service.stream.extensions
 
+import io.provenance.aggregate.service.extensions.*
 import io.provenance.aggregate.service.stream.BlockEvent
+import io.provenance.aggregate.service.stream.RpcResponse
 import io.provenance.aggregate.service.stream.TxEvent
 import io.provenance.aggregate.service.stream.models.*
-import com.google.common.io.BaseEncoding
-import java.security.MessageDigest
-import java.security.NoSuchAlgorithmException
+import org.json.JSONObject
 
-private fun String.hash(): String = sha256(BaseEncoding.base64().decode(this)).toHexString()
-
-private fun ByteArray.toHexString() = BaseEncoding.base16().encode(this)
-
-private fun sha256(input: ByteArray?): ByteArray =
-    try {
-        val digest = MessageDigest.getInstance("SHA-256")
-        digest.digest(input)
-    } catch (e: NoSuchAlgorithmException) {
-        throw RuntimeException("Couldn't find a SHA-256 provider", e)
-    }
+fun RpcResponse<JSONObject>.isEmpty(): Boolean = this?.result?.isEmpty() ?: true
 
 fun Block.txHash(index: Int): String? = this.data?.txs?.get(index)?.hash()
 
