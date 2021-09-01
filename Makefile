@@ -1,15 +1,22 @@
-.PHONY: clean build run
+.PHONY: build clean cleanTest run test
 
-NAME := aggregate-service
-BUILD := $(PWD)/build
+NAME    := aggregate-service
+BUILD   := $(PWD)/build
+GRADLEW := ./gradlew
 
 all: run
 
 clean:
-	./gradlew clean
+	$(GRADLEW) clean
+
+cleanTest:
+	$(GRADLEW) cleanTest
 
 build:
-	./gradlew installDist
+	$(GRADLEW) installDist
 
 run: build
 	$(BUILD)/install/$(NAME)/bin/$(NAME) $(ARGS)
+
+test: cleanTest
+	$(GRADLEW) test

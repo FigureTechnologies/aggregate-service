@@ -88,11 +88,20 @@ dependencies {
 //    testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
-sourceSets.main {
-    java.srcDirs(
-        "$projectDir/src/main/kotlin",
-        "$buildDir/generated/src/main/kotlin"
-    )
+sourceSets {
+    main {
+        java {
+            srcDirs(
+                "$projectDir/src/main/kotlin",
+                "$buildDir/generated/src/main/kotlin"
+            )
+        }
+    }
+    test {
+        java {
+            srcDir("$projectDir/src/test/kotlin")
+        }
+    }
 }
 
 application {
@@ -108,14 +117,14 @@ project.afterEvaluate {
     tasks.get("kaptGenerateStubsKotlin").dependsOn("generateTendermintAPI")
 }
 
-tasks.withType<KotlinCompile> {
+tasks.compileKotlin {
     kotlinOptions {
         freeCompilerArgs = listOf("-Xjsr305=strict")
         jvmTarget = "11"
     }
 }
 
-tasks.withType<Test> {
+tasks.test {
     useJUnitPlatform()
 }
 
@@ -154,3 +163,4 @@ tasks.register<org.openapitools.generator.gradle.plugin.tasks.GenerateTask>("gen
 //        )
 //    )
 }
+
