@@ -8,6 +8,7 @@ import com.tinder.scarlet.Scarlet
 import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
+import io.provenance.aggregate.service.aws.AwsInterface
 import io.provenance.aggregate.service.stream.*
 import io.provenance.aggregate.service.stream.json.JSONObjectAdapter
 import kotlinx.coroutines.Dispatchers
@@ -32,11 +33,15 @@ fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
 }
 
 fun main(args: Array<String>) {
-    val config: Config = ConfigLoader.Builder()
+     val config: Config = ConfigLoader.Builder()
         .addSource(PropertySource.resource("/application.properties"))
         .build()
         .loadConfig<Config>()
         .getUnsafe()
+
+    if(config.environment == "development") {
+        AwsInterface().startLocalstackContainer()
+    }
 
     val log = object{}.logger()
 

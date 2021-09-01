@@ -48,6 +48,8 @@ object Version {
     val moshi = "1.12.0"
     val provenance = "1.5.0"
     val scarlet = "0.1.12"
+    val awsSdk = "2.15.0"
+    val localstack = "0.2.15"
 }
 
 dependencies {
@@ -82,6 +84,11 @@ dependencies {
     implementation("com.sksamuel.hoplite", "hoplite-core", Version.hoplite)
 
     implementation("org.json", "json", "20210307")
+
+    implementation(platform("software.amazon.awssdk:bom:2.15.0"))
+    implementation("software.amazon.awssdk:s3")
+    implementation("software.amazon.awssdk:dynamodb")
+    implementation("cloud.localstack", "localstack-utils", Version.localstack)
 
 //    implementation("org.springframework.boot:spring-boot-starter-web")
 //    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
