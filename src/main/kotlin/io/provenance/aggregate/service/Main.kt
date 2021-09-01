@@ -8,6 +8,7 @@ import com.tinder.scarlet.Scarlet
 import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
+import io.provenance.aggregate.service.aws.AwsInterface
 import io.provenance.aggregate.service.stream.*
 import io.provenance.aggregate.service.stream.extensions.dateTime
 import io.provenance.aggregate.service.stream.json.JSONObjectAdapter
@@ -38,6 +39,10 @@ fun main(args: Array<String>) {
         .build()
         .loadConfig<Config>()
         .getUnsafe()
+
+    if (config.environment == "development") {
+        AwsInterface().startLocalstackContainer()
+    }
 
     val log = object {}.logger()
 
