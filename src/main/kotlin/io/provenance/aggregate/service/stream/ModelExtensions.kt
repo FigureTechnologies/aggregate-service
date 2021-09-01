@@ -6,12 +6,19 @@ import io.provenance.aggregate.service.stream.RpcResponse
 import io.provenance.aggregate.service.stream.TxEvent
 import io.provenance.aggregate.service.stream.models.*
 import org.json.JSONObject
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 
 fun RpcResponse<JSONObject>.isEmpty(): Boolean = this?.result?.isEmpty() ?: true
 
 fun Block.txHash(index: Int): String? = this.data?.txs?.get(index)?.hash()
 
 fun Block.txHashes(): List<String> = this.data?.txs?.map { it.hash() } ?: emptyList()
+
+fun Block.dateTime() = this.header?.dateTime()
+
+fun BlockHeader.dateTime(): OffsetDateTime? =
+    runCatching { OffsetDateTime.parse(this.time, DateTimeFormatter.ISO_DATE_TIME) }.getOrNull()
 
 fun BlockResponse.txHash(index: Int): String? = this.result?.block?.txHash(index)
 
