@@ -112,10 +112,13 @@ class EventStream(
         return rpcNewBlockResponseReader.fromJson(input)
             ?.let {
                 it.result?.let { MessageType.NewBlock(it) }
-            } ?: throw JsonDataException("malformed input: $input")
+            }
     }
 
     private fun getBlockHeightQueryRanges(minHeight: Long, maxHeight: Long): Sequence<Pair<Long, Long>> {
+        if (minHeight > maxHeight) {
+            return emptySequence()
+        }
         val step = TENDERMINT_MAX_QUERY_RANGE
         return sequence {
             var i = minHeight
