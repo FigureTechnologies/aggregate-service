@@ -10,6 +10,7 @@ import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
 import io.provenance.aggregate.service.aws.AwsInterface
 import io.provenance.aggregate.service.stream.*
+import io.provenance.aggregate.service.stream.extensions.dateTime
 import io.provenance.aggregate.service.stream.json.JSONObjectAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -58,14 +59,13 @@ fun main(args: Array<String>) {
         EventStreamConsumer(factory, lastHeight, skipEmptyBlocks = true)
             .consume { b: StreamBlock, serialize: (StreamBlock) -> String ->
                 //println(serialize(b))
+                val text = "BLOCK = ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
                 log.info(
-                    "BLOCK = ${b.block.header?.height ?: "--"}:${b.block.header?.dataHash} (${
-                        if (b.historical) {
-                            "historical"
-                        } else {
-                            "live"
-                        }
-                    })"
+                    if (b.historical) {
+                        text
+                    } else {
+                        green(text)
+                    }
                 )
             }
     }
