@@ -7,11 +7,14 @@ import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
 import io.provenance.aggregate.service.stream.*
 import io.provenance.aggregate.service.stream.json.JSONObjectAdapter
+import io.provenance.aggregate.service.mocks.MockEventStreamService
+import io.provenance.aggregate.service.mocks.MockTendermintService
+import io.provenance.aggregate.service.mocks.ServiceMocker
 import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
 import io.provenance.aggregate.service.stream.models.BlockResponse
 import io.provenance.aggregate.service.stream.models.BlockResultsResponse
 import io.provenance.aggregate.service.stream.models.BlockchainResponse
-import io.provenance.aggregate.service.stream.templates.Template
+import io.provenance.aggregate.service.utils.Template
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.take
@@ -288,7 +291,7 @@ class StreamTests {
         )
 
         runBlocking(Dispatchers.Default) {
-            // Explicitly taking the expected response count items from the flow will implicitly cancel it after
+            // Explicitly taking the expected response count items from the io.provenance.aggregate.service.flow will implicitly cancel it after
             // that number of items as been consumed. Otherwise, the mock websocket receiver (like the real one),
             // will just wait indefinitely for further events.
             val collected: List<Either<Throwable, StreamBlock>> = eventStream.streamLiveBlocks()

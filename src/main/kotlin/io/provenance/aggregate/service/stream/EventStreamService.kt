@@ -100,7 +100,7 @@ class TendermintEventStreamService(rpcStream: TendermintRPCStream, val lifecycle
     TendermintRPCStream by rpcStream, EventStreamService {
 
     /**
-     * Allow the websocket event flow to start receiving events.
+     * Allow the websocket event io.provenance.aggregate.service.flow to start receiving events.
      *
      * Note: this must be called prior to any
      */
@@ -109,7 +109,7 @@ class TendermintEventStreamService(rpcStream: TendermintRPCStream, val lifecycle
     }
 
     /**
-     * Stops the websocket event flow from receiving events.
+     * Stops the websocket event io.provenance.aggregate.service.flow from receiving events.
      */
     override fun stopListening() {
         lifecycle.onNext(Lifecycle.State.Stopped.AndAborted)
