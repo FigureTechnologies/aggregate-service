@@ -1,0 +1,27 @@
+service: aggregate-service
+
+provider:
+  name: aws
+  region: us-east-1
+#  imaRoleStatements:
+#    - Effect: Allow
+#      Action:
+#      - s3:PutObject
+#      - s3:PutObjectAcl
+#      Resource: "arn:aws:iam::544196980723:role/AwsS3Access"
+
+#resources:
+#  Resources:
+#    S3Assets:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: aggregate-service-test-bucket
+
+## Below is to run serverless against localstack
+#plugins:
+#  - serverless-localstack
+#
+#custom:
+#  localstack:
+#    stages:
+#      - local
