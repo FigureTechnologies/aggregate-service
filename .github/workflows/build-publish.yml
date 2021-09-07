@@ -23,5 +23,5 @@ jobs:
       run: sls config credentials --provider aws --key ${{ secrets.AWS_ACCESS_TOKEN }} --secret ${{ secrets.AWS_SECRET_TOKEN }}
     - name: deploy serverless s3
       working-directory: ./
-      run: sls deploy
+      run: pwd
 
