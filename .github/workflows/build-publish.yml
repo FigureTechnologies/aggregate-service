@@ -18,9 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: serverless deploy
-      uses: serverless/github-action@master
+      uses: serverless/github-action@v1
       with:
         args: deploy
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_TOKEN }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
+        SLS_DEBUG: 1
