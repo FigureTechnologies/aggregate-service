@@ -8,12 +8,12 @@ import com.tinder.scarlet.WebSocket
 import com.tinder.scarlet.lifecycle.LifecycleRegistry
 import io.provenance.aggregate.service.Config
 import io.provenance.aggregate.service.logger
-import io.provenance.aggregate.service.stream.extensions.blockEvents
-import io.provenance.aggregate.service.stream.extensions.isEmpty
-import io.provenance.aggregate.service.stream.extensions.txEvents
-import io.provenance.aggregate.service.stream.extensions.txHash
 import io.provenance.aggregate.service.stream.models.Block
 import io.provenance.aggregate.service.stream.models.Event
+import io.provenance.aggregate.service.stream.models.extensions.blockEvents
+import io.provenance.aggregate.service.stream.models.extensions.isEmpty
+import io.provenance.aggregate.service.stream.models.extensions.txEvents
+import io.provenance.aggregate.service.stream.models.extensions.txHash
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.json.JSONObject
@@ -24,7 +24,9 @@ data class StreamBlock(
     val blockEvents: List<BlockEvent>,
     val txEvents: List<TxEvent>,
     val historical: Boolean = false
-)
+) {
+    val height: Long? get() = block.header?.height
+}
 
 @JsonClass(generateAdapter = true)
 data class BlockEvent(
@@ -64,7 +66,7 @@ class EventStream(
         private val tendermintService: TendermintService
     ) {
         fun getStream(skipEmptyBlocks: Boolean = true): EventStream {
-            val lifecycle = LifecycleRegistry(config.event.stream.throttle_duration_ms)
+            val lifecycle = LifecycleRegistry(config.event.stream.throttleDurationMs)
             val scarlet: Scarlet = eventStreamBuilder.lifecycle(lifecycle).build()
             val tendermintRpc: TendermintRPCStream = scarlet.create()
             val eventStreamService = TendermintEventStreamService(tendermintRpc, lifecycle)
@@ -72,7 +74,7 @@ class EventStream(
                 eventStreamService,
                 tendermintService,
                 moshi,
-                batchSize = config.event.stream.batch_size,
+                batchSize = config.event.stream.batchSize,
                 skipIfEmpty = skipEmptyBlocks
             )
         }
@@ -164,12 +166,12 @@ class EventStream(
     }
 
     /***
-     * Query a range of blocks by a given minimum and maximum height range (inclusive), returning a flow of
+     * Query a range of blocks by a given minimum and maximum height range (inclusive), returning a io.provenance.aggregate.service.flow of
      * found historical blocks along with events associated with each block, if any.
      *
      * @param minHeight The minimum block height in the query range, inclusive.
      * @param maxHeight The maximum block height in the query range, inclusive.
-     * @return A flow of found historical blocks along with events associated with each block, if any.
+     * @return A io.provenance.aggregate.service.flow of found historical blocks along with events associated with each block, if any.
      */
     private suspend fun queryBlockRange(minHeight: Long, maxHeight: Long): Flow<StreamBlock> {
         if (minHeight > maxHeight) {
@@ -205,7 +207,7 @@ class EventStream(
         return blockHeightsInRange.chunked(batchSize)
             .asFlow()
             .transform { chunkOfHeights: List<Long> ->
-                val blocks: List<StreamBlock> = withContext(Dispatchers.Default) {
+                val blocks: List<StreamBlock> = withContext(Dispatchers.IO) {
                     coroutineScope {
                         chunkOfHeights.map { height: Long ->
                             async {
@@ -223,13 +225,13 @@ class EventStream(
     }
 
     /**
-     * Constructs a flow of historical blocks and associated events based on a starting height. Blocks will be streamed
-     * from the given starting height up to the latest block height, as determined by the start of the flow.
+     * Constructs a io.provenance.aggregate.service.flow of historical blocks and associated events based on a starting height. Blocks will be streamed
+     * from the given starting height up to the latest block height, as determined by the start of the io.provenance.aggregate.service.flow.
      *
      * @param fromHeight Stream blocks from the given starting height.
-     * @param concurrency The concurrency limit for the flow's `flatMapMerge` operation. See
-     * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/flat-map-merge.html
-     * @return A flow of historical blocks and associated events
+     * @param concurrency The concurrency limit for the io.provenance.aggregate.service.flow's `flatMapMerge` operation. See
+     * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.io.provenance.aggregate.service.flow/flat-map-merge.html
+     * @return A io.provenance.aggregate.service.flow of historical blocks and associated events
      */
     @kotlinx.coroutines.FlowPreview
     @kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -251,13 +253,12 @@ class EventStream(
                 Either.Right(it.copy(historical = true))
             }
             .catch { e -> Either.Left(e) }
-            .flowOn(Dispatchers.Default)
     }
 
     /**
-     * Constructs a flow of newly minted blocks and associated events as the blocks are added to the chain.
+     * Constructs a io.provenance.aggregate.service.flow of newly minted blocks and associated events as the blocks are added to the chain.
      *
-     * @return A flow of newly minted blocks and associated events
+     * @return A io.provenance.aggregate.service.flow of newly minted blocks and associated events
      */
     suspend fun streamLiveBlocks(): Flow<Either<Throwable, StreamBlock>> {
         // Toggle the Lifecycle register start state :
@@ -308,12 +309,11 @@ class EventStream(
                 }
             }
         }
-            .flowOn(Dispatchers.Default)
             .onStart {
                 log.info("streamLiveBlocks::thread<${Thread.currentThread().id}>")
             }
             .retryWhen { cause: Throwable, attempt: Long ->
-                log.info("streamLiveBlocks::recovering flow (attempt ${attempt + 1})")
+                log.info("streamLiveBlocks::recovering io.provenance.aggregate.service.flow (attempt ${attempt + 1})")
                 when (cause) {
                     is JsonDataException -> {
                         log.warn("streamLiveBlocks::parse error: $cause")
@@ -325,15 +325,15 @@ class EventStream(
     }
 
     /**
-     * Constructs a flow of live and historical blocks, plus associated event data.
+     * Constructs a io.provenance.aggregate.service.flow of live and historical blocks, plus associated event data.
      *
-     * If a starting height is provided, historical blocks will be included in the flow from the starting height, up
-     * to the latest block height determined at the start of the collection of the flow.
+     * If a starting height is provided, historical blocks will be included in the io.provenance.aggregate.service.flow from the starting height, up
+     * to the latest block height determined at the start of the collection of the io.provenance.aggregate.service.flow.
      *
      * @param fromHeight The optional block height to start streaming from for historical block data.
-     * @param concurrency The concurrency limit for the flow's `flatMapMerge` operation. See
-     * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/flat-map-merge.html
-     * @return A flow of live and historical blocks, plus associated event data.
+     * @param concurrency The concurrency limit for the io.provenance.aggregate.service.flow's `flatMapMerge` operation. See
+     * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.io.provenance.aggregate.service.flow/flat-map-merge.html
+     * @return A io.provenance.aggregate.service.flow of live and historical blocks, plus associated event data.
      */
     @kotlinx.coroutines.FlowPreview
     @kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -346,7 +346,6 @@ class EventStream(
         } else {
             streamLiveBlocks()
         }
-            .flowOn(Dispatchers.Default)
     }
 }
 

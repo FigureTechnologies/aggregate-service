@@ -1,9 +1,11 @@
-package io.provenance.aggregate.service.stream
+package io.provenance.aggregate.service.mocks
 
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
+import io.provenance.aggregate.service.stream.EventStreamService
+import io.provenance.aggregate.service.stream.Subscribe
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.runBlocking
