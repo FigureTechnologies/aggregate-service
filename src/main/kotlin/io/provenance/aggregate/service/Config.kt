@@ -1,17 +1,25 @@
 package io.provenance.aggregate.service
 
-data class Config_Stream(
-    val websocket_uri: String,
-    val rpc_uri: String,
-    val batch_size: Int,
-    val throttle_duration_ms: Long = 0
+import com.sksamuel.hoplite.ConfigAlias
+
+data class ConfigStream(
+    @ConfigAlias("websocket_uri") val websocketUri: String,
+    @ConfigAlias("rpc_uri") val rpcUri: String,
+    @ConfigAlias("batch_size") val batchSize: Int,
+    @ConfigAlias("throttle_duration_ms") val throttleDurationMs: Long = 0
 )
 
-data class Config_Event(
-    val stream: Config_Stream
+data class S3Config(
+    val region: String?,
+    val bucket: String
+)
+
+data class EventConfig(
+    val stream: ConfigStream
 )
 
 data class Config(
-    val environment: String,
-    val event: Config_Event
+    val environment: Environment,
+    val s3: S3Config,
+    val event: EventConfig
 )

@@ -40,6 +40,7 @@ repositories {
 object Version {
     val arrow = "0.12.1"
     val apacheCommons = "1.9"
+    val aws = "2.15.0"
     val grpc = "1.39.0"
     val hoplite = "1.4.7"
     val junit = "5.1.0"
@@ -48,7 +49,7 @@ object Version {
     val moshi = "1.12.0"
     val provenance = "1.5.0"
     val scarlet = "0.1.12"
-    val awsSdk = "2.15.0"
+    val awsSdk = "2.17.32"
     val localstack = "0.2.15"
 }
 
@@ -85,7 +86,8 @@ dependencies {
 
     implementation("org.json", "json", "20210307")
 
-    implementation(platform("software.amazon.awssdk:bom:2.15.0"))
+    implementation(platform("software.amazon.awssdk:bom:${Version.aws}"))
+    implementation("software.amazon.awssdk:netty-nio-client")
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:dynamodb")
     implementation("cloud.localstack", "localstack-utils", Version.localstack)
