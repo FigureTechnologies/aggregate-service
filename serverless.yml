@@ -9,7 +9,7 @@ resources:
     S3Assets:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: aggregate-service-test-bucket
+        BucketName: aggregate-service-bucket
     usersTable:
       Type: AWS::DynamoDB::Table
       Properties:
