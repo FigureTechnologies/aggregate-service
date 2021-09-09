@@ -7,6 +7,8 @@ import com.tinder.scarlet.Scarlet
 import com.tinder.scarlet.WebSocket
 import com.tinder.scarlet.lifecycle.LifecycleRegistry
 import io.provenance.aggregate.service.Config
+import io.provenance.aggregate.service.DefaultDispatcherProvider
+import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.models.Block
 import io.provenance.aggregate.service.stream.models.Event
@@ -43,13 +45,22 @@ data class TxEvent(
     val attributes: List<Event>,
 )
 
+interface IEventStream {
+    @OptIn(FlowPreview::class)
+    suspend fun streamBlocks(
+        fromHeight: Long? = null,
+        concurrency: Int = DEFAULT_CONCURRENCY
+    ): Flow<Either<Throwable, StreamBlock>>
+}
+
 class EventStream(
     private val eventStreamService: EventStreamService,
     private val tendermintService: TendermintService,
     private val moshi: Moshi,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
     private val batchSize: Int = 4,
     private val skipIfEmpty: Boolean = true
-) {
+) : IEventStream {
     companion object {
         const val TENDERMINT_MAX_QUERY_RANGE = 20
     }
@@ -63,7 +74,8 @@ class EventStream(
         private val config: Config,
         private val moshi: Moshi,
         private val eventStreamBuilder: Scarlet.Builder,
-        private val tendermintService: TendermintService
+        private val tendermintService: TendermintService,
+        private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
     ) {
         fun getStream(skipEmptyBlocks: Boolean = true): EventStream {
             val lifecycle = LifecycleRegistry(config.event.stream.throttleDurationMs)
@@ -74,6 +86,7 @@ class EventStream(
                 eventStreamService,
                 tendermintService,
                 moshi,
+                dispatchers = dispatchers,
                 batchSize = config.event.stream.batchSize,
                 skipIfEmpty = skipEmptyBlocks
             )
@@ -207,7 +220,7 @@ class EventStream(
         return blockHeightsInRange.chunked(batchSize)
             .asFlow()
             .transform { chunkOfHeights: List<Long> ->
-                val blocks: List<StreamBlock> = withContext(Dispatchers.IO) {
+                val blocks: List<StreamBlock> = withContext(dispatchers.io()) {
                     coroutineScope {
                         chunkOfHeights.map { height: Long ->
                             async {
@@ -337,9 +350,9 @@ class EventStream(
      */
     @kotlinx.coroutines.FlowPreview
     @kotlinx.coroutines.ExperimentalCoroutinesApi
-    suspend fun streamBlocks(
-        fromHeight: Long? = null,
-        concurrency: Int = DEFAULT_CONCURRENCY
+    override suspend fun streamBlocks(
+        fromHeight: Long?,
+        concurrency: Int
     ): Flow<Either<Throwable, StreamBlock>> {
         return if (fromHeight != null) {
             merge(streamHistoricalBlocks(fromHeight, concurrency), streamLiveBlocks())

@@ -10,9 +10,8 @@ import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
 import io.provenance.aggregate.service.aws.AwsInterface
-import io.provenance.aggregate.service.stream.EventStream
-import io.provenance.aggregate.service.stream.EventStreamUploader
-import io.provenance.aggregate.service.stream.TendermintServiceClient
+import io.provenance.aggregate.service.stream.*
+import io.provenance.aggregate.service.stream.models.extensions.*
 import io.provenance.aggregate.service.stream.json.JSONObjectAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -36,7 +35,9 @@ fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
 
 fun main(args: Array<String>) {
     // All configuration options can be overridden via environment variables:
+    //
     // - ENVIRONMENT=development will override the application.properties value "environment=local".
+    //
     // - To override nested configuration options separated with a dot ("."), use double underscores ("__")
     //  in the environment variable:
     //    event.stream.rpc_uri=http://localhost:26657 is overridden by "event__stream_rpc_uri=foo"
@@ -63,20 +64,22 @@ fun main(args: Array<String>) {
 
     runBlocking(Dispatchers.IO) {
 
-        EventStreamUploader(factory, aws, moshi, lastHeight, skipEmptyBlocks = true)
-            .upload()
-
-//        EventStreamConsumer(factory, lastHeight, skipEmptyBlocks = true)
-//            .consume { b: StreamBlock, serialize: (StreamBlock) -> String ->
-//                //println(serialize(b))
-//                val text = "BLOCK = ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
-//                log.info(
-//                    if (b.historical) {
-//                        text
-//                    } else {
-//                        green(text)
-//                    }
-//                )
+//        EventStreamUploader(factory, aws, moshi, lastHeight, skipEmptyBlocks = true)
+//            .upload()
+//            .collect { result: UploadResult ->
+//                println("uploaded ${result.etag}::${result.streamBlock.height}")
 //            }
+
+        EventStreamViewer(factory, lastHeight, skipEmptyBlocks = true)
+            .consume { b: StreamBlock, _serialize: (StreamBlock) -> String ->
+                val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
+                log.info(
+                    if (b.historical) {
+                        text
+                    } else {
+                        green(text)
+                    }
+                )
+            }
     }
 }

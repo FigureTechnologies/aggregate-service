@@ -59,6 +59,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.kotlinx)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.kotlinx)
 
+    testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.kotlinx)
+    testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-test", Version.kotlinx)
     testImplementation("org.junit.jupiter", "junit-jupiter-engine", Version.junit)
     testImplementation("org.apache.commons", "commons-text", Version.apacheCommons)
 
@@ -90,7 +92,7 @@ dependencies {
     implementation("software.amazon.awssdk:netty-nio-client")
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:dynamodb")
-    
+
     implementation("cloud.localstack", "localstack-utils", Version.localstack)
 
 //    implementation("org.springframework.boot:spring-boot-starter-web")
@@ -129,7 +131,8 @@ project.afterEvaluate {
 
 tasks.compileKotlin {
     kotlinOptions {
-        freeCompilerArgs = listOf("-Xjsr305=strict")
+        freeCompilerArgs += "-Xjsr305=strict"
+        freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
         jvmTarget = "11"
     }
 }

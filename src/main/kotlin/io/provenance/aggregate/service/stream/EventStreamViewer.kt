@@ -2,14 +2,17 @@ package io.provenance.aggregate.service.stream
 
 import arrow.core.Either
 import io.provenance.aggregate.service.logger
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collect
 
-class EventStreamConsumer(
-    private val eventStreamFactory: EventStream.Factory,
-    private val lastHeight: Long?,
-    private val skipEmptyBlocks: Boolean = true
+class EventStreamViewer(
+    private val eventStream: EventStream,
+    private val lastHeight: Long?
 ) {
+    constructor(eventStreamFactory: EventStream.Factory, lastHeight: Long?, skipEmptyBlocks: Boolean = true) :
+            this(eventStreamFactory.getStream(skipEmptyBlocks), lastHeight)
+
     private val log = logger()
 
     private fun onError(error: Throwable) {
@@ -20,6 +23,7 @@ class EventStreamConsumer(
         consume(error) { b, _ -> ok(b) }
     }
 
+    @OptIn(FlowPreview::class)
     suspend fun consume(
         error: (Throwable) -> Unit = ::onError,
         ok: (block: StreamBlock, serialize: (StreamBlock) -> String) -> Unit
@@ -31,7 +35,6 @@ class EventStreamConsumer(
             log.info("Starting event stream at height $lastHeight")
         }
 
-        val eventStream = eventStreamFactory.getStream(skipEmptyBlocks)
         val serializer = { b: StreamBlock -> eventStream.serialize(StreamBlock::class.java, b) }
 
         eventStream.streamBlocks(lastHeight)
