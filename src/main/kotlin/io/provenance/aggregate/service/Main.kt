@@ -49,7 +49,7 @@ fun main(args: Array<String>) {
         .loadConfig<Config>()
         .getUnsafe()
 
-    val log = object {}.logger()
+    val log = object{}.logger()
 
     val lastHeight: Long? = args.firstOrNull()?.let { it.toLongOrNull() }
     val moshi: Moshi = Moshi.Builder()

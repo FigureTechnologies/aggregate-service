@@ -1,0 +1,34 @@
+service: aggregate-service
+
+provider:
+  name: aws
+  region: us-east-1
+
+resources:
+  Resources:
+    S3Assets:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: aggregate-service-bucket
+    usersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: aggregateTable
+        AttributeDefinitions:
+          - AttributeName: blockHeight
+            AttributeType: N
+        KeySchema:
+          - AttributeName: blockHeight
+            KeyType: HASH
+        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 5 reads and writes for now.
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+## Below is to run serverless against localstack
+#plugins:
+#  - serverless-localstack
+#
+#custom:
+#  localstack:
+#    stages:
+#      - local
