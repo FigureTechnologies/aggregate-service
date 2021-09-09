@@ -76,6 +76,28 @@
       "Properties": {
         "BucketName": "aggregate-service-test-bucket"
       }
+    },
+    "usersTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "aggregateTable",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "blockHeight",
+            "AttributeType": "N"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "blockHeight",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 1,
+          "WriteCapacityUnits": 1
+        }
+      }
     }
   },
   "Outputs": {

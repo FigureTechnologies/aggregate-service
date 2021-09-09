@@ -87,6 +87,28 @@
             "Properties": {
               "BucketName": "aggregate-service-test-bucket"
             }
+          },
+          "usersTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "aggregateTable",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "blockHeight",
+                  "AttributeType": "N"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "blockHeight",
+                  "KeyType": "HASH"
+                }
+              ],
+              "ProvisionedThroughput": {
+                "ReadCapacityUnits": 1,
+                "WriteCapacityUnits": 1
+              }
+            }
           }
         },
         "Outputs": {
@@ -192,6 +214,28 @@
           "Properties": {
             "BucketName": "aggregate-service-test-bucket"
           }
+        },
+        "usersTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "aggregateTable",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "blockHeight",
+                "AttributeType": "N"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "blockHeight",
+                "KeyType": "HASH"
+              }
+            ],
+            "ProvisionedThroughput": {
+              "ReadCapacityUnits": 1,
+              "WriteCapacityUnits": 1
+            }
+          }
         }
       },
       "Outputs": {}
@@ -213,7 +257,7 @@
     "isDashboardMonitoringPreconfigured": false
   },
   "package": {
-    "artifactDirectoryName": "serverless/aggregate-service/dev/1631122868419-2021-09-08T17:41:08.419Z",
+    "artifactDirectoryName": "serverless/aggregate-service/dev/1631199720486-2021-09-09T15:02:00.486Z",
     "artifact": ""
   }
 }

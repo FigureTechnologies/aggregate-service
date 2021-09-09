@@ -4,25 +4,26 @@ provider:
   name: aws
   region: us-east-1
 
-
-#  imaRoleStatements:
-#    - Effect: Allow
-#      Action:
-#      - s3:PutObject
-#      - s3:PutObjectAcl
-#      Resource: "arn:aws:iam::544196980723:role/AwsS3Access"
-
-#custom:
-#  assets:
-#    targets:
-#      - bucket: aggregate-service-test-bucket
-
 resources:
   Resources:
     S3Assets:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: aggregate-service-test-bucket
+    usersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: aggregateTable
+        AttributeDefinitions:
+          - AttributeName: blockHeight
+            AttributeType: N
+        KeySchema:
+          - AttributeName: blockHeight
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
 
 ## Below is to run serverless against localstack
 #plugins:
