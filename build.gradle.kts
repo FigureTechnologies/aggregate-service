@@ -59,6 +59,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.kotlinx)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.kotlinx)
 
+    testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.kotlinx)
+    testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-test", Version.kotlinx)
     testImplementation("org.junit.jupiter", "junit-jupiter-engine", Version.junit)
     testImplementation("org.apache.commons", "commons-text", Version.apacheCommons)
 
@@ -129,7 +131,8 @@ project.afterEvaluate {
 
 tasks.compileKotlin {
     kotlinOptions {
-        freeCompilerArgs = listOf("-Xjsr305=strict")
+        freeCompilerArgs += "-Xjsr305=strict"
+        freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
         jvmTarget = "11"
     }
 }

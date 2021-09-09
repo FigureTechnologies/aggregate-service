@@ -13,7 +13,7 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest
 import java.net.URI
 
-class LocalStackAwsInterface(s3Config: S3Config) : AwsInterface(s3Config) {
+open class LocalStackAwsInterface(s3Config: S3Config) : AwsInterface(s3Config) {
 
     companion object {
         const val LOCALSTACK_ACCESS_TOKEN = "test"

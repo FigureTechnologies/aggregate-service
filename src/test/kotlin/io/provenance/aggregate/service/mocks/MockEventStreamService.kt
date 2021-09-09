@@ -6,13 +6,14 @@ import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
 import io.provenance.aggregate.service.stream.EventStreamService
 import io.provenance.aggregate.service.stream.Subscribe
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runBlockingTest
 
 class MockEventStreamService private constructor(
     private val channel: Channel<WebSocket.Event>,
-    private val responseCount: Int,
+    private val responseCount: Long,
     private val moshi: Moshi
 ) : EventStreamService {
 
@@ -39,16 +40,17 @@ class MockEventStreamService private constructor(
             for (payload in payloads) {
                 channel.send(WebSocket.Event.OnMessageReceived(Message.Text(payload)))
             }
-            return MockEventStreamService(channel, payloads.size, moshi)
+            return MockEventStreamService(channel, payloads.size.toLong(), moshi)
         }
     }
 
-    fun expectedResponseCount(): Int = responseCount
+    fun expectedResponseCount(): Long = responseCount
 
     override fun observeWebSocketEvent(): ReceiveChannel<WebSocket.Event> = channel
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun subscribe(subscribe: Subscribe) {
-        runBlocking {
+        runBlockingTest {
             channel.send(WebSocket.Event.OnConnectionOpened(Unit))
         }
     }
