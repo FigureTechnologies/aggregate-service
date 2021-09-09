@@ -20,11 +20,11 @@ resources:
         KeySchema:
           - AttributeName: blockHeight
             KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 5 reads and writes for now.
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
 
-
+# Via npm
 ## Below is to run serverless against localstack
 #plugins:
 #  - serverless-localstack
