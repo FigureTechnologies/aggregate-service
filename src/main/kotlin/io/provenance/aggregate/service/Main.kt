@@ -49,10 +49,6 @@ fun main(args: Array<String>) {
         .loadConfig<Config>()
         .getUnsafe()
 
-    if(config.environment == "development") {
-        AwsInterface().startLocalstackContainer()
-    }
-
     val log = object{}.logger()
 
     val lastHeight: Long? = args.firstOrNull()?.let { it.toLongOrNull() }

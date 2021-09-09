@@ -24,7 +24,6 @@ resources:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
 
-# Via npm
 ## Below is to run serverless against localstack
 #plugins:
 #  - serverless-localstack
