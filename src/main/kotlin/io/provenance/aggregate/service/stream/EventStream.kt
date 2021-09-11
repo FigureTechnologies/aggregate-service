@@ -9,9 +9,10 @@ import com.tinder.scarlet.lifecycle.LifecycleRegistry
 import io.provenance.aggregate.service.Config
 import io.provenance.aggregate.service.DefaultDispatcherProvider
 import io.provenance.aggregate.service.DispatcherProvider
+import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
+import io.provenance.aggregate.service.aws.dynamodb.BlockStorageMetadata
 import io.provenance.aggregate.service.logger
-import io.provenance.aggregate.service.stream.models.Block
-import io.provenance.aggregate.service.stream.models.Event
+import io.provenance.aggregate.service.stream.models.*
 import io.provenance.aggregate.service.stream.models.extensions.blockEvents
 import io.provenance.aggregate.service.stream.models.extensions.isEmpty
 import io.provenance.aggregate.service.stream.models.extensions.txEvents
@@ -19,78 +20,111 @@ import io.provenance.aggregate.service.stream.models.extensions.txHash
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.json.JSONObject
+import java.lang.IllegalStateException
+import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.min
 
-@JsonClass(generateAdapter = true)
-data class StreamBlock(
-    val block: Block,
-    val blockEvents: List<BlockEvent>,
-    val txEvents: List<TxEvent>,
-    val historical: Boolean = false
-) {
-    val height: Long? get() = block.header?.height
-}
-
-@JsonClass(generateAdapter = true)
-data class BlockEvent(
-    val height: Long,
-    val eventType: String,
-    val attributes: List<Event>,
-)
-
-@JsonClass(generateAdapter = true)
-data class TxEvent(
-    val height: Long,
-    val txHash: String,
-    val eventType: String,
-    val attributes: List<Event>,
-)
-
+@OptIn(FlowPreview::class)
 interface IEventStream {
-    @OptIn(FlowPreview::class)
-    suspend fun streamBlocks(
-        fromHeight: Long? = null,
-        concurrency: Int = DEFAULT_CONCURRENCY
-    ): Flow<Either<Throwable, StreamBlock>>
+    suspend fun streamBlocks(): Flow<Either<Throwable, StreamBlock>>
 }
 
+@OptIn(FlowPreview::class)
+@ExperimentalCoroutinesApi
 class EventStream(
     private val eventStreamService: EventStreamService,
     private val tendermintService: TendermintService,
+    private val dynamo: AwsDynamoInterface,
     private val moshi: Moshi,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
-    private val batchSize: Int = 4,
-    private val skipIfEmpty: Boolean = true
+    private val options: Options = Options.DEFAULT
 ) : IEventStream {
+
     companion object {
+        const val DEFAULT_BATCH_SIZE = 4
         const val TENDERMINT_MAX_QUERY_RANGE = 20
+        const val DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS = 100
+    }
+
+    data class Options(
+        val concurrency: Int,
+        val batchSize: Int,
+        val fromHeight: Long?,
+        val toHeight: Long?,
+        val skipIfEmpty: Boolean,
+        val skipIfSeen: Boolean
+    ) {
+        companion object {
+            val DEFAULT: Options = Builder().build()
+            fun builder() = Builder()
+        }
+
+        class Builder {
+            var concurrency: Int = DEFAULT_CONCURRENCY
+            var batchSize: Int = DEFAULT_BATCH_SIZE
+            var fromHeight: Long? = null
+            var toHeight: Long? = null
+            var skipIfEmpty: Boolean = true
+            var skipIfSeen: Boolean = false
+
+            fun concurrency(value: Int) = apply { concurrency = value }
+            fun batchSize(value: Int) = apply { batchSize = value }
+            fun fromHeight(value: Long?) = apply { fromHeight = value }
+            fun fromHeight(value: Long) = apply { fromHeight = value }
+            fun toHeight(value: Long) = apply { toHeight = value }
+            fun skipIfEmpty(value: Boolean) = apply { skipIfEmpty = value }
+            fun skipIfSeen(value: Boolean) = apply { skipIfSeen = value }
+
+            fun build(): Options = Options(
+                concurrency = concurrency,
+                batchSize = batchSize,
+                fromHeight = fromHeight,
+                toHeight = toHeight,
+                skipIfEmpty = skipIfEmpty,
+                skipIfSeen = skipIfSeen
+            )
+        }
+    }
+
+    class Factory(
+        private val config: Config,
+        private val moshi: Moshi,
+        private val eventStreamBuilder: Scarlet.Builder,
+        private val tendermintService: TendermintService,
+        private val dynamoClient: AwsDynamoInterface,
+        private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
+    ) {
+        private fun noop(_options: EventStream.Options.Builder) {}
+
+        fun create(setOptions: (options: EventStream.Options.Builder) -> Unit = ::noop): EventStream {
+            val optionsBuilder = Options.Builder()
+                .batchSize(config.event.stream.batchSize)
+                .skipIfEmpty(true)
+            setOptions(optionsBuilder)
+            return create(optionsBuilder.build())
+        }
+
+        fun create(options: EventStream.Options): EventStream {
+            val lifecycle = LifecycleRegistry(config.event.stream.throttleDurationMs)
+            val scarlet: Scarlet = eventStreamBuilder.lifecycle(lifecycle).build()
+            val tendermintRpc: TendermintRPCStream = scarlet.create()
+            val eventStreamService = TendermintEventStreamService(tendermintRpc, lifecycle)
+
+            return EventStream(
+                eventStreamService,
+                tendermintService,
+                dynamoClient,
+                moshi,
+                options = options,
+                dispatchers = dispatchers
+            )
+        }
     }
 
     sealed class MessageType {
         object Empty : MessageType()
         data class NewBlock(val block: NewBlockResult) : MessageType()
-    }
-
-    data class Factory(
-        private val config: Config,
-        private val moshi: Moshi,
-        private val eventStreamBuilder: Scarlet.Builder,
-        private val tendermintService: TendermintService,
-        private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
-    ) {
-        fun getStream(skipEmptyBlocks: Boolean = true): EventStream {
-            val lifecycle = LifecycleRegistry(config.event.stream.throttleDurationMs)
-            val scarlet: Scarlet = eventStreamBuilder.lifecycle(lifecycle).build()
-            val tendermintRpc: TendermintRPCStream = scarlet.create()
-            val eventStreamService = TendermintEventStreamService(tendermintRpc, lifecycle)
-            return EventStream(
-                eventStreamService,
-                tendermintService,
-                moshi,
-                dispatchers = dispatchers,
-                batchSize = config.event.stream.batchSize,
-                skipIfEmpty = skipEmptyBlocks
-            )
-        }
     }
 
     private val log = logger()
@@ -150,6 +184,30 @@ class EventStream(
         }
     }
 
+    private suspend fun fetchBlockHeightsInRange(minHeight: Long, maxHeight: Long): List<Long> {
+        if (minHeight > maxHeight) {
+            return emptyList()
+        }
+
+        // invariant
+        assert((maxHeight - minHeight) <= TENDERMINT_MAX_QUERY_RANGE) {
+            "Difference between (minHeight, maxHeight) can be at maximum $TENDERMINT_MAX_QUERY_RANGE"
+        }
+
+        return (tendermintService.blockchain(minHeight, maxHeight)
+            .result
+            ?.blockMetas
+            .let {
+                if (options.skipIfEmpty) {
+                    it?.filter { it.numTxs ?: 0 > 0 }
+                } else {
+                    it
+                }
+            }?.mapNotNull { it.header?.height }
+            ?: emptyList<Long>())
+            .sortedWith(naturalOrder<Long>())
+    }
+
     /**
      * Query a block by height, returning any events associated with the block.
      *
@@ -170,6 +228,7 @@ class EventStream(
             return null
         }
 
+
         return block?.run {
             val blockResponse = tendermintService.blockResults(block.header?.height).result
             val blockEvents: List<BlockEvent> = blockResponse.blockEvents()
@@ -179,99 +238,127 @@ class EventStream(
     }
 
     /***
-     * Query a range of blocks by a given minimum and maximum height range (inclusive), returning a io.provenance.aggregate.service.flow of
-     * found historical blocks along with events associated with each block, if any.
+     * Query a collections of blocks by their heights.
      *
-     * @param minHeight The minimum block height in the query range, inclusive.
-     * @param maxHeight The maximum block height in the query range, inclusive.
-     * @return A io.provenance.aggregate.service.flow of found historical blocks along with events associated with each block, if any.
+     * Note: it is assumed the specified blocks already exists. No check will be performed to verify existence!
+     *
+     * @param blockHeights The heights of the blocks to query
+     * @return A Flow of found historical blocks along with events associated with each block, if any.
      */
-    private suspend fun queryBlockRange(minHeight: Long, maxHeight: Long): Flow<StreamBlock> {
-        if (minHeight > maxHeight) {
-            return emptyFlow()
-        }
-
-        // Only take blocks with transactions:
-        val blockHeightsInRange: List<Long> =
-            (tendermintService.blockchain(minHeight, maxHeight)
-                .result
-                ?.blockMetas
-                .let {
-                    if (skipIfEmpty) {
-                        it?.filter { it.numTxs ?: 0 > 0 }
-                    } else {
-                        it
-                    }
-                }
-                ?.map { it.header?.height }
-                ?.filterNotNull()
-                ?: emptyList<Long>())
-                .sortedWith(naturalOrder<Long>())
-
-        if (blockHeightsInRange.isEmpty()) {
-            //log.info("No block found in range ($minHeight, $maxHeight)")
-            return emptyFlow()
-        }
-
-        log.info("Found ${blockHeightsInRange.size} block(s) in range ($minHeight, $maxHeight) = $blockHeightsInRange")
-
+    private suspend fun queryBlocks(blockHeights: Iterable<Pair<Long, BlockStorageMetadata?>>): Flow<StreamBlock> {
         // Chunk up the heights of returned blocks, then for the heights in each block,
         // concurrently fetch the events for each block at the given height:
-        return blockHeightsInRange.chunked(batchSize)
+        return blockHeights.chunked(options.batchSize)
             .asFlow()
-            .transform { chunkOfHeights: List<Long> ->
-                val blocks: List<StreamBlock> = withContext(dispatchers.io()) {
-                    coroutineScope {
-                        chunkOfHeights.map { height: Long ->
-                            async {
-                                //log.info("streamHistoricalBlocks::queryBlockRange::async<${Thread.currentThread().id}>")
-                                queryBlock(Either.Left(height), skipIfNoTxs = skipIfEmpty)
-                            }
+            .transform { chunkOfHeights: List<Pair<Long, BlockStorageMetadata?>> ->
+                val blocks: List<StreamBlock> = coroutineScope {
+                    chunkOfHeights.map { (height: Long, metadata: BlockStorageMetadata?) ->
+                        async {
+                            //log.info("streamHistoricalBlocks::queryBlockRange::async<${Thread.currentThread().id}>")
+                            queryBlock(Either.Left(height), skipIfNoTxs = options.skipIfEmpty)
+                                ?.let {
+                                    it.copy(metadata = metadata)
+                                }
                         }
-                    }.awaitAll()
+                    }
+                        .awaitAll()
                         .filterNotNull()
                 }
                 for (block in blocks) {
                     emit(block)
                 }
             }
+            .flowOn(dispatchers.io())
     }
 
+    @JvmName("queryBlocksNoMetadata")
+    private suspend fun queryBlocks(blockHeights: Iterable<Long>): Flow<StreamBlock> =
+        queryBlocks(blockHeights.map { Pair(it, null) })
+
     /**
-     * Constructs a io.provenance.aggregate.service.flow of historical blocks and associated events based on a starting height. Blocks will be streamed
-     * from the given starting height up to the latest block height, as determined by the start of the io.provenance.aggregate.service.flow.
+     * Constructs a Flow of historical blocks and associated events based on a starting height. Blocks will be streamed
+     * from the given starting height up to the latest block height, as determined by the start of the Flow.
      *
      * @param fromHeight Stream blocks from the given starting height.
-     * @param concurrency The concurrency limit for the io.provenance.aggregate.service.flow's `flatMapMerge` operation. See
-     * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.io.provenance.aggregate.service.flow/flat-map-merge.html
-     * @return A io.provenance.aggregate.service.flow of historical blocks and associated events
+     * @param concurrency The concurrency limit for the Flow's `flatMapMerge` operation. See
+     * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.Flow/flat-map-merge.html
+     * @return A Flow of historical blocks and associated events
      */
-    @kotlinx.coroutines.FlowPreview
-    @kotlinx.coroutines.ExperimentalCoroutinesApi
-    suspend fun streamHistoricalBlocks(
-        fromHeight: Long,
-        concurrency: Int = DEFAULT_CONCURRENCY
-    ): Flow<Either<Throwable, StreamBlock>> {
+    suspend fun streamHistoricalBlocks(): Flow<Either<Throwable, StreamBlock>> {
+        val startingHeight: Long = options.fromHeight ?: throw IllegalStateException("No starting height set")
         val lastBlockHeight: Long = tendermintService.abciInfo().result?.response?.lastBlockHeight ?: 0
-        log.info("streamHistoricalBlocks::streaming blocks: $fromHeight to $lastBlockHeight")
-        log.info("streamHistoricalBlocks::batch size = $batchSize")
-        return getBlockHeightQueryRanges(fromHeight, lastBlockHeight)
+
+        log.info("streamHistoricalBlocks::streaming blocks: $startingHeight to $lastBlockHeight")
+        log.info("streamHistoricalBlocks::batch size = ${options.batchSize}")
+
+        // Since each pair will be TENDERMINT_MAX_QUERY_RANGE apart, and we want the cumulative number of heights
+        // to query to be DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS, we need
+        // floor(max(TENDERMINT_MAX_QUERY_RANGE, DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS) / min(TENDERMINT_MAX_QUERY_RANGE, DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS))
+        // chunks:
+        val xValue = TENDERMINT_MAX_QUERY_RANGE.toDouble()
+        val yValue = DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS.toDouble()
+        val numChunks: Int = floor(max(xValue, yValue) / min(xValue, yValue)).toInt()
+
+        return getBlockHeightQueryRanges(startingHeight, lastBlockHeight)
+            .chunked(numChunks)
             .asFlow()
-            .flatMapMerge(concurrency) { (minHeight: Long, maxHeight: Long) ->
-                queryBlockRange(minHeight, maxHeight).onStart {
-                    //log.info("streamHistoricalBlocks::querying range ($minHeight, $maxHeight)")
+            .map { heightPairChunk: List<Pair<Long, Long>> -> // each pair will be `TENDERMINT_MAX_QUERY_RANGE` units apart
+                // How tracking blocks works:
+                //   1. For a given list of height pairs <minHeight, maxHeight>, compute the overall <spanMinHeight, spanMaxHeight>
+                //   2. Generate a new sequence [spanMinHeight..spanMaxHeight]
+                val spanMinHeight: Long = heightPairChunk.minOf { it.first }
+                val spanMaxHeight: Long = heightPairChunk.maxOf { it.second }
+                val fullBlockHeights: Set<Long> = (spanMinHeight..spanMaxHeight).toSet()
+
+                // invariant:
+                assert(fullBlockHeights.size <= DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS)
+
+                // There are two ways to handle blocks that have been seen already and recorded in Dynamo, but are
+                // present in the stream:
+                //
+                // 1. Filter them out completely so that they don't appear in the resulting Flow<StreamBlock> at all
+                //
+                // 2. Include the given StreamBlock in the resulting Flow, but mark the StreamBlock's `metadata`
+                //    property as null/non-null based on the presence of the block in upstream.
+                val (seenBlockMap: Map<Long, BlockStorageMetadata>, availableBlocks: List<Long>) = coroutineScope {
+
+                    val seenBlockMap: Map<Long, BlockStorageMetadata> =
+                        dynamo.getBlockMetadataMap(fullBlockHeights)  // Capped at size=DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS
+
+                    val availableBlocks = heightPairChunk
+                        // Filter out spans in which all block heights have been seen already:
+                        .filter { (minHeight, maxHeight) -> !((minHeight..maxHeight).all { it in seenBlockMap }) }
+                        // Fetch the blocks in range chunk [minHeight, maxHeight]:
+                        .map { (minHeight, maxHeight) ->
+                            async { fetchBlockHeightsInRange(minHeight, maxHeight) }
+                        }.awaitAll()
+                        // Flatten all the existing block height lists:
+                        .flatten()
+                        // Remove any that have already been recorded in Dynamo:
+                        .let { blocks ->
+                            if (options.skipIfSeen) {
+                                blocks.filter { it !in seenBlockMap }
+                            } else {
+                                blocks
+                            }
+                        }
+
+                    Pair(seenBlockMap, availableBlocks)
                 }
+
+                availableBlocks.map { height: Long -> Pair(height, seenBlockMap[height]) }
             }
-            .map {
-                Either.Right(it.copy(historical = true))
-            }
-            .catch { e -> Either.Left(e) }
+            .flowOn(dispatchers.io())
+            .flatMapMerge(options.concurrency) { queryBlocks(it) }
+            .flowOn(dispatchers.io())
+            .map { Either.Right(it.copy(historical = true)) }
+        //.catch { e -> Either.Left(e) }
     }
 
     /**
-     * Constructs a io.provenance.aggregate.service.flow of newly minted blocks and associated events as the blocks are added to the chain.
+     * Constructs a Flow of newly minted blocks and associated events as the blocks are added to the chain.
      *
-     * @return A io.provenance.aggregate.service.flow of newly minted blocks and associated events
+     * @return A Flow of newly minted blocks and associated events
      */
     suspend fun streamLiveBlocks(): Flow<Either<Throwable, StreamBlock>> {
         // Toggle the Lifecycle register start state :
@@ -326,7 +413,7 @@ class EventStream(
                 log.info("streamLiveBlocks::thread<${Thread.currentThread().id}>")
             }
             .retryWhen { cause: Throwable, attempt: Long ->
-                log.info("streamLiveBlocks::recovering io.provenance.aggregate.service.flow (attempt ${attempt + 1})")
+                log.info("streamLiveBlocks::recovering Flow (attempt ${attempt + 1})")
                 when (cause) {
                     is JsonDataException -> {
                         log.warn("streamLiveBlocks::parse error: $cause")
@@ -338,27 +425,20 @@ class EventStream(
     }
 
     /**
-     * Constructs a io.provenance.aggregate.service.flow of live and historical blocks, plus associated event data.
+     * Constructs a Flow of live and historical blocks, plus associated event data.
      *
-     * If a starting height is provided, historical blocks will be included in the io.provenance.aggregate.service.flow from the starting height, up
-     * to the latest block height determined at the start of the collection of the io.provenance.aggregate.service.flow.
+     * If a starting height is provided, historical blocks will be included in the Flow from the starting height, up
+     * to the latest block height determined at the start of the collection of the Flow.
      *
-     * @param fromHeight The optional block height to start streaming from for historical block data.
-     * @param concurrency The concurrency limit for the io.provenance.aggregate.service.flow's `flatMapMerge` operation. See
-     * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.io.provenance.aggregate.service.flow/flat-map-merge.html
-     * @return A io.provenance.aggregate.service.flow of live and historical blocks, plus associated event data.
+     * @return A Flow of live and historical blocks, plus associated event data.
      */
-    @kotlinx.coroutines.FlowPreview
-    @kotlinx.coroutines.ExperimentalCoroutinesApi
-    override suspend fun streamBlocks(
-        fromHeight: Long?,
-        concurrency: Int
-    ): Flow<Either<Throwable, StreamBlock>> {
-        return if (fromHeight != null) {
-            merge(streamHistoricalBlocks(fromHeight, concurrency), streamLiveBlocks())
+    override suspend fun streamBlocks(): Flow<Either<Throwable, StreamBlock>> =
+        if (options.fromHeight != null) {
+            log.info("Listening for live and historical blocks from height ${options.fromHeight}")
+            merge(streamHistoricalBlocks(), streamLiveBlocks())
         } else {
+            log.info("Listening for live blocks only")
             streamLiveBlocks()
         }
-    }
 }
 

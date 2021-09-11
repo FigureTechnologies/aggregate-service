@@ -3,6 +3,7 @@ package io.provenance.aggregate.service.utils
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.provenance.aggregate.service.DispatcherProvider
+import io.provenance.aggregate.service.DynamoConfig
 import io.provenance.aggregate.service.S3Config
 import io.provenance.aggregate.service.stream.json.JSONObjectAdapter
 import io.provenance.aggregate.service.stream.models.BlockResponse
@@ -45,4 +46,7 @@ object Defaults {
             .toTypedArray()
 
     val s3Config: S3Config = S3Config(region = S3_REGION, bucket = S3_BUCKET)
+
+    val dynamoConfig: DynamoConfig =
+        DynamoConfig(region = S3_REGION, blockMetadataTable = DYNAMODB_BLOCK_METADATA_TABLE)
 }

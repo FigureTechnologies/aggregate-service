@@ -5,7 +5,9 @@ import com.tinder.scarlet.WebSocket
 import io.provenance.aggregate.service.base.TestBase
 import io.provenance.aggregate.service.mocks.MockEventStreamService
 import io.provenance.aggregate.service.mocks.MockTendermintService
+import io.provenance.aggregate.service.mocks.NoOpDynamo
 import io.provenance.aggregate.service.mocks.ServiceMocker
+import io.provenance.aggregate.service.stream.TendermintService
 import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
 import io.provenance.aggregate.service.stream.models.BlockResponse
 import io.provenance.aggregate.service.stream.models.BlockResultsResponse
@@ -14,11 +16,16 @@ import io.provenance.aggregate.service.utils.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class StreamTests : TestBase() {
+
+    // Fake Dynamo usage for these tests. This implementation stores nothing and returns nothing when fetching
+    // block metadata by block height:
+    val noopDynamo = NoOpDynamo()
 
     @BeforeAll
     override fun setup() {
@@ -58,25 +65,29 @@ class StreamTests : TestBase() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testBlockResponse() {
-        val tm = ServiceMocker.Builder()
+
+        val tendermint: TendermintService = ServiceMocker.Builder()
             .doFor("block") { templates.readAs(BlockResponse::class.java, "block/${it[0]}.json") }
             .build(MockTendermintService::class.java)
 
         val expectedHeight = MIN_BLOCK_HEIGHT
 
+        // Expect success:
         dispatcherProvider.runBlockingTest {
-            assert(tm.block(expectedHeight).result?.block?.header?.height == expectedHeight)
+            assert(tendermint.block(expectedHeight).result?.block?.header?.height == expectedHeight)
         }
 
+        // Retrieving a non-existent block should fail (negative case):
         assertThrows<Throwable> {
             dispatcherProvider.runBlockingTest {
-                tm.block(-1)
+                tendermint.block(-1)
             }
         }
 
+        // Retrieving a non-existent block should fail (non-existent case):
         assertThrows<Throwable> {
             dispatcherProvider.runBlockingTest {
-                tm.block(999999999)
+                tendermint.block(999999999)
             }
         }
     }
@@ -84,25 +95,29 @@ class StreamTests : TestBase() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testBlockResultsResponse() {
-        val tm = ServiceMocker.Builder()
+
+        val tendermint: TendermintService = ServiceMocker.Builder()
             .doFor("blockResults") { templates.readAs(BlockResultsResponse::class.java, "block_results/${it[0]}.json") }
             .build(MockTendermintService::class.java)
 
         val expectedHeight = MIN_BLOCK_HEIGHT
 
+        // Expect success:
         dispatcherProvider.runBlockingTest {
-            assert(tm.blockResults(expectedHeight).result.height == expectedHeight)
+            assert(tendermint.blockResults(expectedHeight).result.height == expectedHeight)
         }
 
+        // Retrieving a non-existent block should fail (negative case):
         assertThrows<Throwable> {
             dispatcherProvider.runBlockingTest {
-                tm.blockResults(-1)
+                tendermint.blockResults(-1)
             }
         }
 
+        // Retrieving a non-existent block should fail (non-existent case):
         assertThrows<Throwable> {
             dispatcherProvider.runBlockingTest {
-                tm.blockResults(999999999)
+                tendermint.blockResults(999999999)
             }
         }
     }
@@ -110,7 +125,8 @@ class StreamTests : TestBase() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testBlockchainResponse() {
-        val tm = ServiceMocker.Builder()
+
+        val tendermint: TendermintService = ServiceMocker.Builder()
             .doFor("blockchain") {
                 templates.readAs(
                     BlockchainResponse::class.java,
@@ -123,12 +139,12 @@ class StreamTests : TestBase() {
         val expectedMaxHeight: Long = expectedMinHeight + 20 - 1
 
         dispatcherProvider.runBlockingTest {
-            val blockMetas = tm.blockchain(expectedMinHeight, expectedMaxHeight).result?.blockMetas
+            val blockMetas = tendermint.blockchain(expectedMinHeight, expectedMaxHeight).result?.blockMetas
 
             assert(blockMetas?.size == 20)
 
             val expectedHeights: Set<Long> = (expectedMinHeight..expectedMaxHeight).toSet()
-            val heights: Set<Long> = blockMetas?.map { b -> b.header?.height }?.filterNotNull()?.toSet() ?: setOf()
+            val heights: Set<Long> = blockMetas?.mapNotNull { b -> b.header?.height }?.toSet() ?: setOf()
 
             assert((expectedHeights - heights).isEmpty())
 
@@ -136,7 +152,7 @@ class StreamTests : TestBase() {
 
         assertThrows<Throwable> {
             dispatcherProvider.runBlockingTest {
-                tm.blockchain(-expectedMinHeight, expectedMaxHeight)
+                tendermint.blockchain(-expectedMinHeight, expectedMaxHeight)
             }
         }
     }
@@ -144,6 +160,7 @@ class StreamTests : TestBase() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testWebsocketReceiver() {
+
         dispatcherProvider.runBlockingTest {
             val heights: Set<Long> = setOf(
                 MIN_BLOCK_HEIGHT,
@@ -156,8 +173,10 @@ class StreamTests : TestBase() {
                     .toTypedArray()
 
             // set up:
-            val ess = MockEventStreamService.Builder(Defaults.moshi)
-                .addResponse(BlockResponse::class.java, *blocks)
+            val ess = MockEventStreamService
+                .builder()
+                .dispatchers(dispatcherProvider)
+                .response(BlockResponse::class.java, *blocks)
                 .build()
 
             val receiver = ess.observeWebSocketEvent()
@@ -173,20 +192,34 @@ class StreamTests : TestBase() {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
     @Test
     fun testHistoricalBlockStreaming() {
+
         dispatcherProvider.runBlockingTest {
+
             // If not skipping empty blocks, we should get 100:
-            val collectedNoSkip = Builders.defaultEventStream(dispatcherProvider, skipIfEmpty = false)
-                .streamHistoricalBlocks(MIN_BLOCK_HEIGHT)
+            val collectedNoSkip = Builders.eventStream()
+                .dispatchers(dispatcherProvider)
+                .dynamoInterface(noopDynamo)
+                .fromHeight(MIN_BLOCK_HEIGHT)
+                .skipIfEmpty(false)
+                .build()
+                .streamHistoricalBlocks()
                 .toList()
+
             assert(collectedNoSkip.size.toLong() == EXPECTED_TOTAL_BLOCKS)
             assert(collectedNoSkip.all { it.isRight() && it.orNull()?.historical ?: false })
 
             // If skipping empty blocks, we should get EXPECTED_NONEMPTY_BLOCKS:
-            val collectedSkip = Builders.defaultEventStream(dispatcherProvider, skipIfEmpty = true)
-                .streamHistoricalBlocks(MIN_BLOCK_HEIGHT).toList()
+            val collectedSkip = Builders.eventStream()
+                .dispatchers(dispatcherProvider)
+                .dynamoInterface(noopDynamo)
+                .fromHeight(MIN_BLOCK_HEIGHT)
+                .build()
+                .streamHistoricalBlocks().toList()
                 .toList()
+
             assert(collectedSkip.size.toLong() == EXPECTED_NONEMPTY_BLOCKS)
             assert(collectedSkip.all { it.isRight() && it.orNull()?.historical ?: false })
         }
@@ -195,24 +228,26 @@ class StreamTests : TestBase() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testLiveBlockStreaming() {
-        dispatcherProvider.runBlockingTest {
-            val eventStreamService = Builders.defaultEventStreamService(includeLiveBlocks = true).build()
 
-            val tendermintService = Builders.defaultTendermintService()
+        dispatcherProvider.runBlockingTest {
+
+            val eventStreamService = Builders.eventStreamService(includeLiveBlocks = true)
+                .dispatchers(dispatcherProvider)
+                .build()
+
+            val tendermintService = Builders.tendermintService()
                 .build(MockTendermintService::class.java)
 
-            val eventStream = Builders.defaultEventStream(
-                dispatcherProvider,
-                eventStreamService,
-                tendermintService,
-                skipIfEmpty = false
-            )
+            val eventStream = Builders.eventStream()
+                .dispatchers(dispatcherProvider)
+                .eventStreamService(eventStreamService)
+                .tendermintService(tendermintService)
+                .dynamoInterface(noopDynamo)
+                .skipIfEmpty(false)
+                .build()
 
-            // Explicitly taking the expected response count items from the io.provenance.aggregate.service.flow will implicitly cancel it after
-            // that number of items as been consumed. Otherwise, the mock websocket receiver (like the real one),
-            // will just wait indefinitely for further events.
-            val collected = eventStream.streamLiveBlocks()
-                .take(eventStreamService.expectedResponseCount().toInt())
+            val collected = eventStream
+                .streamLiveBlocks()
                 .toList()
 
             assert(eventStreamService.expectedResponseCount() > 0)
@@ -223,25 +258,32 @@ class StreamTests : TestBase() {
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
     @Test
     fun testCombinedBlockStreaming() {
-        dispatcherProvider.runBlockingTest {
-            val eventStreamService = Builders.defaultEventStreamService(includeLiveBlocks = true).build()
 
-            val tendermintService = Builders.defaultTendermintService()
+        dispatcherProvider.runBlockingTest {
+
+            val eventStreamService = Builders.eventStreamService(includeLiveBlocks = true)
+                .dispatchers(dispatcherProvider)
+                .build()
+
+            val tendermintService = Builders.tendermintService()
                 .build(MockTendermintService::class.java)
 
-            val eventStream = Builders.defaultEventStream(
-                dispatcherProvider,
-                eventStreamService,
-                tendermintService,
-                skipIfEmpty = true
-            )
+            val eventStream = Builders.eventStream()
+                .dispatchers(dispatcherProvider)
+                .eventStreamService(eventStreamService)
+                .tendermintService(tendermintService)
+                .dynamoInterface(noopDynamo)
+                .fromHeight(MIN_BLOCK_HEIGHT)
+                .skipIfEmpty(true)
+                .build()
 
             val expectTotal = EXPECTED_NONEMPTY_BLOCKS + eventStreamService.expectedResponseCount()
-            val collected = eventStream.streamBlocks(MIN_BLOCK_HEIGHT)
-                .take(expectTotal.toInt())
+
+            val collected = eventStream
+                .streamBlocks()
                 .toList()
 
             assert(collected.size == expectTotal.toInt())

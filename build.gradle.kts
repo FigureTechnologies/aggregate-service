@@ -1,13 +1,29 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+object Version {
+    val arrow = "0.12.1"
+    val apacheCommons = "1.9"
+    val aws = "2.17.40"
+    val grpc = "1.39.0"
+    val hoplite = "1.4.7"
+    val junit = "5.1.0"
+    val kotlinx = "1.5.2"
+    val logback = "0.1.5"
+    val moshi = "1.12.0"
+    val provenance = "1.5.0"
+    val scarlet = "0.1.12"
+    val awsSdk = "2.17.32"
+    val localstack = "0.2.15"
+}
+
 plugins {
-    kotlin("jvm") version "1.5.21"
-    kotlin("plugin.spring") version "1.5.21"
-    id("org.jetbrains.kotlin.kapt") version "1.5.21"
+    kotlin("jvm")
+    id("org.jetbrains.kotlin.kapt")
     id("com.google.protobuf") version "0.8.17"
     id("org.openapi.generator") version "5.2.1"
-//    id("org.springframework.boot") version "2.5.3"
-//    id("io.spring.dependency-management") version "1.0.11.RELEASE"
+    // kotlin("plugin.spring") version "1.5.21"
+    // id("org.springframework.boot") version "2.5.3"
+    // id("io.spring.dependency-management") version "1.0.11.RELEASE"
     application
     idea
 }
@@ -37,29 +53,16 @@ repositories {
     }
 }
 
-object Version {
-    val arrow = "0.12.1"
-    val apacheCommons = "1.9"
-    val aws = "2.15.0"
-    val grpc = "1.39.0"
-    val hoplite = "1.4.7"
-    val junit = "5.1.0"
-    val kotlinx = "1.5.0"
-    val logback = "0.1.5"
-    val moshi = "1.12.0"
-    val provenance = "1.5.0"
-    val scarlet = "0.1.12"
-    val awsSdk = "2.17.32"
-    val localstack = "0.2.15"
-}
-
 dependencies {
+    // All dependencies in the `org.jetbrains.kotlin` package will use the version of kotlin defined in
+    // `gradle.properties`: used to pin the org.jetbrains.kotlin.{jvm,kapt} plugin versions in `settings.gradle.kts`.
     implementation("org.jetbrains.kotlin", "kotlin-stdlib")
-    implementation("org.jetbrains.kotlin", "kotlin-reflect", Version.kotlinx)
+    implementation("org.jetbrains.kotlin", "kotlin-reflect")
+
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.kotlinx)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.kotlinx)
+    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-reactive", Version.kotlinx)
 
-    testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.kotlinx)
     testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-test", Version.kotlinx)
     testImplementation("org.junit.jupiter", "junit-jupiter-engine", Version.junit)
     testImplementation("org.apache.commons", "commons-text", Version.apacheCommons)
@@ -92,6 +95,7 @@ dependencies {
     implementation("software.amazon.awssdk:netty-nio-client")
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:dynamodb")
+    implementation("software.amazon.awssdk:dynamodb-enhanced")
 
     implementation("cloud.localstack", "localstack-utils", Version.localstack)
 
@@ -137,6 +141,14 @@ tasks.compileKotlin {
     }
 }
 
+tasks.compileTestKotlin {
+    kotlinOptions {
+        freeCompilerArgs += "-Xjsr305=strict"
+        freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+        jvmTarget = "11"
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
 }
@@ -156,7 +168,7 @@ tasks.register<org.openapitools.generator.gradle.plugin.tasks.GenerateTask>("gen
     packageName.set("io.provenance.aggregate.service.stream")
     modelPackage.set("io.provenance.aggregate.service.stream.models")
     library.set("jvm-okhttp4")
-    //library.set("jvm-retrofit2")
+//library.set("jvm-retrofit2")
     configOptions.set(
         mapOf(
             "artifactId" to "tendermint-api",
