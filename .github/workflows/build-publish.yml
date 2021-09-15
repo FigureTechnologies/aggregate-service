@@ -25,7 +25,6 @@ jobs:
   deploy:
     runs-on: [linux, self-hosted]
     steps:
-      - uses: actions/checkout@v2
       - name: Checkout Figure shared-actions
       - uses: actions/checkout@v2
         with:
