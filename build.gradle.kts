@@ -22,15 +22,15 @@ repositories {
     maven {
         url = uri("https://nexus.figure.com/repository/mirror")
         credentials {
-            username = findProperty("nexusUser")?.toString() ?: System.getenv("NEXUS_USER")
-            password = findProperty("nexusPass")?.toString() ?:System.getenv("NEXUS_PASS")
+            username = (project.properties["nexusUser"] ?: System.getenv("NEXUS_USER")) as String?
+            password = (project.properties["nexusPass"] ?: System.getenv("NEXUS_PASS")) as String?
         }
     }
     maven {
         url = uri("https://nexus.figure.com/repository/figure")
         credentials {
-            username = findProperty("nexusUser")?.toString() ?: System.getenv("NEXUS_USER")
-            password = findProperty("nexusPass")?.toString() ?:System.getenv("NEXUS_PASS")
+            username = (project.properties["nexusUser"] ?: System.getenv("NEXUS_USER")) as String?
+            password = (project.properties["nexusPass"] ?: System.getenv("NEXUS_PASS")) as String?
         }
     }
 }
@@ -174,4 +174,3 @@ tasks.register<org.openapitools.generator.gradle.plugin.tasks.GenerateTask>("gen
 //        )
 //    )
 }
-
