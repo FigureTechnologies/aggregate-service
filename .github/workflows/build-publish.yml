@@ -41,13 +41,13 @@ jobs:
         uses: ./shared-actions/set-env-action
         with:
           dev_cluster: pio-test
-      - uses: actions/checkout@v2
-      - name: Deploy Serverless
-        uses: serverless/github-action@v1
-        with:
-          args: deploy
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_TOKEN }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
-          SLS_DEBUG: 1
+#      - uses: actions/checkout@v2
+#      - name: Deploy Serverless
+#        uses: serverless/github-action@v1
+#        with:
+#          args: deploy
+#        env:
+#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_TOKEN }}
+#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
+#          SLS_DEBUG: 1
 
