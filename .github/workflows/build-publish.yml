@@ -23,6 +23,13 @@ jobs:
     name: Deploy Serverless AWS environment
     runs-on: [self-hosted, linux]
     steps:
+      - name: Checkout Figure shared-actions
+        uses: actions/checkout@v2
+        with:
+          repository: FigureTechnologies/shared-actions
+          ref: main
+          token: ${{ secrets.PAT }}
+          path: shared-actions
       - uses: actions/checkout@v2
       - name: serverless deploy
         uses: serverless/github-action@v1
