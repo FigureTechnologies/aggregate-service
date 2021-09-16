@@ -37,15 +37,15 @@ jobs:
       - name: Build jar
         run: ./gradlew installDist
 
+      - name: debug
+        run: cd build && ls -l && cd libs && ls -l
+
       - name: Upload aggregate-service artifact
         uses: actions/upload-artifact@v2
         with:
           name: aggregate-service
           path: aggregate-service/build/libs/*.jar
-      - name: debug
-        run: pwd
-      - name: debug2
-        run: ls -l
+
   docker_build:
     name: Push to GitHub Docker Package Registry
     needs: java_build
