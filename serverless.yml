@@ -21,8 +21,8 @@ resources:
           - AttributeName: blockHeight
             KeyType: HASH
         ProvisionedThroughput: # Might need to turn on auto-scaling, default to 5 reads and writes for now.
-          ReadCapacityUnits: 5
-          WriteCapacityUnits: 5
+          ReadCapacityUnits: 25
+          WriteCapacityUnits: 25
 
 ## Below is to run serverless against localstack
 #plugins:
