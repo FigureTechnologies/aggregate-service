@@ -29,6 +29,11 @@ jobs:
         run: ./gradlew clean build --refresh-dependencies
       - name: Build jar
         run: ./gradlew installDist
+      - name: Upload aggregate-service artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: aggregate-service
+          path: aggregate-service/build/libs/*.jar
   docker_build:
     name: Push to GitHub Docker Package Registry
     needs: java_build
