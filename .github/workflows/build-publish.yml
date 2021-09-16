@@ -81,7 +81,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: aggregate-serice
-          path: aggregate-service/build/libs
+          path: build/libs
       - name: Log into registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Build and push
