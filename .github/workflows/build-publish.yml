@@ -10,10 +10,20 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+
   java_build:
     name: Build Jar
     runs-on: ubuntu-latest
     steps:
+      - name: Get Version
+        run: |
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: Build Project
         run: ./gradlew clean build --refresh-dependencies
@@ -21,15 +31,8 @@ jobs:
         run: ./gradlew installDist
   deploy:
     name: Deploy Serverless AWS environment
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Figure shared-actions
-        uses: actions/checkout@v2
-        with:
-          repository: FigureTechnologies/shared-actions
-          ref: main
-          token: ${{ secrets.PAT }}
-          path: shared-actions
       - uses: actions/checkout@v2
       - name: serverless deploy
         uses: serverless/github-action@v1
