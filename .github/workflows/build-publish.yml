@@ -31,7 +31,7 @@ jobs:
           java-version: 11
           server-id: github
 
-      - name: Compile Project
+      - name: Build Project
         run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION
 
       - name: debug
@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: aggregate-service
-          path: aggregate-service/build/libs/*.jar
+          path: /build/libs/*.jar
 
   docker_build:
     name: Push to GitHub Docker Package Registry
