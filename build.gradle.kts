@@ -19,20 +19,6 @@ val TENDERMINT_OPENAPI_YAML = "$rootDir/src/main/resources/tendermint-v0.34.12-r
 repositories {
     mavenLocal()
     mavenCentral()
-    maven {
-        url = uri("https://nexus.figure.com/repository/mirror")
-        credentials {
-            username = (project.properties["nexusUser"] ?: System.getenv("NEXUS_USER")) as String?
-            password = (project.properties["nexusPass"] ?: System.getenv("NEXUS_PASS")) as String?
-        }
-    }
-    maven {
-        url = uri("https://nexus.figure.com/repository/figure")
-        credentials {
-            username = (project.properties["nexusUser"] ?: System.getenv("NEXUS_USER")) as String?
-            password = (project.properties["nexusPass"] ?: System.getenv("NEXUS_PASS")) as String?
-        }
-    }
 }
 
 object Version {
