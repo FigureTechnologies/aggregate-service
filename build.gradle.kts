@@ -160,3 +160,20 @@ tasks.register<org.openapitools.generator.gradle.plugin.tasks.GenerateTask>("gen
 //        )
 //    )
 }
+
+tasks.withType<Jar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes["Main-Class"] = "io.provenance.aggregate.service.MainKt"
+    }
+
+    from(sourceSets.main.get().output)
+    dependsOn(configurations.runtimeClasspath)
+    from({
+        configurations.runtimeClasspath.get().map { if(it.isDirectory) it else zipTree(it)}
+    })
+
+
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+}
