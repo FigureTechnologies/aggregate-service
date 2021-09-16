@@ -25,9 +25,9 @@ jobs:
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - uses: actions/checkout@v2
-      - name: Build Project
+      - name: Compile Project
         run: ./gradlew clean build --refresh-dependencies
-      - name: build jar
+      - name: Build jar
         run: ./gradlew installDist
   docker_build:
     name: Push to GitHub Docker Package Registry
@@ -48,7 +48,7 @@ jobs:
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/${{ matrix.project }}
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/aggregate-service
 
           DOCKER_TAGS=$IMAGE_ID:$VERSION
 
