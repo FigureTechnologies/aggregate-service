@@ -32,9 +32,6 @@ jobs:
   docker_build:
     name: Push to GitHub Docker Package Registry
     needs: java_build
-    strategy:
-      matrix:
-        project: aggregate-service
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
