@@ -34,14 +34,11 @@ jobs:
       - name: Build Project
         run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION
 
-      - name: debug
-        run: cd build/libs && ls -l
-
       - name: Upload aggregate-service artifact
         uses: actions/upload-artifact@v2
         with:
           name: aggregate-service
-          path: /build/libs/*.jar
+          path: build/libs/*.jar
 
   docker_build:
     name: Push to GitHub Docker Package Registry
