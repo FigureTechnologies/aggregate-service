@@ -34,11 +34,8 @@ jobs:
       - name: Compile Project
         run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION
 
-      - name: Build jar
-        run: ./gradlew installDist
-
       - name: debug
-        run: cd build && ls -l && cd libs && ls -l
+        run: cd build/libs && ls -l
 
       - name: Upload aggregate-service artifact
         uses: actions/upload-artifact@v2
@@ -96,6 +93,7 @@ jobs:
           file: aggregate-service/Dockerfile
           push: true
           tags: ${{ env.DOCKER_TAGS }}
+
   deploy:
     name: Deploy Serverless AWS environment
     runs-on: ubuntu-latest
