@@ -15,6 +15,7 @@ jobs:
     name: Build Jar
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Get Version
         run: |
           # Strip git ref prefix from version
@@ -29,16 +30,20 @@ jobs:
         with:
           java-version: 11
           server-id: github
-      - uses: actions/checkout@v2
+
       - name: Compile Project
         run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION
+
       - name: Build jar
         run: ./gradlew installDist
+
       - name: Upload aggregate-service artifact
         uses: actions/upload-artifact@v2
         with:
           name: aggregate-service
           path: aggregate-service/build/libs/*.jar
+        run: pwd
+
   docker_build:
     name: Push to GitHub Docker Package Registry
     needs: java_build
