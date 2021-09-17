@@ -1,56 +1,39 @@
 package io.provenance.aggregate.service.mocks
 
+import io.provenance.aggregate.service.DynamoConfig
 import io.provenance.aggregate.service.S3Config
 import io.provenance.aggregate.service.aws.LocalStackAwsInterface
-import kotlinx.coroutines.future.await
-import software.amazon.awssdk.services.s3.model.*
+import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
+import io.provenance.aggregate.service.aws.dynamodb.Table
+import io.provenance.aggregate.service.aws.s3.AwsS3Interface
 
-class MockAwsInterface(s3Config: S3Config) : LocalStackAwsInterface(s3Config) {
+open class MockAwsInterface protected constructor(s3Config: S3Config, dynamoConfig: DynamoConfig) :
+    LocalStackAwsInterface(s3Config, dynamoConfig) {
 
-    suspend fun createBucket(): CreateBucketResponse =
-        s3Client.createBucket(
-            CreateBucketRequest
-                .builder()
-                .bucket(s3Config.bucket)
-                .build()
-        )
-            .await()
+    class Builder() {
+        var s3Impl: AwsS3Interface? = null
+        var dynamoImpl: AwsDynamoInterface? = null
 
-    suspend fun getBucketObjects(): List<S3Object> =
-        s3Client.listObjectsV2(
-            ListObjectsV2Request
-                .builder()
-                .bucket(s3Config.bucket)
-                .build()
-        ).await()
-            .contents()
+        fun <I : AwsS3Interface> s3Implementation(impl: I) = apply { s3Impl = impl }
+        fun <I : AwsDynamoInterface> dynamoImplementation(impl: I) = apply { dynamoImpl = impl }
 
-    suspend fun listBucketObjectKeys(): List<String> =
-        getBucketObjects().map { it.key() }
+        fun build(s3Config: S3Config, dynamoConfig: DynamoConfig): MockAwsInterface {
+            return object : MockAwsInterface(s3Config, dynamoConfig) {
+                override fun s3(): AwsS3Interface {
+                    return s3Impl ?: LocalStackS3(
+                        s3Client,
+                        io.provenance.aggregate.service.aws.s3.Bucket(s3Config.bucket)
+                    )
+                }
 
-    suspend fun deleteBucketObjects(): DeleteObjectsResponse? {
-        val keys: List<String> = listBucketObjectKeys()
-        val identifiers: List<ObjectIdentifier> = keys.map { ObjectIdentifier.builder().key(it).build() }
-        return s3Client.deleteObjects(
-            DeleteObjectsRequest.builder()
-                .bucket(s3Config.bucket)
-                .delete(Delete.builder().objects(identifiers).build())
-                .build()
-        )
-            .await()
+                override fun dynamo(): AwsDynamoInterface {
+                    return dynamoImpl ?: LocalStackDynamo(dynamoClient, Table(dynamoConfig.blockMetadataTable))
+                }
+            }
+        }
     }
 
-    suspend fun deleteBucket() {
-        s3Client.deleteBucket(
-            DeleteBucketRequest.builder()
-                .bucket(s3Config.bucket)
-                .build()
-        )
-            .await()
-    }
-
-    suspend fun emptyAndDeleteBucket() {
-        deleteBucketObjects()
-        deleteBucket()
+    companion object {
+        fun builder() = Builder()
     }
 }

@@ -30,9 +30,15 @@ services:
     volumes:
       - "${TMPDIR:-/tmp/localstack}:/tmp/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
+
         # Enable using initialization scripts (maps /docker-entrypoint-initaws.d => /opt/code/localstack/, read-only)
-      - "./aws/localstack:/docker-entrypoint-initaws.d:ro"
-        # Expose ./aws/bin/ => /opt/code/localstack/scripts (read-only)
-      - "./aws/bin:/opt/code/localstack/scripts:ro"
-        # Expose ./src/main/resources/ => /opt/code/localstack/__resources/ (read-only)
-      - "./src/main/resources:/opt/code/localstack/__resources:ro"
+      - "./aws/localstack-init:/docker-entrypoint-initaws.d:ro"
+
+        # Expose ./aws/bin/ => /opt/code/localstack/__scripts__ (read-only)
+      - "./aws/bin:/opt/code/localstack/__scripts__:ro"
+
+        # Expose ./aws/config/ => /opt/code/localstack/__config__ (read-only)
+      - "./aws/config:/opt/code/localstack/__config__:ro"
+
+        # Expose ./src/main/resources/ => /opt/code/localstack/__resources__/ (read-only)
+      - "./src/main/resources:/opt/code/localstack/__resources__:ro"

@@ -1,0 +1,19 @@
+{
+  "TableName": "Aggregate-Service-Block-Metadata",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "BlockHeight",
+      "AttributeType": "N"
+    }
+  ],
+  "KeySchema": [
+    {
+      "AttributeName": "BlockHeight",
+      "KeyType": "HASH"
+    }
+  ],
+  "ProvisionedThroughput": {
+    "ReadCapacityUnits": 1,
+    "WriteCapacityUnits": 1
+  }
+}

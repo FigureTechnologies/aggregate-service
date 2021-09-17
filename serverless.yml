@@ -13,12 +13,12 @@ resources:
     usersTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: aggregateTable
+        TableName: Aggregate-Service-Block-Metadata
         AttributeDefinitions:
-          - AttributeName: blockHeight
+          - AttributeName: BlockHeight
             AttributeType: N
         KeySchema:
-          - AttributeName: blockHeight
+          - AttributeName: BlockHeight
             KeyType: HASH
         ProvisionedThroughput: # Might need to turn on auto-scaling, default to 5 reads and writes for now.
           ReadCapacityUnits: 5

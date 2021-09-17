@@ -27,3 +27,4 @@ val heightChunks: List<Pair<Long, Long>> = heights
 
 const val S3_REGION: String = "us-east-1"
 const val S3_BUCKET: String = "test-bucket"
+const val DYNAMODB_BLOCK_METADATA_TABLE: String = "test-Aggregate-Service-Block-Metadata"

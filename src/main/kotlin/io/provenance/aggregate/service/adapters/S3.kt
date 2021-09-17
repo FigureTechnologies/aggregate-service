@@ -2,9 +2,9 @@ package io.provenance.aggregate.service.adapters
 
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
-import io.provenance.aggregate.service.aws.S3StreamableObject
-import io.provenance.aggregate.service.stream.StreamBlock
+import io.provenance.aggregate.service.aws.s3.S3StreamableObject
 import io.provenance.aggregate.service.stream.models.Block
+import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.extensions.dateTime
 import software.amazon.awssdk.core.async.AsyncRequestBody
 

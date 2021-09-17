@@ -1,6 +1,5 @@
 package io.provenance.aggregate.service.mocks
 
-import io.provenance.aggregate.service.mocks.ServiceMock
 import io.provenance.aggregate.service.stream.TendermintService
 import io.provenance.aggregate.service.stream.models.*
 

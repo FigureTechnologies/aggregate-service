@@ -3,12 +3,14 @@ package io.provenance.aggregate.service.mocks
 typealias Action = (Array<out Any?>) -> Any?
 
 interface ServiceMock {
-    fun <T> respondWith(method: String, vararg args: Any?): T
+    suspend fun <T> respondWith(method: String, vararg args: Any?): T
 }
 
 class ServiceMocker private constructor(
     private val actions: Map<String, Action>
 ) : ServiceMock {
+
+    private val calls: MutableMap<String, Int> = mutableMapOf()
 
     data class Builder(
         private val buildActions: MutableMap<String, Action> = mutableMapOf(),
@@ -26,8 +28,13 @@ class ServiceMocker private constructor(
         fun <T> build(clazz: Class<T>): T = clazz.getDeclaredConstructor(ServiceMock::class.java).newInstance(build())
     }
 
-    override fun <T> respondWith(method: String, vararg args: Any?): T {
+    fun callCount(method: String): Int = calls[method] ?: 0
+
+    override suspend fun <T> respondWith(method: String, vararg args: Any?): T {
         val action = actions[method] ?: throw IllegalArgumentException("Bad method: $method")
-        return action(args) as T
+        val result = action(args) as T
+        calls.putIfAbsent(method, 0)
+        calls.computeIfPresent(method) { _, v -> v + 1 }
+        return result
     }
 }

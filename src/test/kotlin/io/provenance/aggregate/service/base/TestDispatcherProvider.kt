@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.runBlockingTest
 
+@ExperimentalCoroutinesApi
 class TestDispatcherProvider : DispatcherProvider {
 
     @OptIn(ExperimentalCoroutinesApi::class)
