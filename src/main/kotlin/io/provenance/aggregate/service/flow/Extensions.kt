@@ -15,7 +15,7 @@ import kotlin.math.*
  * @param size the number of elements to take in each list, must be positive and can be greater than the number of elements in this flow.
  */
 
-@FlowPreview
+@OptIn(FlowPreview::class)
 fun <T> Flow<T>.chunked(size: Int): Flow<List<T>> = chunked(size) { it.toList() }
 
 /**
@@ -31,7 +31,7 @@ fun <T> Flow<T>.chunked(size: Int): Flow<List<T>> = chunked(size) { it.toList() 
  * @param size the number of elements to take in each list, must be positive and can be greater than the number of elements in this flow.
  */
 
-@FlowPreview
+@OptIn(FlowPreview::class)
 fun <T, R> Flow<T>.chunked(size: Int, transform: suspend (List<T>) -> R): Flow<R> {
     require(size > 0) { "Size should be greater than 0, but was $size" }
     return windowed(size, size, true, transform)
@@ -50,7 +50,7 @@ fun <T, R> Flow<T>.chunked(size: Int, transform: suspend (List<T>) -> R): Flow<R
  * @param partialWindows controls whether or not to keep partial windows in the end if any.
  */
 
-@FlowPreview
+@OptIn(FlowPreview::class)
 fun <T> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean): Flow<List<T>> =
     windowed(size, step, partialWindows) { it.toList() }
 
@@ -71,8 +71,7 @@ fun <T> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean): Flow<Li
  * @param partialWindows controls whether or not to keep partial windows in the end if any.
  */
 
-@OptIn(ExperimentalStdlibApi::class, kotlinx.coroutines.InternalCoroutinesApi::class)
-@FlowPreview
+@OptIn(ExperimentalStdlibApi::class, kotlinx.coroutines.InternalCoroutinesApi::class, FlowPreview::class)
 fun <T, R> Flow<T>.windowed(
     size: Int,
     step: Int,

@@ -2,16 +2,22 @@ package io.provenance.aggregate.service.stream
 
 import arrow.core.Either
 import io.provenance.aggregate.service.logger
+import io.provenance.aggregate.service.stream.models.StreamBlock
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collect
 
+@OptIn(FlowPreview::class)
+@ExperimentalCoroutinesApi
 class EventStreamViewer(
     private val eventStream: EventStream,
-    private val lastHeight: Long?
+    private val options: EventStream.Options = EventStream.Options.DEFAULT
 ) {
-    constructor(eventStreamFactory: EventStream.Factory, lastHeight: Long?, skipEmptyBlocks: Boolean = true) :
-            this(eventStreamFactory.getStream(skipEmptyBlocks), lastHeight)
+    constructor(
+        eventStreamFactory: EventStream.Factory,
+        options: EventStream.Options = EventStream.Options.DEFAULT
+    ) : this(eventStreamFactory.create(), options)
 
     private val log = logger()
 
@@ -23,21 +29,20 @@ class EventStreamViewer(
         consume(error) { b, _ -> ok(b) }
     }
 
-    @OptIn(FlowPreview::class)
     suspend fun consume(
         error: (Throwable) -> Unit = ::onError,
         ok: (block: StreamBlock, serialize: (StreamBlock) -> String) -> Unit
     ) {
-        if (lastHeight != null) {
-            if (lastHeight < 0) {
+        if (options.fromHeight != null) {
+            if (options.fromHeight < 0) {
                 throw IllegalArgumentException("lastHeight must be greater than 0")
             }
-            log.info("Starting event stream at height $lastHeight")
+            log.info("Starting event stream at height ${options.fromHeight}")
         }
 
         val serializer = { b: StreamBlock -> eventStream.serialize(StreamBlock::class.java, b) }
 
-        eventStream.streamBlocks(lastHeight)
+        eventStream.streamBlocks()
             .buffer()
             .collect {
                 when (it) {

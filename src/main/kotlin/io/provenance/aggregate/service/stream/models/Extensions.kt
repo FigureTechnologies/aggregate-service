@@ -1,9 +1,7 @@
 package io.provenance.aggregate.service.stream.models.extensions
 
 import io.provenance.aggregate.service.extensions.hash
-import io.provenance.aggregate.service.stream.BlockEvent
 import io.provenance.aggregate.service.stream.RpcResponse
-import io.provenance.aggregate.service.stream.TxEvent
 import io.provenance.aggregate.service.stream.models.*
 import org.json.JSONObject
 import java.time.OffsetDateTime
