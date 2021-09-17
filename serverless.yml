@@ -4,23 +4,27 @@ provider:
   name: aws
   region: us-east-1
 
+custom:
+  s3BucketName: ${file(env.yml):BUCKET_NAME}
+  dynamoDbTableName: ${file(env.yml):DYNAMODB_TABLE_NAME}
+
 resources:
   Resources:
     S3Assets:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: aggregate-service-bucket
+        BucketName: ${self:custom.s3BucketName}
     usersTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: aggregateTable
+        TableName: ${self:custom.dynamoDbTableName}
         AttributeDefinitions:
           - AttributeName: blockHeight
             AttributeType: N
         KeySchema:
           - AttributeName: blockHeight
             KeyType: HASH
-        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 5 reads and writes for now.
+        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 25 reads and writes for now.
           ReadCapacityUnits: 25
           WriteCapacityUnits: 25
 
