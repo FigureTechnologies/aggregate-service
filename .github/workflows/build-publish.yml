@@ -103,12 +103,12 @@ jobs:
     name: Deploy Serverless AWS environment
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Create env file
         run: |
           cat > env.yml << EOF
           ${{ secrets.SERVERLESS_ENV }}
           EOF
-      - uses: actions/checkout@v2
       - name: serverless deploy
         uses: serverless/github-action@v1
         with:
