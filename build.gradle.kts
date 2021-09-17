@@ -37,20 +37,6 @@ val TENDERMINT_OPENAPI_YAML = "$rootDir/src/main/resources/tendermint-v0.34.12-r
 repositories {
     mavenLocal()
     mavenCentral()
-    maven {
-        url = uri("https://nexus.figure.com/repository/mirror")
-        credentials {
-            username = (project.properties["nexusUser"] ?: System.getenv("NEXUS_USER")) as String
-            password = (project.properties["nexusPass"] ?: System.getenv("NEXUS_PASS")) as String
-        }
-    }
-    maven {
-        url = uri("https://nexus.figure.com/repository/figure")
-        credentials {
-            username = (project.properties["nexusUser"] ?: System.getenv("NEXUS_USER")) as String
-            password = (project.properties["nexusPass"] ?: System.getenv("NEXUS_PASS")) as String
-        }
-    }
 }
 
 dependencies {
@@ -189,3 +175,19 @@ tasks.register<org.openapitools.generator.gradle.plugin.tasks.GenerateTask>("gen
 //    )
 }
 
+tasks.withType<Jar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes["Main-Class"] = "io.provenance.aggregate.service.MainKt"
+    }
+
+    from(sourceSets.main.get().output)
+    dependsOn(configurations.runtimeClasspath)
+    from({
+        configurations.runtimeClasspath.get().map { if(it.isDirectory) it else zipTree(it)}
+    })
+
+
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+}

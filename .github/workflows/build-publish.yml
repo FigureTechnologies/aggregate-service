@@ -4,20 +4,111 @@ name: Build and Deploy Serverless
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+    branches: [ main, develop ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+
+  java_build:
+    name: Build Jar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get Version
+        run: |
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+          server-id: github
+
+      - name: Build Project
+        run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION
+
+      - name: Upload aggregate-service artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: aggregate-service
+          path: build/libs/*.jar
+
+  docker_build:
+    name: Push to GitHub Docker Package Registry
+    needs: java_build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get Version
+        run: |
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "main" ] && VERSION=latest
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/aggregate-service
+
+          DOCKER_TAGS=$IMAGE_ID:$VERSION
+
+          PRERELEASE=${{ github.event.release.prerelease }}
+          echo PRERELEASE=$PRERELEASE
+
+          if [ "$PRERELEASE" == "false" ]; then
+              DOCKER_TAGS=$DOCKER_TAGS,$IMAGE_ID:latest
+          fi
+
+          echo "DOCKER_TAGS=$DOCKER_TAGS" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          install: true
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: aggregate-service
+          path: aggregate-service/build/libs
+
+      - name: Log into registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: debug
+        run: pwd && ls -l
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: aggregate-service
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.DOCKER_TAGS }}
+
   deploy:
     name: Deploy Serverless AWS environment
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Create env file
+        run: |
+          cat > env.yml << EOF
+          ${{ secrets.SERVERLESS_ENV }}
+          EOF
       - name: serverless deploy
         uses: serverless/github-action@v1
         with:
@@ -26,4 +117,3 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_TOKEN }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
           SLS_DEBUG: 1
-
