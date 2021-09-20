@@ -1,0 +1,43 @@
+apiVersion: ctl.figure.com/v1
+kind: FigureDeployment
+metadata:
+  name: aggregate-service
+  namespace: apis
+  labels:
+    fd: aggregate-service
+spec:
+  selector:
+    matchLabels:
+      fd: aggregate-service
+  template:
+    metadata:
+      labels:
+        fd: aggregate-service
+    spec:
+      environments:
+        - test
+        - prod
+      deployment:
+        business_unit: figure-tech
+        business_product: figure-tech
+        configMap:
+          prod:
+            EVENT_STREAM_ID: 6b99843e-8ffc-40a6-b1a4-104d8006e23a
+            EVENT_STREAM_WEBSOCKET_URI: ws://192.168.1.244:26657
+            EVENT_STREAM_RPC_URI: http://192.168.1.244:26657
+            EVENT_STREAM_EPOCH: 499220
+          test:
+            EVENT_STREAM_ID: 6b99843e-8ffc-40a6-b1a4-104d8006e23b
+            EVENT_STREAM_EPOCH: 1158601
+            EVENT_STREAM_WEBSOCKET_URI: ws://192.168.1.244:26657
+            EVENT_STREAM_RPC_URI: http://192.168.1.244:26657
+    image:
+      prod:
+      test:
+    readinessProbe:
+      path: /
+      periodSeconds: 3
+      initialDelaySeconds: 15
+    replicas:
+      prod: 1
+      test: 1
