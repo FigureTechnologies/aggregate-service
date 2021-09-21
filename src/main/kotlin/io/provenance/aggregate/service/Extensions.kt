@@ -4,9 +4,11 @@ import com.google.common.io.BaseEncoding
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 
+fun String.decodeBase64(): String = BaseEncoding.base64().decode(this).decodeToString()
+
 fun String.hash(): String = sha256(BaseEncoding.base64().decode(this)).toHexString()
 
-fun ByteArray.toHexString() = BaseEncoding.base16().encode(this)
+fun ByteArray.toHexString(): String = BaseEncoding.base16().encode(this)
 
 fun sha256(input: ByteArray?): ByteArray =
     try {

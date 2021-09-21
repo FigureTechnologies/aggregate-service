@@ -6,6 +6,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 
 // See documentation for the enhanced DynamoDB "enhanced" async client:
 // https://github.com/aws/aws-sdk-java-v2/tree/master/services-custom/dynamodb-enhanced
+//
 // For working with immutable data, see the workaround:
 // https://github.com/aws/aws-sdk-java-v2/issues/2096#issuecomment-752667521
 @DynamoDbImmutable(builder = BlockStorageMetadata.Builder::class)

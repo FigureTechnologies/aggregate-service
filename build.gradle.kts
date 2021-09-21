@@ -45,6 +45,7 @@ dependencies {
     implementation("org.jetbrains.kotlin", "kotlin-stdlib")
     implementation("org.jetbrains.kotlin", "kotlin-reflect")
 
+    implementation("org.jetbrains.kotlinx", "kotlinx-cli-jvm", "0.3.3")
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.kotlinx)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.kotlinx)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-reactive", Version.kotlinx)

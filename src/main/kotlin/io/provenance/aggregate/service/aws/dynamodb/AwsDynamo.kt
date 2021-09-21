@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.aws.dynamodb
 
+import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -14,6 +15,8 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema
 import software.amazon.awssdk.enhanced.dynamodb.mapper.ImmutableTableSchema
 import software.amazon.awssdk.enhanced.dynamodb.model.*
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+import io.provenance.aggregate.service.aws.dynamodb.extensions.*
+import io.provenance.aggregate.service.logger
 
 // See https://aws.amazon.com/blogs/developer/introducing-enhanced-dynamodb-client-in-the-aws-sdk-for-java-v2 for usage
 
@@ -21,6 +24,8 @@ open class AwsDynamo(
     private val dynamoClient: DynamoDbAsyncClient,
     private val table: Table
 ) : AwsDynamoInterface {
+
+    val log = logger()
 
     val enhancedClient: DynamoDbEnhancedAsyncClient =
         DynamoDbEnhancedAsyncClient.builder().dynamoDbClient(dynamoClient).build()
@@ -51,14 +56,18 @@ open class AwsDynamo(
             .flatMapConcat { page: BatchGetResultPage -> page.resultsForTable(blockMetadataTable).asFlow() }
     }
 
-    // Just record block heights for now:
-    override suspend fun markBlocks(blockHeights: Iterable<Long>): WriteResult {
+    override suspend fun trackBlocks(blocks: Iterable<StreamBlock>): WriteResult {
         val writer = WriteBatch.builder(BlockStorageMetadata::class.java)
             .mappedTableResource(blockMetadataTable)
 
         var totalBlockHeights: Int = 0
-        for (blockHeight in blockHeights) {
-            writer.addPutItem(BlockStorageMetadata(blockHeight = blockHeight))
+        for (block in blocks) {
+            val metadata: BlockStorageMetadata? = block.toBlockStorageMetadata()
+            if (metadata == null) {
+                log.warn("Can't store block; missing necessary attributes")
+                continue
+            }
+            writer.addPutItem(metadata)
             totalBlockHeights += 1
         }
 
@@ -71,7 +80,7 @@ open class AwsDynamo(
 
         return WriteResult(
             processed = totalBlockHeights - unprocessedItems.size,
-            unprocessed = unprocessedItems.size
+            unprocessed = unprocessedItems.map { it.blockHeight }
         )
     }
 }

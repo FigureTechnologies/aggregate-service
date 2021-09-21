@@ -1,7 +1,7 @@
 package io.provenance.aggregate.service.aws.dynamodb
 
-data class WriteResult(val processed: Int, val unprocessed: Int) {
+data class WriteResult(val processed: Int, val unprocessed: List<Long>) {
     companion object {
-        val DEFAULT = WriteResult(processed = 0, unprocessed = 0)
+        fun empty() = WriteResult(processed = 0, unprocessed = emptyList())
     }
 }
