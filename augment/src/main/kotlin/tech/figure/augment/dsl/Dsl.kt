@@ -1,5 +1,7 @@
 package tech.figure.augment.dsl
 
+import kotlinx.serialization.Serializable
+
 // name: nycb_account_balance
 // cron: "<cron schedule>"
 // type: grpc
@@ -18,6 +20,7 @@ package tech.figure.augment.dsl
 
 // TODO validate function on all builder classes?
 
+@Serializable
 data class Job(
     val name: String,
     val cron: String,
@@ -38,6 +41,7 @@ class JobBuilder {
 
 fun job(block: JobBuilder.() -> Unit): Job = JobBuilder().apply(block).build()
 
+@Serializable
 data class Query(
     val sources: List<Source>,
     val transforms: List<Transform>,
@@ -63,7 +67,9 @@ class QueryBuilder {
     fun build(): Query = Query(sources, transforms, output)
 }
 
+@Serializable
 sealed class Source
+@Serializable
 class DbSource(val table: String, val filter: Filter?) : Source() {
     override fun equals(other: Any?): Boolean {
         return if (other?.javaClass == javaClass) {
@@ -75,6 +81,7 @@ class DbSource(val table: String, val filter: Filter?) : Source() {
         }
     }
 }
+@Serializable
 class RpcSource(val module: String) : Source() { // TODO change to something besides String
     override fun equals(other: Any?): Boolean {
         return if (other?.javaClass == javaClass) {
@@ -104,12 +111,14 @@ class RpcSourceBuilder {
     fun build(): RpcSource = RpcSource(module)
 }
 
+@Serializable
 data class Filter(
     val left: String,
     val right: String,
     val operator: Operator, // TODO change to enum
 )
 
+@Serializable
 enum class Operator {
     EQUAL,
 }
@@ -129,9 +138,12 @@ class FilterBuilder {
     }
 }
 
+@Serializable
 sealed class Transform
 
+@Serializable
 sealed class Output
+@Serializable
 class LoggingOutput : Output() {
     override fun equals(other: Any?): Boolean {
         return other?.javaClass == javaClass
