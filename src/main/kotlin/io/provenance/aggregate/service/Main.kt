@@ -81,7 +81,7 @@ fun main(args: Array<String>) {
         .add(JSONObjectAdapter())
         .build()
     val wsStreamBuilder = configureEventStreamBuilder(config.event.stream.websocketUri)
-    val tendermintService = TendermintServiceClient(config.event.stream.rpcUri)
+    val tendermintService = TendermintServiceClient(config.event.stream.rpcUri).also { println(config.event.stream.rpcUri) }
     val aws: AwsInterface = AwsInterface.create(config.environment, config.s3, config.dynamodb)
 
     val log = object {}.logger()
