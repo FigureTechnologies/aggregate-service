@@ -3,12 +3,12 @@ service: aggregate-service
 provider:
   name: aws
   region: us-east-1
-  stage: ${opt:stage, self:custom:defaultStage}
+  stage: ${opt:stage, self:custom.defaultStage}
 
 custom:
   defaultStage: dev
   s3BucketName: ${file(env.yml):${self:provider.stage}, file(env.yml):default}
-  dynamoDbTableName: ${file(env.yml):${self.provider.stage}, file(env.yml):default}
+  dynamoDbTableName: ${file(env.yml):${self:provider.stage}, file(env.yml):default}
 
 resources:
   Resources:
