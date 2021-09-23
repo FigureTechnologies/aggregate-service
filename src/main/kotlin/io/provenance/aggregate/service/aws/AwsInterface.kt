@@ -79,7 +79,7 @@ abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConf
 
     protected open fun getRegion(): Region = s3Config.region?.let { Region.of(it) } ?: DEFAULT_REGION
 
-    protected open fun getCredentialsProvider(): AwsCredentialsProvider = EnvironmentVariableCredentialsProvider()
+    protected open fun getCredentialsProvider(): AwsCredentialsProvider = DefaultCredentialsProvider.create()
 
     protected open fun getEndpointOverride(): URI? = null
 
