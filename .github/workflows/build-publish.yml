@@ -106,8 +106,8 @@ jobs:
           cat > env.yml << EOF
           ${{ secrets.SERVERLESS_ENV }}
           EOF
-      - name: serverless deploy
         if: ${{ github.head_ref }} == 'main'
+      - name: serverless deploy
         uses: serverless/github-action@v1
         with:
           args: deploy
