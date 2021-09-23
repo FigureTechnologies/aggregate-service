@@ -87,9 +87,6 @@ jobs:
       - name: Log into registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: debug
-        run: pwd && ls -l
-
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
@@ -109,6 +106,10 @@ jobs:
           cat > env.yml << EOF
           ${{ secrets.SERVERLESS_ENV }}
           EOF
+      - name: Branch Name
+        run: |
+          GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
+          echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
       - name: serverless deploy
         uses: serverless/github-action@v1
         with:
