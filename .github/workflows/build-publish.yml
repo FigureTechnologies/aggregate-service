@@ -106,11 +106,8 @@ jobs:
           cat > env.yml << EOF
           ${{ secrets.SERVERLESS_ENV }}
           EOF
-      - name: Branch Name
-        run: |
-          GIT_BRANCH=${{ github.head_ref }}
-          echo GIT_BRANCH
       - name: serverless deploy
+        if: ${{ github.head_ref }} == 'main'
         uses: serverless/github-action@v1
         with:
           args: deploy
