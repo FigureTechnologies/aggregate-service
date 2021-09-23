@@ -8,10 +8,8 @@ import io.provenance.aggregate.service.mocks.MockEventStreamService
 import io.provenance.aggregate.service.mocks.MockTendermintService
 import io.provenance.aggregate.service.mocks.ServiceMocker
 import io.provenance.aggregate.service.stream.TendermintService
-import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
-import io.provenance.aggregate.service.stream.models.BlockResponse
-import io.provenance.aggregate.service.stream.models.BlockResultsResponse
-import io.provenance.aggregate.service.stream.models.BlockchainResponse
+import io.provenance.aggregate.service.stream.models.*
+import io.provenance.aggregate.service.stream.models.extensions.toDecodedMap
 import io.provenance.aggregate.service.utils.Builders
 import io.provenance.aggregate.service.utils.EXPECTED_NONEMPTY_BLOCKS
 import io.provenance.aggregate.service.utils.EXPECTED_TOTAL_BLOCKS
@@ -36,6 +34,28 @@ class StreamTests : TestBase() {
     @AfterAll
     override fun tearDown() {
         super.tearDown()
+    }
+
+    @Nested
+    inner class EventAttributes {
+
+        @Test
+        fun testDecodingIntoMap() {
+            val recordAddrValue =
+                "InJlY29yZDFxMm0zeGFneDc2dXl2ZzRrN3l2eGM3dWhudWdnOWc2bjBsY2Robm43YXM2YWQ4a3U4Z3ZmdXVnZjZ0aiI="
+            val sessionAddrValue =
+                "InNlc3Npb24xcXhtM3hhZ3g3NnV5dmc0azd5dnhjN3VobnVnMHpwdjl1cTNhdTMzMmsyNzY2NmplMGFxZ2o4Mmt3dWUi"
+            val scopeAddrValue = "InNjb3BlMXF6bTN4YWd4NzZ1eXZnNGs3eXZ4Yzd1aG51Z3F6ZW1tbTci"
+            val eventAttributes: List<Event> = listOf(
+                Event(key = "cmVjb3JkX2FkZHI=", value = recordAddrValue, index = false),
+                Event(key = "c2Vzc2lvbl9hZGRy", value = sessionAddrValue, index = false),
+                Event(key = "c2NvcGVfYWRkcg==", value = scopeAddrValue, index = false)
+            )
+            val attributeMap = eventAttributes.toDecodedMap()
+            assert("record_addr" in attributeMap && attributeMap["record_addr"] == recordAddrValue)
+            assert("session_addr" in attributeMap && attributeMap["session_addr"] == sessionAddrValue)
+            assert("scope_addr" in attributeMap && attributeMap["scope_addr"] == scopeAddrValue)
+        }
     }
 
     @Nested

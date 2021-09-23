@@ -61,7 +61,7 @@ class MockEventStreamService private constructor(
                 channel = channel,
                 responseCount = payloads.size.toLong(),
                 moshi = moshi,
-                dispatchers = dispatchers ?: throw IllegalStateException("dispatchers must be provided")
+                dispatchers = dispatchers ?: error("dispatchers must be provided")
             )
         }
     }

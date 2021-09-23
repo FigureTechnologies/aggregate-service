@@ -96,7 +96,7 @@ object Builders {
         fun matchTxEvent(predicate: (event: String) -> Boolean) = apply { options.matchTxEvent(predicate) }
 
         suspend fun build(): EventStream {
-            val dispatchers = dispatchers ?: throw IllegalStateException("dispatchers must be provided")
+            val dispatchers = dispatchers ?: error("dispatchers must be provided")
             return EventStream(
                 eventStreamService = eventStreamService
                     ?: builders

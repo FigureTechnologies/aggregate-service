@@ -13,8 +13,9 @@ import io.provenance.aggregate.service.aws.AwsInterface
 import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
 import io.provenance.aggregate.service.extensions.decodeBase64
 import io.provenance.aggregate.service.stream.*
-import io.provenance.aggregate.service.stream.json.JSONObjectAdapter
+import io.provenance.aggregate.service.adapter.json.JSONObjectAdapter
 import io.provenance.aggregate.service.stream.models.StreamBlock
+import io.provenance.aggregate.service.stream.models.UploadResult
 import io.provenance.aggregate.service.stream.models.extensions.dateTime
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -66,6 +67,18 @@ fun main(args: Array<String>) {
     val viewOnly by parser.option(
         ArgType.Boolean, fullName = "view", description = "View blocks instead of upload"
     ).default(false)
+    val verbose by parser.option(
+        ArgType.Boolean, shortName = "v", fullName = "verbose", description = "Enables verbose output"
+    ).default(false)
+    val skipIfEmpty by parser.option(
+        ArgType.Boolean, fullName = "skip-if-empty", description = "Skip blocks that have no transactions"
+    ).default(true)
+    val skipIfSeen by parser.option(
+        ArgType.Boolean,
+        fullName = "skip-if-seen",
+        description = "Skip blocks that have already been seen (stored in DynamoDB)"
+    ).default(false)
+
     parser.parse(args)
 
     val config: Config = ConfigLoader.Builder()
@@ -87,15 +100,21 @@ fun main(args: Array<String>) {
 
     runBlocking(Dispatchers.IO) {
 
-        val checkForEvents = setOf("provenance.attribute.v1.EventAttributeAdd")
+        // https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#provenance.attribute.v1.AttributeType
+        val checkForEvents = setOf(
+            "provenance.attribute.v1.EventAttributeAdd",
+            "provenance.attribute.v1.EventAttributeUpdate",
+            "provenance.attribute.v1.EventAttributeDelete",
+            "provenance.attribute.v1.EventAttributeDistinctDelete"
+        )
 
         val options = EventStream.Options
             .builder()
             .fromHeight(fromHeight?.let { it.toLong() })
             .toHeight(toHeight?.let { it.toLong() })
-            .skipIfEmpty(true)
-            .skipIfSeen(true)
-            //.matchTxEvent { it in checkForEvents }
+            .skipIfEmpty(skipIfEmpty)
+            .skipIfSeen(skipIfSeen)
+            .matchTxEvent { it in checkForEvents }
             .build()
 
         if (viewOnly) {
@@ -111,12 +130,6 @@ fun main(args: Array<String>) {
                 .consume { b: StreamBlock ->
                     val text =
                         "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
-//                    for (event in b.blockEvents) {
-//                        println("  BLOCK EVENT = ${event.eventType}")
-//                        for (attr in event.attributes) {
-//                            println("    ${attr.key?.decodeBase64()}: ${attr.value?.decodeBase64()}")
-//                        }
-//                    }
                     println(
                         if (b.historical) {
                             text
@@ -124,13 +137,21 @@ fun main(args: Array<String>) {
                             green(text)
                         }
                     )
-                    //for (event in b.txEvents.filter { it.eventType in checkForEvents }) {
-//                    for (event in b.txEvents) {
-//                        println("  TX EVENT = ${event.eventType}")
-//                        for (attr in event.attributes) {
-//                            println("    ${attr.key?.decodeBase64()}: ${attr.value?.decodeBase64()}")
-//                        }
-//                    }
+                    if (verbose) {
+                        for (event in b.blockEvents) {
+                            println("  Block-Event: ${event.eventType}")
+                            for (attr in event.attributes) {
+                                println("    ${attr.key?.decodeBase64()}: ${attr.value?.decodeBase64()}")
+                            }
+                        }
+                        for (event in b.txEvents.filter { it.eventType in checkForEvents }) {
+                            println("  Tx-Event: ${event.eventType}")
+                            for (attr in event.attributes) {
+                                println("    ${attr.key?.decodeBase64()}: ${attr.value?.decodeBase64()}")
+                            }
+                        }
+                    }
+                    println()
                 }
         } else {
             val factory = EventStream.Factory(
@@ -140,9 +161,10 @@ fun main(args: Array<String>) {
                 tendermintService,
                 aws.dynamo()
             )
-            EventStreamUploader(factory, aws, moshi, options).upload()
+            EventStreamUploader(factory, aws, moshi, options)
+                .upload()
                 .collect { result: UploadResult ->
-                    log.info("uploaded #${result.streamBlock.height} => S3 ETag: ${result.etag}")
+                    println("uploaded #${result.batchId} => S3 ETag: ${result.eTag}")
                 }
         }
     }

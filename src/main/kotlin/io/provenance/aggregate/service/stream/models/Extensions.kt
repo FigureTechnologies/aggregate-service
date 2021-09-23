@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.stream.models.extensions
 
+import io.provenance.aggregate.service.extensions.decodeBase64
 import io.provenance.aggregate.service.extensions.hash
 import io.provenance.aggregate.service.stream.RpcResponse
 import io.provenance.aggregate.service.stream.models.*
@@ -56,3 +57,35 @@ fun BlockResultsResponseResultEvents.toTxEvent(height: Long, txHash: String): Tx
         eventType = this.type ?: "",
         attributes = this.attributes ?: emptyList()
     )
+
+/**
+ * A utility function which converts a list of key/value event attributes like:
+ *
+ *   [
+ *     {
+ *       "key": "cmVjb3JkX2FkZHI=",
+ *       "value": "InJlY29yZDFxMm0zeGFneDc2dXl2ZzRrN3l2eGM3dWhudWdnOWc2bjBsY2Robm43YXM2YWQ4a3U4Z3ZmdXVnZjZ0aiI="
+ *     },
+ *     {
+ *       "key": "c2Vzc2lvbl9hZGRy",
+ *       "value": "InNlc3Npb24xcXhtM3hhZ3g3NnV5dmc0azd5dnhjN3VobnVnMHpwdjl1cTNhdTMzMmsyNzY2NmplMGFxZ2o4Mmt3dWUi"
+ *     },
+ *     {
+ *       "key": "c2NvcGVfYWRkcg==",
+ *       "value": "InNjb3BlMXF6bTN4YWd4NzZ1eXZnNGs3eXZ4Yzd1aG51Z3F6ZW1tbTci"
+ *     }
+ *   ]
+ *
+ * which have been deserialized in `List<Event>`, into `Map<String, String>`,
+ *
+ * where keys have been base64 decoded:
+ *
+ *   {
+ *     "record_addr"  to "InJlY29yZDFxMm0zeGFneDc2dXl2ZzRrN3l2eGM3dWhudWdnOWc2bjBsY2Robm43YXM2YWQ4a3U4Z3ZmdXVnZjZ0aiI=",
+ *     "session_addr" to "InNlc3Npb24xcXhtM3hhZ3g3NnV5dmc0azd5dnhjN3VobnVnMHpwdjl1cTNhdTMzMmsyNzY2NmplMGFxZ2o4Mmt3dWUi",
+ *     "scope_addr"   to "InNjb3BlMXF6bTN4YWd4NzZ1eXZnNGs3eXZ4Yzd1aG51Z3F6ZW1tbTci"
+ *   }
+ */
+fun List<Event>.toDecodedMap(): Map<String, String?> =
+    this.mapNotNull { e -> e.key?.let { it.decodeBase64() to e.value } }
+        .toMap()

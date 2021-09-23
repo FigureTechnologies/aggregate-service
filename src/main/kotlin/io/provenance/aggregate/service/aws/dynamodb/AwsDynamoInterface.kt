@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.aws.dynamodb
 
+import io.provenance.aggregate.service.stream.batch.BatchId
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.fold
@@ -18,5 +19,5 @@ interface AwsDynamoInterface {
         }
             .toImmutableMap()
 
-    suspend fun trackBlocks(blocks: Iterable<StreamBlock>): WriteResult
+    suspend fun trackBlocks(batchId: BatchId, blocks: Iterable<StreamBlock>): WriteResult
 }

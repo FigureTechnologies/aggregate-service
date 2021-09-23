@@ -17,6 +17,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.*
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import io.provenance.aggregate.service.aws.dynamodb.extensions.*
 import io.provenance.aggregate.service.logger
+import io.provenance.aggregate.service.stream.batch.BatchId
 
 // See https://aws.amazon.com/blogs/developer/introducing-enhanced-dynamodb-client-in-the-aws-sdk-for-java-v2 for usage
 
@@ -56,13 +57,13 @@ open class AwsDynamo(
             .flatMapConcat { page: BatchGetResultPage -> page.resultsForTable(blockMetadataTable).asFlow() }
     }
 
-    override suspend fun trackBlocks(blocks: Iterable<StreamBlock>): WriteResult {
+    override suspend fun trackBlocks(batchId: BatchId, blocks: Iterable<StreamBlock>): WriteResult {
         val writer = WriteBatch.builder(BlockStorageMetadata::class.java)
             .mappedTableResource(blockMetadataTable)
 
         var totalBlockHeights: Int = 0
         for (block in blocks) {
-            val metadata: BlockStorageMetadata? = block.toBlockStorageMetadata()
+            val metadata: BlockStorageMetadata? = block.toBlockStorageMetadata(batchId)
             if (metadata == null) {
                 log.warn("Can't store block; missing necessary attributes")
                 continue

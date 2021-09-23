@@ -1,22 +1,22 @@
-package io.provenance.aggregate.service.adapters
+package io.provenance.aggregate.service.adapter.json
 
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
-import io.provenance.aggregate.service.aws.s3.S3StreamableObject
+import io.provenance.aggregate.service.aws.s3.Keys
+import io.provenance.aggregate.service.aws.s3.StreamableObject
 import io.provenance.aggregate.service.stream.models.Block
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.extensions.dateTime
 import software.amazon.awssdk.core.async.AsyncRequestBody
 
-internal fun generateKeyPrefix(block: Block) =
-    block.dateTime()
-        ?.let {
-            "${it.year}/${it.month.value}/${it.dayOfMonth}/${it.hour}"
-        } ?: "undated"
+class JsonS3Block(block: StreamBlock, moshi: Moshi) : StreamableObject {
 
-class JsonS3Block(block: StreamBlock, moshi: Moshi) : S3StreamableObject {
+    private fun generateKeyPrefix(block: Block) = block.dateTime()?.let { Keys.prefix(it) } ?: "undated"
+
     val adapter: JsonAdapter<StreamBlock> = moshi.adapter(StreamBlock::class.java)
 
     override val key = "${generateKeyPrefix(block.block)}/${block.height!!}.json"
-    override val body = AsyncRequestBody.fromString(adapter.toJson(block))
+    override val body: AsyncRequestBody by lazy {
+        AsyncRequestBody.fromString(adapter.toJson(block))
+    }
 }

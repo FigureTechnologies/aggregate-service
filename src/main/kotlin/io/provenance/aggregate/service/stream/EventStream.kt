@@ -21,6 +21,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.json.JSONObject
 import java.net.ConnectException
+import java.net.SocketException
+import java.net.SocketTimeoutException
 import java.util.concurrent.CompletionException
 import kotlin.math.floor
 import kotlin.math.max
@@ -164,9 +166,9 @@ class EventStream(
         }
     }
 
-    sealed class MessageType {
-        object Empty : MessageType()
-        data class NewBlock(val block: NewBlockResult) : MessageType()
+    sealed interface MessageType {
+        object Empty : MessageType
+        data class NewBlock(val block: NewBlockResult) : MessageType
     }
 
     private val log = logger()
@@ -254,14 +256,14 @@ class EventStream(
     /**
      * Test if any block events match the supplied predicate.
      */
-    private fun <T : BlockchainEvent> matchesBlockEvent(blockEvents: Iterable<T>): Boolean? =
-        options.blockEventPredicate?.let { p -> blockEvents.any { p(it.getType()) } }
+    private fun <T : EncodedBlockchainEvent> matchesBlockEvent(blockEvents: Iterable<T>): Boolean? =
+        options.blockEventPredicate?.let { p -> blockEvents.any { p(it.eventType) } }
 
     /**
      * Test if any transaction events match the supplied predicate.
      */
-    private fun <T : BlockchainEvent> matchesTxEvent(txEvents: Iterable<T>): Boolean? =
-        options.txEventPredicate?.let { p -> txEvents.any { p(it.getType()) } }
+    private fun <T : EncodedBlockchainEvent> matchesTxEvent(txEvents: Iterable<T>): Boolean? =
+        options.txEventPredicate?.let { p -> txEvents.any { p(it.eventType) } }
 
     /**
      * Query a block by height, returning any events associated with the block.
@@ -286,7 +288,7 @@ class EventStream(
         return block?.run {
             val blockResponse = tendermintService.blockResults(block.header?.height).result
             val blockEvents: List<BlockEvent> = blockResponse.blockEvents()
-            val txEvents: List<TxEvent> = blockResponse.txEvents { index: Int -> block.txHash(index) ?: "" }
+            val txEvents: List<TxEvent> = blockResponse.txEvents { index: Int -> txHash(index) ?: "" }
             val streamBlock = StreamBlock(this, blockEvents, txEvents)
             val matchBlock = matchesBlockEvent(blockEvents)
             val matchTx = matchesTxEvent(txEvents)
@@ -335,6 +337,23 @@ class EventStream(
                 }
             }
             .flowOn(dispatchers.io())
+        // Chunk up the heights of returned blocks, then for the heights in each block,
+        // concurrently fetch the events for each block at the given height:
+//        return channelFlow {
+//            for ((height, metadata) in blockHeights) {
+//                launch {
+//                    //log.info("querying block #${height}")
+//                    val block = queryBlock(Either.Left(height), skipIfNoTxs = options.skipIfEmpty)
+//                        ?.let {
+//                            it.copy(metadata = metadata)
+//                        }
+//                    if (block != null) {
+//                        send(block)
+//                    }
+//                }
+//            }
+//        }
+//            .flowOn(dispatchers.io())
     }
 
     @JvmName("queryBlocksNoMetadata")
@@ -374,8 +393,9 @@ class EventStream(
         }
             .map { heightPairChunk: List<Pair<Long, Long>> -> // each pair will be `TENDERMINT_MAX_QUERY_RANGE` units apart
 
-                val fullBlockHeights: Set<Long> =
-                    (heightPairChunk.minOf { it.first }..heightPairChunk.maxOf { it.second }).toSet()
+                val lowest = heightPairChunk.minOf { it.first }
+                val highest = heightPairChunk.maxOf { it.second }
+                val fullBlockHeights: Set<Long> = (lowest..highest).toSet()
 
                 // invariant:
                 assert(fullBlockHeights.size <= DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS)
@@ -410,6 +430,8 @@ class EventStream(
                             }
                         }
 
+                    log.info("${availableBlocks.size} block(s) in [$lowest..$highest]")
+
                     Pair(seenBlockMap, availableBlocks)
                 }
 
@@ -421,7 +443,6 @@ class EventStream(
             .map { Either.Right(it.copy(historical = true)) }
 
     //.catch { e -> Either.Left(e) }
-
 
     /**
      * Constructs a Flow of newly minted blocks and associated events as the blocks are added to the chain.
@@ -487,14 +508,8 @@ class EventStream(
             .retryWhen { cause: Throwable, attempt: Long ->
                 log.warn("live::error; recovering Flow (attempt ${attempt + 1})")
                 when (cause) {
-                    is CompletionException, is ConnectException -> {
-                        val duration = Backoff.forAttempt(attempt)
-                        log.error("Reconnect attempt #$attempt; waiting ${duration.inWholeSeconds}s before trying again: $cause")
-                        delay(duration)
-                        true
-                    }
                     is JsonDataException -> {
-                        log.error("streamLiveBlocks::parse error: $cause")
+                        log.error("streamLiveBlocks::parse error, skipping: $cause")
                         true
                     }
                     else -> false
@@ -521,18 +536,17 @@ class EventStream(
         }
             .transform {
                 when (it) {
-                    is Either.Left -> {
-                        log.error("${it.value}")
-                    }
-                    is Either.Right -> {
-                        emit(it.value)
-                    }
+                    is Either.Left -> log.error("${it.value}")
+                    is Either.Right -> emit(it.value)
                 }
             }
             .retryWhen { cause: Throwable, attempt: Long ->
                 log.warn("streamBlocks::error; recovering Flow (attempt ${attempt + 1})")
                 when (cause) {
-                    is CompletionException, is ConnectException -> {
+                    is CompletionException,
+                    is ConnectException,
+                    is SocketTimeoutException,
+                    is SocketException -> {
                         val duration = Backoff.forAttempt(attempt)
                         log.error("Reconnect attempt #$attempt; waiting ${duration.inWholeSeconds}s before trying again: $cause")
                         delay(duration)
