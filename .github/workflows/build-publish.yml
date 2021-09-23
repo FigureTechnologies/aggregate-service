@@ -108,8 +108,8 @@ jobs:
           EOF
       - name: Branch Name
         run: |
-          GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
-          echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
+          GIT_BRANCH=${{ github.head_ref }}
+          echo GIT_BRANCH
       - name: serverless deploy
         uses: serverless/github-action@v1
         with:
