@@ -70,8 +70,8 @@ fun main(args: Array<String>) {
 
     val config: Config = ConfigLoader.Builder()
         .addSource(EnvironmentVariablesPropertySource(useUnderscoresAsSeparator = true, allowUppercaseNames = true))
-        .addSource(PropertySource.resource("/application.properties"))
         .addSource(PropertySource.resource("/application-container.properties"))
+        .addSource(PropertySource.resource("/application.properties"))
         .build()
         .loadConfig<Config>()
         .getUnsafe()
