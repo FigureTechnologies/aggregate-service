@@ -8,7 +8,6 @@ provider:
 custom:
   defaultStage: default
   environment: ${file(env.yml):${self:provider.stage}, file(env.yml):default}
-#  dynamoDbTableName: ${file(env.yml):${self:provider.stage}, file(env.yml):DYNAMODB_TABLE_NAME}
 
 resources:
   Resources:
@@ -16,19 +15,19 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:custom.environment.BUCKET_NAME}
-#    usersTable:
-#      Type: AWS::DynamoDB::Table
-#      Properties:
-#        TableName: ${self:custom.dynamoDbTableName}
-#        AttributeDefinitions:
-#          - AttributeName: BlockHeight
-#            AttributeType: N
-#        KeySchema:
-#          - AttributeName: BlockHeight
-#            KeyType: HASH
-#        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 25 reads and writes for now.
-#          ReadCapacityUnits: 25
-#          WriteCapacityUnits: 25
+    usersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.environment.dynamoDbTableName}
+        AttributeDefinitions:
+          - AttributeName: BlockHeight
+            AttributeType: N
+        KeySchema:
+          - AttributeName: BlockHeight
+            KeyType: HASH
+        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 25 reads and writes for now.
+          ReadCapacityUnits: 25
+          WriteCapacityUnits: 25
 
 ## Below is to run serverless against localstack
 #plugins:
