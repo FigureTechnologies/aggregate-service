@@ -6,7 +6,7 @@ provider:
   stage: ${opt:stage, self:custom.defaultStage}
 
 custom:
-  defaultStage: default
+  defaultStage: dev
   environment: ${file(env.yml):${self:provider.stage}, file(env.yml):default}
 
 resources:
@@ -18,7 +18,7 @@ resources:
     usersTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:custom.environment.dynamoDbTableName}
+        TableName: ${self:custom.environment.DYNAMODB_TABLE_NAME}
         AttributeDefinitions:
           - AttributeName: BlockHeight
             AttributeType: N
