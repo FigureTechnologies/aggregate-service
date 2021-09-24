@@ -6,7 +6,7 @@ provider:
   stage: ${opt:stage, self:custom.defaultStage}
 
 custom:
-  defaultStage: dev
+  defaultStage: default
   s3BucketName: ${file(env.yml):${self:provider.stage}, file(env.yml):BUCKET_NAME}
   dynamoDbTableName: ${file(env.yml):${self:provider.stage}, file(env.yml):DYNAMODB_TABLE_NAME}
 
