@@ -6,7 +6,7 @@ provider:
   stage: ${opt:stage, self:custom.defaultStage}
 
 custom:
-  defaultStage: dev
+  defaultStage: default
   environment: ${file(env.yml):${self:provider.stage}, file(env.yml):default}
 
 resources:
