@@ -7,7 +7,7 @@ provider:
 
 custom:
   defaultStage: default
-  s3BucketName: ${file(env.yml):${self:provider.stage}, file(env.yml):default, file(env.yml):BUCKET_NAME}
+  environment: ${file(env.yml):${self:provider.stage}, file(env.yml):default}
 #  dynamoDbTableName: ${file(env.yml):${self:provider.stage}, file(env.yml):DYNAMODB_TABLE_NAME}
 
 resources:
@@ -15,7 +15,7 @@ resources:
     S3Assets:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: ${self:custom.s3BucketName}
+        BucketName: ${self:custom.environment.BUCKET_NAME}
 #    usersTable:
 #      Type: AWS::DynamoDB::Table
 #      Properties:
