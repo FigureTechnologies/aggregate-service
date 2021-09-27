@@ -20,6 +20,7 @@ import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
@@ -116,7 +117,7 @@ abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConf
         val override = getEndpointOverride()
         val httpClient = createNettyClient()
         return S3AsyncClient.builder()
-            .credentialsProvider(getCredentialsProvider())
+            .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
             .region(getRegion())
             .httpClient(httpClient)
             .serviceConfiguration(

@@ -87,9 +87,6 @@ jobs:
       - name: Log into registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: debug
-        run: pwd && ls -l
-
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
@@ -109,11 +106,23 @@ jobs:
           cat > env.yml << EOF
           ${{ secrets.SERVERLESS_ENV }}
           EOF
-      - name: serverless deploy
+      - name: Set env.BRANCH
+        run: echo "BRANCH=$(echo $GITHUB_REF | cut -d'/' -f 3)" >> $GITHUB_ENV
+      - name: serverless deploy prod
         uses: serverless/github-action@v1
         with:
-          args: deploy
+          args: deploy --stage prod
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_TOKEN }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
           SLS_DEBUG: 1
+      - name: serverless deploy dev
+        if: env.BRANCH != 'main'
+        uses: serverless/github-action@v1
+        with:
+          args: deploy --stage default
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_TOKEN }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
+          SLS_DEBUG: 1
+
