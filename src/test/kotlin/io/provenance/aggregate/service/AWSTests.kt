@@ -19,6 +19,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junitpioneer.jupiter.SetEnvironmentVariable
+import org.junitpioneer.jupiter.SetEnvironmentVariable.SetEnvironmentVariables
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
@@ -95,6 +97,16 @@ class AWSTests : TestBase() {
 
     @OptIn(FlowPreview::class, ExperimentalTime::class, ExperimentalCoroutinesApi::class)
     @Test
+    @SetEnvironmentVariables(
+        SetEnvironmentVariable(
+            key = "AWS_ACCESS_KEY_ID",
+            value = "test",
+        ),
+        SetEnvironmentVariable(
+            key = "AWS_SECRET_ACCESS_KEY",
+            value = "test"
+        )
+    )
     fun testSimpleStreamBlocksToS3() {
         // TODO: Use this when https://github.com/Kotlin/kotlinx.coroutines/issues/1204 is fixed
         // NOTE! This is possibly a problem when using `.await()` with `CompleteableFuture`, as that is needed when using
@@ -143,6 +155,16 @@ class AWSTests : TestBase() {
 
     @OptIn(FlowPreview::class, ExperimentalTime::class, ExperimentalCoroutinesApi::class)
     @Test
+    @SetEnvironmentVariables(
+        SetEnvironmentVariable(
+            key = "AWS_ACCESS_KEY_ID",
+            value = "test",
+        ),
+        SetEnvironmentVariable(
+            key = "AWS_SECRET_ACCESS_KEY",
+            value = "test"
+        )
+    )
     fun testHandlingPreviouslySeenBlocks() {
 
         runBlocking(dispatcherProvider.main()) {
