@@ -1,8 +1,8 @@
 plugins {
+    kotlin("jvm")
+
     application
     idea
-
-    id("tech.figure.augment.kotlin-application-conventions")
 
     kotlin("plugin.serialization") version "1.5.30"
 }
@@ -32,7 +32,6 @@ dependencies {
     runtimeOnly("io.grpc:grpc-netty-shaded:1.39.0")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
 }
 
 tasks.compileTestKotlin {
