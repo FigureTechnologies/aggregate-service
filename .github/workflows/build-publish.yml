@@ -37,14 +37,14 @@ jobs:
       - name: Test Project
         run: ./gradlew augment:test
 
-      - name: Build Jar Project
+      - name: Build Project
         run: ./gradlew augment:build -Pversion=$VERSION
 
       - name: Upload augment-job artifact
         uses: actions/upload-artifact@v2
         with:
           name: augment-job
-          path: build/libs/*.jar
+          path: augment/build/libs/*.jar
 
   docker_job_build:
     name: Push to GitHub Docker Package Registry
