@@ -43,7 +43,7 @@ jobs:
       - name: Upload augment-job artifact
         uses: actions/upload-artifact@v2
         with:
-          name: augment
+          name: augment-job
           path: build/libs/*.jar
 
   docker_job_build:
