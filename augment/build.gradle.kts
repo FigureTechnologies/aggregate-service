@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     application
     idea
@@ -10,7 +8,7 @@ plugins {
 }
 
 group = "tech.figure.augment"
-version = "1.0-SNAPSHOT"
+version = project.property("version")?.takeIf { it != "unspecified" } ?: "1.0-SNAPSHOT"
 
 repositories {
     mavenLocal()
@@ -27,6 +25,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.5.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.2")
+
+    implementation("com.github.jasync-sql:jasync-postgresql:2.0.2")
 
     runtimeOnly("io.grpc:grpc-netty-shaded:1.39.0")
 
@@ -42,10 +43,33 @@ tasks.compileTestKotlin {
     }
 }
 
+tasks.compileKotlin {
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
 }
 
 application {
     mainClassName = "tech.figure.augment.MainKt"
+}
+
+tasks.withType<Jar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes["Main-Class"] = "tech.figure.augment.MainKt"
+    }
+
+    from(sourceSets.main.get().output)
+    dependsOn(configurations.runtimeClasspath)
+    from({
+        configurations.runtimeClasspath.get().map { if(it.isDirectory) it else zipTree(it)}
+    })
+
+
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
 }

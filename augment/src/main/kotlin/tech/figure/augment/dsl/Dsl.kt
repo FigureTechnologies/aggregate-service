@@ -30,7 +30,7 @@ data class Job(
 class JobBuilder {
     var name: String = ""
     var cron: String = ""
-    var query: Query = Query(emptyList(), emptyList(), LoggingOutput())
+    var query: Query = Query(emptyList(), emptyList(), LoggingOutput(emptyList()))
 
     fun query(block: QueryBuilder.() -> Unit) {
         query = QueryBuilder().apply(block).build()
@@ -51,13 +51,17 @@ data class Query(
 class QueryBuilder {
     private val sources = mutableListOf<Source>()
     private val transforms = mutableListOf<Transform>()
-    private var output: Output = LoggingOutput()
+    private var output: Output = LoggingOutput(emptyList())
 
     fun dbSource(block: DbSourceBuilder.() -> Unit) {
         sources.add(DbSourceBuilder().apply(block).build())
     }
     fun rpcSource(block: RpcSourceBuilder.() -> Unit) {
         sources.add(RpcSourceBuilder().apply(block).build())
+    }
+
+    fun loggingOutput(block: LoggingOutputBuilder.() -> Unit) {
+        output = LoggingOutputBuilder().apply(block).build()
     }
 
     fun s3Output(block: S3OutputBuilder.() -> Unit) {
@@ -70,24 +74,25 @@ class QueryBuilder {
 @Serializable
 sealed class Source
 @Serializable
-class DbSource(val table: String, val filter: Filter?) : Source() {
+class DbSource(val columns: List<String>, val table: String, val filter: DbFilter?) : Source() {
     override fun equals(other: Any?): Boolean {
         return if (other?.javaClass == javaClass) {
             val o = (other as DbSource)
 
             o.table == table && (o.filter?.equals(filter) == true || (o.filter == null && filter == null))
+                && columns.all { o.columns.contains(it) } && columns.size == o.columns.size
         } else {
             false
         }
     }
 }
 @Serializable
-class RpcSource(val module: String) : Source() { // TODO change to something besides String
+class RpcSource(val module: Module, val filter: RpcFilter?) : Source() {
     override fun equals(other: Any?): Boolean {
         return if (other?.javaClass == javaClass) {
             val o = (other as RpcSource)
 
-            o.module == module
+            o.module == module && (o.filter?.equals(filter) == true || (o.filter == null && filter == null))
         } else {
             false
         }
@@ -96,26 +101,54 @@ class RpcSource(val module: String) : Source() { // TODO change to something bes
 
 class DbSourceBuilder {
     var table: String = ""
-    private var filter: Filter? = null
+    private var filter: DbFilter? = null
+    private val columns = mutableListOf<String>()
 
-    fun filter(block: FilterBuilder.() -> Unit) {
-        filter = FilterBuilder().apply(block).build()
+    fun column(block: () -> String) {
+        columns.add(block())
     }
 
-    fun build(): DbSource = DbSource(table, filter)
+    fun filter(block: DbFilterBuilder.() -> Unit) {
+        filter = DbFilterBuilder().apply(block).build()
+    }
+
+    fun build(): DbSource = DbSource(columns, table, filter)
 }
 
 class RpcSourceBuilder {
     var module: String = ""
+    private var filter: RpcFilter? = null
 
-    fun build(): RpcSource = RpcSource(module)
+    fun filter(block: RpcFilterBuilder.() -> Unit) {
+        filter = RpcFilterBuilder().apply(block).build()
+    }
+
+    fun build(): RpcSource {
+        val module = when (module) {
+            "bank" -> Module.BANK
+            else -> throw IllegalStateException("The only module(s) currently supported is \"bank\"")
+        }
+
+        return RpcSource(module, filter)
+    }
 }
 
 @Serializable
-data class Filter(
+enum class Module {
+    BANK,
+}
+
+@Serializable
+data class DbFilter(
     val left: String,
     val right: String,
-    val operator: Operator, // TODO change to enum
+    val operator: Operator,
+)
+
+@Serializable
+data class RpcFilter(
+    val setter: String,
+    val value: String,
 )
 
 @Serializable
@@ -123,18 +156,27 @@ enum class Operator {
     EQUAL,
 }
 
-class FilterBuilder {
+class DbFilterBuilder {
     var left: String = ""
     var right: String = ""
     var operator: String = ""
 
-    fun build(): Filter {
+    fun build(): DbFilter {
         val operator = when (operator) {
             "=" -> Operator.EQUAL
             else -> throw IllegalStateException("The only operator(s) currently supported is \"=\"")
         }
 
-        return Filter(left, right, operator)
+        return DbFilter(left, right, operator)
+    }
+}
+
+class RpcFilterBuilder {
+    var setter: String = ""
+    var value: String = ""
+
+    fun build(): RpcFilter {
+        return RpcFilter(setter, value)
     }
 }
 
@@ -144,17 +186,49 @@ sealed class Transform
 @Serializable
 sealed class Output
 @Serializable
-class LoggingOutput : Output() {
+class LoggingOutput(val columns: List<String>) : Output() {
     override fun equals(other: Any?): Boolean {
-        return other?.javaClass == javaClass
+        return if (other?.javaClass == javaClass) {
+            val o = (other as LoggingOutput)
+
+            return columns.all { o.columns.contains(it) } && columns.size == o.columns.size
+        } else {
+            false
+        }
     }
 }
-class S3Output : Output() {
+class S3Output(val columns: List<String>) : Output() {
     override fun equals(other: Any?): Boolean {
-        return other?.javaClass == javaClass
+        return if (other?.javaClass == javaClass) {
+            val o = (other as S3Output)
+
+            return columns.all { o.columns.contains(it) } && columns.size == o.columns.size
+        } else {
+            false
+        }
     }
 }
 
-class S3OutputBuilder {
-    fun build(): S3Output = S3Output()
+class LoggingOutputBuilder {
+    private val columns = mutableListOf<String>()
+
+    fun column(block: () -> String) {
+        columns.add(block())
+    }
+
+    fun build(): LoggingOutput = LoggingOutput(columns)
 }
+
+class S3OutputBuilder {
+    private val columns = mutableListOf<String>()
+
+    fun column(block: () -> String) {
+        columns.add(block())
+    }
+
+    fun build(): S3Output = S3Output(columns)
+}
+
+typealias Row = Map<String, String>
+typealias Data = List<Row>
+fun emptyData(): Data = listOf()

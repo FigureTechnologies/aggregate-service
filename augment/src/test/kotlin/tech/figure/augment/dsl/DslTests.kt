@@ -1,6 +1,7 @@
 package tech.figure.augment.dsl
 
 import org.junit.jupiter.api.Test
+import tech.figure.augment.dsl.Module.BANK
 import kotlin.test.assertEquals
 
 class DslTests {
@@ -12,6 +13,8 @@ class DslTests {
             query {
                 dbSource {
                     table = "table"
+                    column { "col1" }
+                    column { "col2" }
                     filter {
                         left = "left"
                         right = "right"
@@ -19,7 +22,11 @@ class DslTests {
                     }
                 }
                 rpcSource {
-                    module = "module"
+                    module = "bank"
+                }
+                loggingOutput {
+                    column { "out1" }
+                    column { "out2" }
                 }
             }
         }
@@ -30,11 +37,15 @@ class DslTests {
                 cron = "cron",
                 query = Query(
                     sources = listOf(
-                        DbSource(table = "table", filter = Filter(left = "left", right = "right", operator = Operator.EQUAL)),
-                        RpcSource(module = "module"),
+                        DbSource(
+                            table = "table",
+                            columns = listOf("col1", "col2"),
+                            filter = DbFilter(left = "left", right = "right", operator = Operator.EQUAL),
+                        ),
+                        RpcSource(module = BANK, filter = null),
                     ),
                     transforms = emptyList(),
-                    output = LoggingOutput(),
+                    output = LoggingOutput(listOf("out1", "out2")),
                 ),
             ),
             job,
