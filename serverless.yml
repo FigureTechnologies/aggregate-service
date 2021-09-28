@@ -3,21 +3,22 @@ service: aggregate-service
 provider:
   name: aws
   region: us-east-1
+  stage: ${opt:stage, self:custom.defaultStage}
 
 custom:
-  s3BucketName: ${file(env.yml):BUCKET_NAME}
-  dynamoDbTableName: ${file(env.yml):DYNAMODB_TABLE_NAME}
+  defaultStage: default
+  environment: ${file(env.yml):${self:provider.stage}, file(env.yml):default}
 
 resources:
   Resources:
     S3Assets:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: ${self:custom.s3BucketName}
+        BucketName: ${self:custom.environment.BUCKET_NAME}
     usersTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:custom.dynamoDbTableName}
+        TableName: ${self:custom.environment.DYNAMODB_TABLE_NAME}
         AttributeDefinitions:
           - AttributeName: BlockHeight
             AttributeType: N

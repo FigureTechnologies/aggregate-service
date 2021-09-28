@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.aws.dynamodb
 
+import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.fold
 import okhttp3.internal.toImmutableMap
@@ -17,5 +18,5 @@ interface AwsDynamoInterface {
         }
             .toImmutableMap()
 
-    suspend fun markBlocks(blockHeights: Iterable<Long>): WriteResult
+    suspend fun trackBlocks(blocks: Iterable<StreamBlock>): WriteResult
 }

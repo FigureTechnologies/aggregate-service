@@ -8,4 +8,6 @@ data class TxEvent(
     val txHash: String,
     val eventType: String,
     val attributes: List<Event>,
-)
+) : BlockchainEvent {
+    override fun getType(): String = eventType
+}

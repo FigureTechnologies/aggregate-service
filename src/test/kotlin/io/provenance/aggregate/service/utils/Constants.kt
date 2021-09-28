@@ -1,6 +1,7 @@
 package io.provenance.aggregate.service.utils
 
 import io.provenance.aggregate.service.stream.EventStream
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /***********************************************************************************************************************
  * Streaming
@@ -17,6 +18,7 @@ const val BATCH_SIZE: Int = 4
 
 val heights: List<Long> = (MIN_BLOCK_HEIGHT..MAX_BLOCK_HEIGHT).toList()
 
+@OptIn(ExperimentalCoroutinesApi::class)
 val heightChunks: List<Pair<Long, Long>> = heights
     .chunked(EventStream.TENDERMINT_MAX_QUERY_RANGE)
     .map { Pair(it.minOrNull()!!, it.maxOrNull()!!) }

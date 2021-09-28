@@ -6,6 +6,7 @@ import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 
 @OptIn(FlowPreview::class)
@@ -17,7 +18,7 @@ class EventStreamViewer(
     constructor(
         eventStreamFactory: EventStream.Factory,
         options: EventStream.Options = EventStream.Options.DEFAULT
-    ) : this(eventStreamFactory.create(), options)
+    ) : this(eventStreamFactory.create(options), options)
 
     private val log = logger()
 
@@ -44,11 +45,7 @@ class EventStreamViewer(
 
         eventStream.streamBlocks()
             .buffer()
-            .collect {
-                when (it) {
-                    is Either.Left -> error(it.value)
-                    is Either.Right -> ok(it.value, serializer)
-                }
-            }
+            .catch { error(it) }
+            .collect { ok(it, serializer) }
     }
 }

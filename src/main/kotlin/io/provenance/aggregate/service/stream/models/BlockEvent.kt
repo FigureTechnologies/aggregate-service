@@ -7,4 +7,6 @@ data class BlockEvent(
     val height: Long,
     val eventType: String,
     val attributes: List<Event>,
-)
+) : BlockchainEvent {
+    override fun getType(): String = eventType
+}

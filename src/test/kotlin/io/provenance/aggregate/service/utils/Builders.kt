@@ -92,6 +92,8 @@ object Builders {
         fun toHeight(value: Long) = apply { options.toHeight(value) }
         fun skipIfEmpty(value: Boolean) = apply { options.skipIfEmpty(value) }
         fun skipIfSeen(value: Boolean) = apply { options.skipIfSeen(value) }
+        fun matchBlockEvent(predicate: (event: String) -> Boolean) = apply { options.matchBlockEvent(predicate) }
+        fun matchTxEvent(predicate: (event: String) -> Boolean) = apply { options.matchTxEvent(predicate) }
 
         suspend fun build(): EventStream {
             val dispatchers = dispatchers ?: throw IllegalStateException("dispatchers must be provided")

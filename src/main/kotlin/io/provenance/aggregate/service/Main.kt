@@ -10,11 +10,15 @@ import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
 import io.provenance.aggregate.service.aws.AwsInterface
-import io.provenance.aggregate.service.stream.EventStream
-import io.provenance.aggregate.service.stream.EventStreamUploader
-import io.provenance.aggregate.service.stream.TendermintServiceClient
-import io.provenance.aggregate.service.stream.UploadResult
+import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
+import io.provenance.aggregate.service.extensions.decodeBase64
+import io.provenance.aggregate.service.stream.*
 import io.provenance.aggregate.service.stream.json.JSONObjectAdapter
+import io.provenance.aggregate.service.stream.models.StreamBlock
+import io.provenance.aggregate.service.stream.models.extensions.dateTime
+import kotlinx.cli.ArgParser
+import kotlinx.cli.ArgType
+import kotlinx.cli.default
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -52,14 +56,26 @@ fun main(args: Array<String>) {
     //
     // See https://github.com/sksamuel/hoplite#environmentvariablespropertysource
 
+    val parser = ArgParser("aggregate-service")
+    val fromHeight by parser.option(
+        ArgType.Int, fullName = "from", description = "Fetch blocks starting from height, inclusive"
+    )
+    val toHeight by parser.option(
+        ArgType.Int, fullName = "to", description = "Fetch blocks up to height, inclusive"
+    )
+    val viewOnly by parser.option(
+        ArgType.Boolean, fullName = "view", description = "View blocks instead of upload"
+    ).default(false)
+    parser.parse(args)
+
     val config: Config = ConfigLoader.Builder()
         .addSource(EnvironmentVariablesPropertySource(useUnderscoresAsSeparator = true, allowUppercaseNames = true))
+        .addSource(PropertySource.resource("/application-container.properties"))
         .addSource(PropertySource.resource("/application.properties"))
         .build()
         .loadConfig<Config>()
         .getUnsafe()
 
-    val fromHeight: Long? = args.firstOrNull()?.let { it.toLongOrNull() }
     val moshi: Moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
         .add(JSONObjectAdapter())
@@ -67,34 +83,68 @@ fun main(args: Array<String>) {
     val wsStreamBuilder = configureEventStreamBuilder(config.event.stream.websocketUri)
     val tendermintService = TendermintServiceClient(config.event.stream.rpcUri)
     val aws: AwsInterface = AwsInterface.create(config.environment, config.s3, config.dynamodb)
-    val factory = EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, aws.dynamo())
+
     val log = object {}.logger()
 
     runBlocking(Dispatchers.IO) {
 
+        val checkForEvents = setOf("provenance.attribute.v1.EventAttributeAdd")
+
         val options = EventStream.Options
             .builder()
-            .fromHeight(fromHeight)
+            .fromHeight(fromHeight?.let { it.toLong() })
+            .toHeight(toHeight?.let { it.toLong() })
             .skipIfEmpty(true)
             .skipIfSeen(true)
+            //.matchTxEvent { it in checkForEvents }
             .build()
 
-        EventStreamUploader(factory, aws, moshi, options)
-            .upload()
-            .collect { result: UploadResult ->
-                log.info("uploaded #${result.streamBlock.height} => S3 ETag: ${result.etag}::")
-            }
-
-//        EventStreamViewer(factory, options)
-//            .consume { b: StreamBlock, _serialize: (StreamBlock) -> String ->
-//                val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
-//                log.info(
-//                    if (b.historical) {
-//                        text
-//                    } else {
-//                        green(text)
+        if (viewOnly) {
+            log.info("*** VIEW MODE ***")
+            val factory = EventStream.Factory(
+                config,
+                moshi,
+                wsStreamBuilder,
+                tendermintService,
+                NoOpDynamo() // Don't record blocks that have been seen before in Dynamo
+            )
+            EventStreamViewer(factory, options)
+                .consume { b: StreamBlock ->
+                    val text =
+                        "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
+//                    for (event in b.blockEvents) {
+//                        println("  BLOCK EVENT = ${event.eventType}")
+//                        for (attr in event.attributes) {
+//                            println("    ${attr.key?.decodeBase64()}: ${attr.value?.decodeBase64()}")
+//                        }
 //                    }
-//                )
-//            }
+                    println(
+                        if (b.historical) {
+                            text
+                        } else {
+                            green(text)
+                        }
+                    )
+                    //for (event in b.txEvents.filter { it.eventType in checkForEvents }) {
+//                    for (event in b.txEvents) {
+//                        println("  TX EVENT = ${event.eventType}")
+//                        for (attr in event.attributes) {
+//                            println("    ${attr.key?.decodeBase64()}: ${attr.value?.decodeBase64()}")
+//                        }
+//                    }
+                }
+        } else {
+            val factory = EventStream.Factory(
+                config,
+                moshi,
+                wsStreamBuilder,
+                tendermintService,
+                aws.dynamo()
+            )
+            EventStreamUploader(factory, aws, moshi, options).upload()
+                .collect { result: UploadResult ->
+                    log.info("uploaded #${result.streamBlock.height} => S3 ETag: ${result.etag}")
+                }
+        }
     }
 }

@@ -14,6 +14,7 @@ object Version {
     val scarlet = "0.1.12"
     val awsSdk = "2.17.32"
     val localstack = "0.2.15"
+    val junitPioneer = "1.4.2"
 }
 
 plugins {
@@ -45,6 +46,7 @@ dependencies {
     implementation("org.jetbrains.kotlin", "kotlin-stdlib")
     implementation("org.jetbrains.kotlin", "kotlin-reflect")
 
+    implementation("org.jetbrains.kotlinx", "kotlinx-cli-jvm", "0.3.3")
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.kotlinx)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.kotlinx)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-reactive", Version.kotlinx)
@@ -52,6 +54,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-test", Version.kotlinx)
     testImplementation("org.junit.jupiter", "junit-jupiter-engine", Version.junit)
     testImplementation("org.apache.commons", "commons-text", Version.apacheCommons)
+    testImplementation("org.junit-pioneer", "junit-pioneer", Version.junitPioneer)
 
     implementation("io.arrow-kt", "arrow-core", Version.arrow)
 
