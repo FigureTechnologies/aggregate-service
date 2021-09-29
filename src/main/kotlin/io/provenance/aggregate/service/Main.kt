@@ -3,6 +3,7 @@ package io.provenance.aggregate.service
 import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.EnvironmentVariablesPropertySource
 import com.sksamuel.hoplite.PropertySource
+import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.tinder.scarlet.Scarlet
@@ -49,8 +50,6 @@ fun main(args: Array<String>) {
 
     // All configuration options can be overridden via environment variables:
     //
-    // - ENVIRONMENT=development will override the application.properties value "environment=local".
-    //
     // - To override nested configuration options separated with a dot ("."), use double underscores ("__")
     //  in the environment variable:
     //    event.stream.rpc_uri=http://localhost:26657 is overridden by "event__stream_rpc_uri=foo"
@@ -58,6 +57,12 @@ fun main(args: Array<String>) {
     // See https://github.com/sksamuel/hoplite#environmentvariablespropertysource
 
     val parser = ArgParser("aggregate-service")
+    val rawEnv by parser.option(
+        ArgType.Choice<Environment>(),
+        shortName = "e",
+        fullName = "env",
+        description = "Specify the application environment. If not present, fall back to the `\$ENVIRONMENT` envvar",
+    )
     val fromHeight by parser.option(
         ArgType.Int, fullName = "from", description = "Fetch blocks starting from height, inclusive"
     )
@@ -81,12 +86,24 @@ fun main(args: Array<String>) {
 
     parser.parse(args)
 
+    val environment: Environment =
+        rawEnv ?: runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
+            .getOrElse {
+                error("Not a valid environment: ${System.getenv("ENVIRONMENT")}")
+            }
+
     val config: Config = ConfigLoader.Builder()
         .addSource(EnvironmentVariablesPropertySource(useUnderscoresAsSeparator = true, allowUppercaseNames = true))
+        .apply {
+            // If in the local environment, override the ${...} envvar values in `application.properties` with
+            // the values provided in the local-specific `local.env.properties` property file:
+            if (environment.isLocal()) {
+                addPreprocessor(PropsPreprocessor("/local.env.properties"))
+            }
+        }
         .addSource(PropertySource.resource("/application.properties"))
         .build()
-        .loadConfig<Config>()
-        .getUnsafe()
+        .loadConfigOrThrow()
 
     val moshi: Moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
@@ -94,7 +111,7 @@ fun main(args: Array<String>) {
         .build()
     val wsStreamBuilder = configureEventStreamBuilder(config.event.stream.websocketUri)
     val tendermintService = TendermintServiceClient(config.event.stream.rpcUri)
-    val aws: AwsInterface = AwsInterface.create(config.environment, config.s3, config.dynamodb)
+    val aws: AwsInterface = AwsInterface.create(environment, config.s3, config.dynamodb)
 
     val log = object {}.logger()
 

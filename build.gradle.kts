@@ -13,6 +13,7 @@ object Version {
     const val GRPC = "1.39.0"
     const val Hoplite = "1.4.7"
     const val JUnit = "5.1.0"
+    const val JUnitPioneer = "1.4.2"
     const val JSON = "20210307"
 
     object Kotlinx {
@@ -62,6 +63,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-test", Version.Kotlinx.Core)
     testImplementation("org.junit.jupiter", "junit-jupiter-engine", Version.JUnit)
     testImplementation("org.apache.commons", "commons-text", Version.ApacheCommons.Text)
+    testImplementation("org.junit-pioneer", "junit-pioneer", Version.JUnitPioneer)
 
     implementation("io.arrow-kt", "arrow-core", Version.Arrow)
     implementation("org.apache.commons", "commons-csv", Version.ApacheCommons.CSV)

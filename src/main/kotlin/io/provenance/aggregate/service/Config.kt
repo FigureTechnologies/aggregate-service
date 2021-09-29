@@ -24,7 +24,6 @@ data class EventConfig(
 )
 
 data class Config(
-    val environment: Environment,
     val s3: S3Config,
     val dynamodb: DynamoConfig,
     val event: EventConfig

@@ -13,6 +13,7 @@ import io.provenance.aggregate.service.logger
 import org.slf4j.Logger
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
@@ -27,7 +28,7 @@ import java.time.Duration as JavaDuration
 abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConfig) {
 
     companion object {
-        val DEFAULT_REGION = Region.US_EAST_1
+        val DEFAULT_REGION: Region = Region.US_EAST_1
 
         fun create(environment: Environment, s3Config: S3Config, dynamoConfig: DynamoConfig): AwsInterface {
             return when (environment) {
@@ -69,7 +70,7 @@ abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConf
         val override = getEndpointOverride()
         val httpClient = createNettyClient()
         return S3AsyncClient.builder()
-            .credentialsProvider(getCredentialsProvider())
+            .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
             .region(getRegion())
             .httpClient(httpClient)
             .serviceConfiguration(
