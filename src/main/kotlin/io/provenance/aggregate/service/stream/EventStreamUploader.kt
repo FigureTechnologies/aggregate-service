@@ -5,18 +5,20 @@ import io.provenance.aggregate.service.DefaultDispatcherProvider
 import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.service.aws.AwsInterface
 import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
+import io.provenance.aggregate.service.aws.dynamodb.BlockBatch
 import io.provenance.aggregate.service.aws.dynamodb.WriteResult
 import io.provenance.aggregate.service.aws.s3.AwsS3Interface
-import io.provenance.aggregate.service.aws.s3.Keys
+import io.provenance.aggregate.service.aws.s3.S3Key
 import io.provenance.aggregate.service.aws.s3.StreamableObject
 import io.provenance.aggregate.service.flow.extensions.chunked
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.batch.Batch
 import io.provenance.aggregate.service.stream.batch.BatchId
+import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.UploadResult
-import io.provenance.aggregate.service.stream.models.extensions.*
+import io.provenance.aggregate.service.stream.models.extensions.dateTime
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -46,8 +48,8 @@ class EventStreamUploader(
 
     private val log = logger()
 
-    private fun csvS3Key(id: BatchId, d: OffsetDateTime?, label: String) =
-        "${d?.run { Keys.prefix(this) } ?: "undated"}/${id}/${label}.csv"
+    private fun csvS3Key(id: BatchId, d: OffsetDateTime?, label: String): S3Key =
+        S3Key("${d?.run { S3Key.createPrefix(this) } ?: "undated"}/${id}/${label}.csv")
 
     /**
      * Run the upload action. The steps for uploading are as follows:
@@ -114,20 +116,21 @@ class EventStreamUploader(
                     .awaitAll()
 
                 // Upload the results to S3:
-                val uploaded: List<UploadResult> = batch.complete { batchId, extractor ->
-                    val s3Key: String = csvS3Key(batchId, earliestDate, extractor.name)
+                val uploaded: List<UploadResult> = batch.complete { batchId: BatchId, extractor: Extractor ->
+                    val key: S3Key = csvS3Key(batchId, earliestDate, extractor.name)
                     when (val out = extractor.output()) {
                         is OutputType.FilePath -> {
                             val putResponse: PutObjectResponse = s3.streamObject(object : StreamableObject {
-                                override val key: String get() = s3Key
+                                override val key: S3Key get() = key
                                 override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(out.path)
+                                override val metadata: Map<String, String>? get() = out.metadata
                             })
                             log.info("${batchId}/${extractor.name} => put.eTag = ${putResponse.eTag()}")
                             UploadResult(
                                 batchId = batch.id,
                                 batchSize = streamBlocks.size,
                                 eTag = putResponse.eTag(),
-                                s3Key = s3Key
+                                s3Key = key
                             )
                         }
                         else -> null
@@ -135,7 +138,10 @@ class EventStreamUploader(
                 }.filterNotNull()
 
                 // Mark the blocks as having been processed:
-                val writeResult: WriteResult = dynamo.trackBlocks(batch.id, streamBlocks)
+                val s3Keys = uploaded.map { it.s3Key }
+                val blockBatch: BlockBatch = BlockBatch(batch.id, aws.s3Config.bucket, s3Keys)
+
+                val writeResult: WriteResult = dynamo.trackBlocks(blockBatch, streamBlocks)
                 log.info("Dynamo write result: $writeResult")
 
                 //  At this point, signal success by emitting results:

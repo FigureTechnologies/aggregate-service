@@ -2,4 +2,14 @@
 set -e
 
 echo "*** Creating DynamoDB tables ***"
-awslocal dynamodb create-table --cli-input-json file://__config__/create-aggregate-table.json
+
+TABLES=(
+  Aggregate-Service-Metadata-Table
+  Aggregate-Service-Block-Batch-Table
+  Aggregate-Service-Block-Metadata-Table
+)
+
+for table in ${TABLES[@]}; do
+  echo "- Creating table: $table"
+  awslocal dynamodb create-table --cli-input-json file://__config__/$table.json
+done

@@ -7,6 +7,7 @@ import io.provenance.aggregate.service.stream.models.ProvenanceEventAttribute
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.writer.csv.ApacheCommonsCSVRecordWriter
 import org.apache.commons.csv.CSVFormat
+import java.io.BufferedOutputStream
 import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.nio.file.Files
@@ -18,13 +19,12 @@ import java.nio.file.StandardOpenOption
  */
 class TxEventAttributes(val s3: AwsS3Interface) : Extractor {
 
-    override val name: String = "tx-event-attributes"
+    override val name: String = "TX_EVENT_ATTRIBUTES"
 
     private val outputFile: Path = Files.createTempFile("${name}-", ".csv")
 
     private val outputStream: OutputStream =
-        //BufferedOutputStream(TeeOutputStream(FileOutputStream(outputFile), System.out))
-        Files.newOutputStream(outputFile, StandardOpenOption.APPEND, StandardOpenOption.WRITE)
+        BufferedOutputStream(Files.newOutputStream(outputFile, StandardOpenOption.APPEND, StandardOpenOption.WRITE))
 
     val headers: Array<String> =
         arrayOf("height", "name", "value", "updatedValue", "type", "updatedType", "account", "owner")
@@ -40,7 +40,14 @@ class TxEventAttributes(val s3: AwsS3Interface) : Extractor {
         .output(OutputStreamWriter(outputStream))
         .build()
 
-    override fun output(): OutputType = OutputType.FilePath(outputFile)
+    override fun output(): OutputType {
+        return OutputType.FilePath(
+            outputFile,
+            metadata = mapOf(
+                "TableName" to name
+            )
+        )
+    }
 
     override suspend fun extract(block: StreamBlock) {
         for (e in block.txEvents) {

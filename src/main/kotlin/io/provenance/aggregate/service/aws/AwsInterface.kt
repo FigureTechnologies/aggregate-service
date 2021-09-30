@@ -5,12 +5,10 @@ import io.provenance.aggregate.service.Environment
 import io.provenance.aggregate.service.S3Config
 import io.provenance.aggregate.service.aws.dynamodb.AwsDynamo
 import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
-import io.provenance.aggregate.service.aws.dynamodb.Table
+import io.provenance.aggregate.service.aws.dynamodb.DynamoTable
 import io.provenance.aggregate.service.aws.s3.AwsS3
 import io.provenance.aggregate.service.aws.s3.AwsS3Interface
-import io.provenance.aggregate.service.aws.s3.Bucket
 import io.provenance.aggregate.service.logger
-import org.slf4j.Logger
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
@@ -81,12 +79,10 @@ abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConf
                     .pathStyleAccessEnabled(true)
                     .build()
             )
-            .let {
+            .apply {
                 if (override != null) {
                     log.info("Using endpoint override: $override")
-                    it.endpointOverride(override)
-                } else {
-                    it
+                    endpointOverride(override)
                 }
             }
             .build()
@@ -99,22 +95,25 @@ abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConf
             .credentialsProvider(getCredentialsProvider())
             .region(getRegion())
             .httpClient(httpClient)
-            .let {
+            .apply {
                 if (override != null) {
                     log.info("Using endpoint override: $override")
-                    it.endpointOverride(override)
-                } else {
-                    it
+                    endpointOverride(override)
                 }
             }
             .build()
     }
 
     open fun s3(): AwsS3Interface {
-        return AwsS3(s3Client, Bucket(s3Config.bucket))
+        return AwsS3(s3Client, s3Config.bucket)
     }
 
     open fun dynamo(): AwsDynamoInterface {
-        return AwsDynamo(dynamoClient, Table(dynamoConfig.blockMetadataTable))
+        return AwsDynamo(
+            dynamoClient,
+            dynamoConfig.blockBatchTable,
+            dynamoConfig.blockMetadataTable,
+            dynamoConfig.serviceMetadataTable
+        )
     }
 }

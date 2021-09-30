@@ -59,7 +59,7 @@ class AWSTests : TestBase() {
         // the AWS SDK v2 async clients
         runBlocking(dispatcherProvider.main()) {
             s3.createBucket()
-            dynamo.createTable()
+            dynamo.createTables()
         }
     }
 
@@ -68,7 +68,7 @@ class AWSTests : TestBase() {
         // TODO: Change this to runBlockingTest when issues are fixed. See https://github.com/Kotlin/kotlinx.coroutines/issues/1204
         runBlocking(dispatcherProvider.main()) {
             s3.emptyAndDeleteBucket()
-            dynamo.dropTable()
+            dynamo.dropTables()
         }
     }
 

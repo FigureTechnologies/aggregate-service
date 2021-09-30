@@ -305,12 +305,17 @@ class EventStream(
         }
     }
 
+    @JvmName("queryBlocksNoMetadata")
+    private fun queryBlocks(blockHeights: Iterable<Long>): Flow<StreamBlock> =
+        queryBlocks(blockHeights.map { Pair(it, null) })
+
     /***
      * Query a collections of blocks by their heights.
      *
      * Note: it is assumed the specified blocks already exists. No check will be performed to verify existence!
      *
-     * @param blockHeights The heights of the blocks to query
+     * @param blockHeights The heights of the blocks to query, along with optional metadata to attach to the fetched\
+     *  block data.
      * @return A Flow of found historical blocks along with events associated with each block, if any.
      */
     private fun queryBlocks(blockHeights: Iterable<Pair<Long, BlockStorageMetadata?>>): Flow<StreamBlock> {
@@ -324,9 +329,7 @@ class EventStream(
                         async {
                             //log.info("streamHistoricalBlocks::queryBlockRange::async<${Thread.currentThread().id}>")
                             queryBlock(Either.Left(height), skipIfNoTxs = options.skipIfEmpty)
-                                ?.let {
-                                    it.copy(metadata = metadata)
-                                }
+                                ?.let { it.copy(metadata = metadata) }
                         }
                     }
                         .awaitAll()
@@ -355,10 +358,6 @@ class EventStream(
 //        }
 //            .flowOn(dispatchers.io())
     }
-
-    @JvmName("queryBlocksNoMetadata")
-    private fun queryBlocks(blockHeights: Iterable<Long>): Flow<StreamBlock> =
-        queryBlocks(blockHeights.map { Pair(it, null) })
 
     /**
      * Constructs a Flow of historical blocks and associated events based on a starting height. Blocks will be streamed
@@ -435,7 +434,12 @@ class EventStream(
                     Pair(seenBlockMap, availableBlocks)
                 }
 
-                availableBlocks.map { height: Long -> Pair(height, seenBlockMap[height]) }
+                availableBlocks.map { height: Long ->
+                    if (seenBlockMap[height] != null) {
+                        println("FOUND METADATA => ${seenBlockMap[height]}")
+                    }
+                    Pair(height, seenBlockMap[height])
+                }
             }
             .flowOn(dispatchers.io())
             .flatMapMerge(options.concurrency) { queryBlocks(it) }

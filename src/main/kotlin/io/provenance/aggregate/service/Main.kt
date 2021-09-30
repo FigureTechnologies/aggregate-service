@@ -76,13 +76,15 @@ fun main(args: Array<String>) {
         ArgType.Boolean, shortName = "v", fullName = "verbose", description = "Enables verbose output"
     ).default(false)
     val skipIfEmpty by parser.option(
-        ArgType.Boolean, fullName = "skip-if-empty", description = "Skip blocks that have no transactions"
+        ArgType.Choice(listOf(false, true), { it.toBooleanStrict() }),
+        fullName = "skip-if-empty",
+        description = "Skip blocks that have no transactions"
     ).default(true)
     val skipIfSeen by parser.option(
-        ArgType.Boolean,
+        ArgType.Choice(listOf(false, true), { it.toBooleanStrict() }),
         fullName = "skip-if-seen",
         description = "Skip blocks that have already been seen (stored in DynamoDB)"
-    ).default(false)
+    ).default(true)
 
     parser.parse(args)
 
@@ -112,10 +114,25 @@ fun main(args: Array<String>) {
     val wsStreamBuilder = configureEventStreamBuilder(config.event.stream.websocketUri)
     val tendermintService = TendermintServiceClient(config.event.stream.rpcUri)
     val aws: AwsInterface = AwsInterface.create(environment, config.s3, config.dynamodb)
+    val dynamo = aws.dynamo()
 
     val log = object {}.logger()
 
     runBlocking(Dispatchers.IO) {
+
+        log.info(
+            """
+            |run options => {
+            |    from-height = $fromHeight 
+            |    to-height = $toHeight
+            |    skip-if-empty = $skipIfEmpty
+            |    skip-if-seen = $skipIfSeen
+            |}
+            """.trimMargin("|")
+        )
+
+        val highest = dynamo.getMaxHistoricalBlockHeight()
+        log.info("Maximum historical block height found: ${highest ?: "--"}")
 
         // https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#provenance.attribute.v1.AttributeType
         val checkForEvents = setOf(
@@ -135,7 +152,7 @@ fun main(args: Array<String>) {
             .build()
 
         if (viewOnly) {
-            log.info("*** VIEW MODE ***")
+            log.info("*** viewing blocks & events only ***")
             val factory = EventStream.Factory(
                 config,
                 moshi,
@@ -176,7 +193,7 @@ fun main(args: Array<String>) {
                 moshi,
                 wsStreamBuilder,
                 tendermintService,
-                aws.dynamo()
+                dynamo
             )
             EventStreamUploader(factory, aws, moshi, options)
                 .upload()
