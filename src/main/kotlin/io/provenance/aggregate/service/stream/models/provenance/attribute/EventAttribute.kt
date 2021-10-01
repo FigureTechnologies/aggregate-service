@@ -1,19 +1,32 @@
-package io.provenance.aggregate.service.stream.models
+package io.provenance.aggregate.service.stream.models.provenance.attribute
 
 import io.provenance.aggregate.service.extensions.*
-import io.provenance.aggregate.service.logger
-import kotlin.reflect.KFunction
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.primaryConstructor
+import io.provenance.aggregate.service.stream.models.provenance.MappedProvenanceEvent
+import io.provenance.aggregate.service.stream.models.provenance.EventMapper
+import io.provenance.aggregate.service.stream.models.provenance.FromAttributeMap
+import io.provenance.aggregate.service.stream.models.provenance.debase64
 
-private fun debase64(t: String): String = t.repeatDecodeBase64()
+private fun toEventTypeEnum(t: String): EventAttributeType = EventAttributeType.valueOf(t)
 
-private fun toEventTypeEnum(t: String): ProvenanceEventAttributeType = ProvenanceEventAttributeType.valueOf(t)
+sealed class EventAttribute() : FromAttributeMap {
 
-sealed class ProvenanceEventAttribute(val height: Long) {
+    companion object {
+        /**
+         * Maps Provenance events like "provenance.attribute.v1.EventAttributeAdd" to constructors for the
+         * `ProvenanceTxEvent` sealed class family.
+         */
+        val mapper = EventMapper(EventAttribute::class)
+    }
 
-    data class EventRecord(
-        val height: Long,
+    abstract fun toEventRecord(): ConsolidatedEvent
+
+    override fun toString() = toEventRecord().toString()
+
+    /**
+     * A container class that is capable of representing the consolidated union of data contained int the
+     * `EventAttributeAdd`, `EventAttributeUpdate`, `EventAttributeDelete`, and `EventAttributeDeleteDistinct` classes.
+     */
+    data class ConsolidatedEvent(
         val name: String,
         val value: String?,
         val updatedValue: String?,
@@ -23,52 +36,21 @@ sealed class ProvenanceEventAttribute(val height: Long) {
         val owner: String
     )
 
-    companion object {
-
-        private val log = logger()
-
-        // Maps Provenance events like "provenance.attribute.v1.EventAttributeAdd" to constructors for the
-        // `ProvenanceTxEvent` sealed class family.
-        private val mapping: Map<String, KFunction<ProvenanceEventAttribute>> =
-            ProvenanceEventAttribute::class.sealedSubclasses
-                .mapNotNull { kclass ->
-                    kclass.findAnnotation<MappedProvenanceEvent>()?.let { annotation -> Pair(kclass, annotation) }
-                }.associate { (kclass, annotation) -> annotation.name to kclass.primaryConstructor!! }
-
-        /**
-         * Given an Provenance event type string as it would appear in a transaction event payload,
-         * e.g. "provenance.attribute.v1.EventAttributeAdd", attempt to create an instance of TxEvent.
-         */
-        @JvmStatic
-        fun createFromEventType(event: String, vararg args: Any?): ProvenanceEventAttribute? {
-            return runCatching {
-                mapping[event]?.call(*args)
-            }.getOrElse { e ->
-                log.error("Couldn't extract event [$event] with arguments ${args} :: $e")
-                null
-            }
-        }
-    }
-
-    abstract fun toEventRecord(): EventRecord
-
     /**
      * Event emitted when attribute is added.
      * @see https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#eventattributeadd
      */
     @MappedProvenanceEvent("provenance.attribute.v1.EventAttributeAdd")
-    class EventAttributeAdd(height: Long, val attributes: Map<String, Any?>) : ProvenanceEventAttribute(height) {
-
+    class Add(override val attributes: Map<String, String?>) : EventAttribute() {
         val name: String by attributes.transform(::debase64)
         val value: String by attributes.transform(::debase64)
-        val type: ProvenanceEventAttributeType by attributes.transform { t: String ->
+        val type: EventAttributeType by attributes.transform { t: String ->
             toEventTypeEnum(debase64(t))
         }
         val account: String by attributes.transform(::debase64)
         val owner: String by attributes.transform(::debase64)
 
-        override fun toEventRecord(): EventRecord = EventRecord(
-            height = height,
+        override fun toEventRecord(): ConsolidatedEvent = ConsolidatedEvent(
             name = name,
             value = value,
             updatedValue = null,
@@ -77,8 +59,6 @@ sealed class ProvenanceEventAttribute(val height: Long) {
             account = account,
             owner = owner
         )
-
-        override fun toString() = toEventRecord().toString()
     }
 
     /**
@@ -86,22 +66,20 @@ sealed class ProvenanceEventAttribute(val height: Long) {
      * @see https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#eventattributeupdate
      */
     @MappedProvenanceEvent("provenance.attribute.v1.EventAttributeUpdate")
-    class EventAttributeUpdate(height: Long, attributes: Map<String, Any?>) : ProvenanceEventAttribute(height) {
-
+    class Update(override val attributes: Map<String, String?>) : EventAttribute() {
         val name: String by attributes.transform(::debase64)
         val originalValue: String by attributes.transform("original_value", ::debase64)
-        val originalType: ProvenanceEventAttributeType by attributes.transform("original_type") { t: String ->
+        val originalType: EventAttributeType by attributes.transform("original_type") { t: String ->
             toEventTypeEnum(debase64(t))
         }
         val updateValue: String by attributes.transform("update_value", ::debase64)
-        val updateType: ProvenanceEventAttributeType by attributes.transform("update_type") { t: String ->
+        val updateType: EventAttributeType by attributes.transform("update_type") { t: String ->
             toEventTypeEnum(debase64(t))
         }
         val account: String by attributes.transform(::debase64)
         val owner: String by attributes.transform(::debase64)
 
-        override fun toEventRecord(): EventRecord = EventRecord(
-            height = height,
+        override fun toEventRecord(): ConsolidatedEvent = ConsolidatedEvent(
             name = name,
             value = originalValue,
             updatedValue = updateValue,
@@ -110,8 +88,6 @@ sealed class ProvenanceEventAttribute(val height: Long) {
             account = account,
             owner = owner
         )
-
-        override fun toString() = toEventRecord().toString()
     }
 
     /**
@@ -119,14 +95,12 @@ sealed class ProvenanceEventAttribute(val height: Long) {
      * @see https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#eventattributedelete
      */
     @MappedProvenanceEvent("provenance.attribute.v1.EventAttributeDelete")
-    class EventAttributeDelete(height: Long, attributes: Map<String, Any?>) : ProvenanceEventAttribute(height) {
-
+    class Delete(override val attributes: Map<String, String?>) : EventAttribute() {
         val name: String by attributes.transform(::debase64)
         val account: String by attributes.transform(::debase64)
         val owner: String by attributes.transform(::debase64)
 
-        override fun toEventRecord(): EventRecord = EventRecord(
-            height = height,
+        override fun toEventRecord(): ConsolidatedEvent = ConsolidatedEvent(
             name = name,
             value = null,
             updatedValue = null,
@@ -135,8 +109,6 @@ sealed class ProvenanceEventAttribute(val height: Long) {
             account = account,
             owner = owner
         )
-
-        override fun toString() = toEventRecord().toString()
     }
 
     /**
@@ -144,18 +116,16 @@ sealed class ProvenanceEventAttribute(val height: Long) {
      * @see https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#eventattributedistinctdelete
      */
     @MappedProvenanceEvent("provenance.attribute.v1.EventAttributeDistinctDelete")
-    class EventAttributeDistinctDelete(height: Long, attributes: Map<String, Any?>) : ProvenanceEventAttribute(height) {
-
+    class DistinctDelete(override val attributes: Map<String, String?>) : EventAttribute() {
         val name: String by attributes.transform(::debase64)
         val value: String by attributes.transform(::debase64)
-        val attributeType: ProvenanceEventAttributeType by attributes.transform("attribute_type") { t: String ->
+        val attributeType: EventAttributeType by attributes.transform("attribute_type") { t: String ->
             toEventTypeEnum(debase64(t))
         }
         val account: String by attributes.transform(::debase64)
         val owner: String by attributes.transform(::debase64)
 
-        override fun toEventRecord(): EventRecord = EventRecord(
-            height = height,
+        override fun toEventRecord(): ConsolidatedEvent = ConsolidatedEvent(
             name = name,
             value = value,
             updatedValue = null,
@@ -164,7 +134,5 @@ sealed class ProvenanceEventAttribute(val height: Long) {
             account = account,
             owner = owner
         )
-
-        override fun toString() = toEventRecord().toString()
     }
 }

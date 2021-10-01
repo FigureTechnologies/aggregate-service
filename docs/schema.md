@@ -1,21 +1,31 @@
 
-event_attributes
-----------------
+tx_event_attributes
+-------------------
 
-| Column                 | Type           | Nullable? |
-| ---------------------- | -------------- | --------- |
-| event_type             | string         | false     |
-| block_height           | integer        | false     |
-| block_timestamp        | datetime       | false     |
-| name                   | string         | false     |
-| value                  | string         | false     |
-| updated_value          | string         | true      |
-| attribute_type         | string (enum)  | false     |
-| updated_attribute_type | string (enum)  | true      |
-| account                | string         | false     |
-| owner                  | string         | false     |
+### Name
 
-where the values of `value_type` and `updated_value_type` are an enumeration with the
+`tx_event_attributes.csv`
+
+### Description
+
+Provides a consolidated view of the `provenance.attribute.v1.EventAttributeAdd`, `provenance.attribute.v1.EventAttributeUpdate`,
+`provenance.attribute.v1.EventAttributeDelete`, and `provenance.attribute.v1.EventAttributeDistinctDelete` Provenance 
+`attribute` transaction events combined together.
+
+### Structure
+
+| Column           | Type           | Nullable? |
+| ---------------- | -------------- | --------- |
+| event_type       | string         | false     |
+| block_height     | integer        | false     |
+| block_timestamp  | string         | true      |
+| name             | string         | false     |
+| value            | string         | true      |
+| type             | string (enum)  | true      |
+| account          | string         | false     |
+| owner            | string         | false     |
+
+where the values of `type` is an enumeration with the
 following values (as defined in https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#attributetype)
 
 | Name                         | Number | Description                                                                         |
@@ -29,3 +39,63 @@ following values (as defined in https://github.com/provenance-io/provenance/blob
 | `ATTRIBUTE_TYPE_FLOAT`       | 6      | Defines an attribute value that contains a float                                    |
 | `ATTRIBUTE_TYPE_PROTO`       | 7      | Defines an attribute value that contains a serialized proto value in bytes          |
 | `ATTRIBUTE_TYPE_BYTES`       | 8      | Defines an attribute value that contains an untyped array of bytes                  |
+
+tx_marker_supply
+----------------
+
+### Name
+
+`tx_marker_supply.csv`
+
+### Description
+
+Provides a consolidated view of the `provenance.marker.v1.EventMarkerActivate`, `provenance.marker.v1.EventMarkerAdd`,
+`provenance.marker.v1.EventMarkerBurn`, `provenance.marker.v1.EventMarkerCancel`, 
+`provenance.marker.v1.EventMarkerDelete`, `provenance.marker.v1.EventMarkerFinalize`, 
+`provenance.marker.v1.EventMarkerMint`, `provenance.marker.v1.EventMarkerSetDenomMetadata`, and 
+`provenance.marker.v1.EventMarkerWithdraw` Provenance `marker` transaction events combined. Together, these events 
+relate to the supply of a marker on the Provenance network.
+
+### Structure
+
+| Column               | Type   | Nullable? |
+| -------------------- | -------| --------- |
+| event_type           | string | false     |
+| block_height         | integer| false     |
+| block_timestamp      | string | true      |
+| denom                | string | true      |
+| amount               | string | true      |
+| administrator        | string | true      |
+| to_address           | string | true      |
+| from_address         | string | true      |
+| metadata_base        | string | true      |
+| metadata_description | string | true      |
+| metadata_display     | string | true      |
+| metadata_denom_units | string | true      |
+| metadata_name        | string | true      |
+| metadata_symbol      | string | true      |
+
+tx_marker_transfer
+------------------
+
+### Name
+
+`tx_marker_transfer.csv`
+
+### Description
+
+Records instances of the Provenance `provenance.marker.v1.EventMarkerTransfer` transaction event. This event 
+corresponds to the transfer of a marker between accounts on the network.
+
+### Structure
+
+| Column          | Type    | Nullable? |
+| --------------- | ------- | --------- |
+| event_type      | string  | false     |
+| block_height    | integer | false     |
+| block_timestamp | string  | true      |
+| amount          | string  | false     |
+| denom           | string  | false     |
+| administrator   | string  | false     |
+| to_address      | string  | false     |
+| from_address    | string  | false     |

@@ -16,12 +16,12 @@ import io.provenance.aggregate.service.stream.models.*
 import io.provenance.aggregate.service.stream.models.extensions.blockEvents
 import io.provenance.aggregate.service.stream.models.extensions.txEvents
 import io.provenance.aggregate.service.stream.models.extensions.txHash
+import io.provenance.aggregate.service.stream.models.StreamBlock
+import io.provenance.aggregate.service.stream.models.extensions.dateTime
 import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
 import io.provenance.aggregate.service.stream.models.rpc.response.MessageType
-import io.provenance.aggregate.service.stream.models.rpc.response.RpcResponse
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import org.json.JSONObject
 import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
@@ -254,9 +254,10 @@ class EventStream(
         }
 
         return block?.run {
-            val blockResponse = tendermintService.blockResults(block.header?.height).result
-            val blockEvents: List<BlockEvent> = blockResponse.blockEvents()
-            val txEvents: List<TxEvent> = blockResponse.txEvents { index: Int -> txHash(index) ?: "" }
+            val blockDatetime = header?.dateTime()
+            val blockResponse = tendermintService.blockResults(header?.height).result
+            val blockEvents: List<BlockEvent> = blockResponse.blockEvents(blockDatetime)
+            val txEvents: List<TxEvent> = blockResponse.txEvents(blockDatetime) { index: Int -> txHash(index) ?: "" }
             val streamBlock = StreamBlock(this, blockEvents, txEvents)
             val matchBlock = matchesBlockEvent(blockEvents)
             val matchTx = matchesTxEvent(txEvents)

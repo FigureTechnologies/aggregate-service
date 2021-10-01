@@ -1,9 +1,9 @@
-package io.provenance.aggregate.service.stream.models
+package io.provenance.aggregate.service.stream.models.provenance.attribute
 
 /**
  * As defined in https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#attributetype
  */
-enum class ProvenanceEventAttributeType {
+enum class EventAttributeType {
     ATTRIBUTE_TYPE_UNSPECIFIED, // Defines an unknown/invalid type
     ATTRIBUTE_TYPE_UUID,        // Defines an attribute value that contains a string value representation of a V4 uuid
     ATTRIBUTE_TYPE_JSON,        // Defines an attribute value that contains a byte string containing json data

@@ -87,7 +87,7 @@ class EventStreamUploader(
      *
      * Classes are expected to:
      *  - Be fully qualified class names.
-     *      Example: "io.provenance.aggregate.service.stream.extractors.csv.TxEventAttributes"
+     *      Example: "io.provenance.aggregate.service.stream.extractors.csv.impl.TxEventAttributes"
      *  - Implement the `Extractor` interface.
      *
      *  @see Extractor
@@ -173,18 +173,22 @@ class EventStreamUploader(
                     val key: S3Key = csvS3Key(batchId, earliestDate, extractor.name)
                     when (val out = extractor.output()) {
                         is OutputType.FilePath -> {
-                            val putResponse: PutObjectResponse = s3.streamObject(object : StreamableObject {
-                                override val key: S3Key get() = key
-                                override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(out.path)
-                                override val metadata: Map<String, String>? get() = out.metadata
-                            })
-                            log.info("${batchId}/${extractor.name} => put.eTag = ${putResponse.eTag()}")
-                            UploadResult(
-                                batchId = batch.id,
-                                batchSize = streamBlocks.size,
-                                eTag = putResponse.eTag(),
-                                s3Key = key
-                            )
+                            if (extractor.shouldOutput()) {
+                                val putResponse: PutObjectResponse = s3.streamObject(object : StreamableObject {
+                                    override val key: S3Key get() = key
+                                    override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(out.path)
+                                    override val metadata: Map<String, String>? get() = out.metadata
+                                })
+                                log.info("${batchId}/${extractor.name} => put.eTag = ${putResponse.eTag()}")
+                                UploadResult(
+                                    batchId = batch.id,
+                                    batchSize = streamBlocks.size,
+                                    eTag = putResponse.eTag(),
+                                    s3Key = key
+                                )
+                            } else {
+                                null
+                            }
                         }
                         else -> null
                     }

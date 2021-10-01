@@ -7,6 +7,7 @@ import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
+import java.io.Closeable
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
@@ -53,7 +54,12 @@ data class Batch internal constructor(
             extractors.map { extractor: Extractor ->
                 async {
                     runCatching { extractor.extract(block) }
-                        .onFailure { e -> log.error("processing error: $e") }
+                        .onFailure { e ->
+                            log.error("processing error: ${e.message} ::")
+                            for (frame in e.stackTrace) {
+                                log.error("  ${frame.toString()}")
+                            }
+                        }
                 }
             }
         }.awaitAll()
@@ -70,10 +76,15 @@ data class Batch internal constructor(
      */
     suspend fun <T> complete(completeAction: suspend (BatchId, Extractor) -> T): List<T> =
         withContext(dispatchers.io()) {
-            extractors.map { extractor ->
+            extractors.map { extractor: Extractor ->
                 async {
-                    extractor.use {
-                        it.beforeComplete()
+                    if (extractor is Closeable) {
+                        extractor.use {
+                            it.beforeComplete()
+                            completeAction(id, extractor)
+                        }
+                    } else {
+                        extractor.beforeComplete()
                         completeAction(id, extractor)
                     }
                 }

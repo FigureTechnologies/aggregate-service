@@ -5,6 +5,8 @@ import com.timgroup.statsd.StatsDClient
 import io.provenance.aggregate.service.utils.sha256
 import org.apache.commons.lang3.StringUtils
 import org.json.JSONArray
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -54,6 +56,13 @@ fun String.repeatDecodeBase64(): String {
  */
 fun String.hash(): String = sha256(BaseEncoding.base64().decode(this)).toHexString()
 
+// === Date/time methods ===============================================================================================
+
+/**
+ * Generate an ISO8601 string from the date.
+ */
+fun OffsetDateTime.toISOString() = this.format(DateTimeFormatter.ISO_DATE_TIME).toString()
+
 // === ByteArray methods ===============================================================================================
 
 /**
@@ -64,36 +73,15 @@ fun ByteArray.toHexString(): String = BaseEncoding.base16().encode(this)
 // === Delegate methods ================================================================================================
 
 /**
- * Provide an alternate name for a delegate property.
+ * Apply a transformation to a delegate property.
  *
  * @example
  *
  *   data class EventUpdate(map: Map<String, Any?>) {
  *     val name: String by map
- *     val original_value: String by map
- *     val update_value: String by map
+ *     val originalValue: String by map.transform { it.lowercase() }
+ *     val updateValue: String by map.transform(::encode)
  *   )
- *
- * becomes
- *
- *   data class EventUpdate(map: Map<String, Any?>) {
- *     val name: String by map
- *     val originalValue: String by rename(map, "original_value")
- *     val updateValue: String by rename(map, "update_value")
- *   )
- *
- * @see https://kotlinlang.org/docs/delegated-properties.html#property-delegate-requirements
- * Note: adapted from https://stackoverflow.com/a/36602770
- */
-@Suppress("UNCHECKED_CAST")
-fun <T, V> transform(properties: Map<String, Any?>, key: String): ReadOnlyProperty<T, V> =
-    ReadOnlyProperty { _: T, _: KProperty<*> -> properties[key]!! as V }
-
-@JvmName("renameDelegateOnPropertyMap")
-fun <T, V> Map<String, Any?>.transform(key: String): ReadOnlyProperty<T, V> = transform(this, key)
-
-/**
- * Apply a transformation to a delegate property.
  *
  * @see https://kotlinlang.org/docs/delegated-properties.html#property-delegate-requirements
  * Note: adapted from https://stackoverflow.com/a/36602770
@@ -106,17 +94,42 @@ fun <T, U, V> transform(properties: Map<String, Any?>, f: (U) -> V): ReadOnlyPro
 fun <T, U, V> Map<String, Any?>.transform(f: (U) -> V): ReadOnlyProperty<T, V> = transform(this, f)
 
 /**
- * Rename and apply a transformation to a delegate property.
+ * Use an alternative name to look up a property and apply a transformation to a delegated value.
+ *
+ * @example
+ *
+ *   data class EventUpdate(map: Map<String, Any?>) {
+ *     val name: String by map
+ *     val originalValue: String by map.transform("original_value") { it.lowercase() }
+ *     val updateValue: String by map.transform("update_value", ::encode)
+ *   )
  *
  * @see https://kotlinlang.org/docs/delegated-properties.html#property-delegate-requirements
  * Note: adapted from https://stackoverflow.com/a/36602770
  */
 @Suppress("UNCHECKED_CAST")
-fun <T, U, V> transform(properties: Map<String, Any?>, key: String, f: (U) -> V): ReadOnlyProperty<T, V> =
-    ReadOnlyProperty { _: T, _: KProperty<*> -> f(properties[key]!! as U) }
+fun <T, U, V> transform(properties: Map<String, Any?>, otherName: String, f: (U) -> V): ReadOnlyProperty<T, V> =
+    ReadOnlyProperty { _: T, _: KProperty<*> -> f(properties[otherName]!! as U) }
 
 @JvmName("mapAndRenameDelegateOnPropertyMap")
-fun <T, U, V> Map<String, Any?>.transform(key: String, f: (U) -> V): ReadOnlyProperty<T, V> = transform(this, key, f)
+fun <T, U, V> Map<String, Any?>.transform(otherName: String, f: (U) -> V): ReadOnlyProperty<T, V> =
+    transform(this, otherName, f)
+
+/**
+ * Use an alternative name (alias) to look up a property.
+ *
+ * @example
+ *
+ *   data class EventUpdate(map: Map<String, Any?>) {
+ *     val name: String by map
+ *     val originalValue: String by map.alias("original_value")
+ *     val updateValue: String by map.alias("update_value")
+ *   )
+ */
+fun <T, V> Map<String, Any?>.alias(otherName: String): ReadOnlyProperty<T, V> =
+    transform<T, V, V>(this, otherName) { it }
+
+// === Data Dog ========================================================================================================
 
 fun StatsDClient.recordMaxBlockHeight(height: Long) = runCatching {
     this.gauge("block_height", height)

@@ -1,4 +1,4 @@
-package io.provenance.aggregate.service.utils
+package io.provenance.aggregate.service.test.utils
 
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi

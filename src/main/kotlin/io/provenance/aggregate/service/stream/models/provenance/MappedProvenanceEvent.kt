@@ -1,4 +1,4 @@
-package io.provenance.aggregate.service.stream.models
+package io.provenance.aggregate.service.stream.models.provenance
 
 /**
  * Annotate a class with this to associate it with a Provenance event.

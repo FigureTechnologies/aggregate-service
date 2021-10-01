@@ -9,10 +9,10 @@ import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.UploadResult
 import io.provenance.aggregate.service.test.base.TestBase
 import io.provenance.aggregate.service.test.mocks.*
-import io.provenance.aggregate.service.utils.Builders
-import io.provenance.aggregate.service.utils.Defaults
-import io.provenance.aggregate.service.utils.EXPECTED_NONEMPTY_BLOCKS
-import io.provenance.aggregate.service.utils.MIN_BLOCK_HEIGHT
+import io.provenance.aggregate.service.test.utils.Builders
+import io.provenance.aggregate.service.test.utils.Defaults
+import io.provenance.aggregate.service.test.utils.EXPECTED_NONEMPTY_BLOCKS
+import io.provenance.aggregate.service.test.utils.MIN_BLOCK_HEIGHT
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.toList
@@ -41,7 +41,7 @@ class AWSTests : TestBase() {
     val dynamo: LocalStackDynamo = aws.dynamo() as LocalStackDynamo
 
     val DEFAULT_EXTRACTORS: Array<String> =
-        arrayOf("io.provenance.aggregate.service.stream.extractors.csv.TxEventAttributes")
+        arrayOf("io.provenance.aggregate.service.stream.extractors.csv.impl.TxEventAttributes")
 
     @BeforeAll
     override fun setup() {
