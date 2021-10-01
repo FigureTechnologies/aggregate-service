@@ -1,11 +1,11 @@
 package io.provenance.aggregate.service.aws
 
-import com.timgroup.statsd.StatsDClient
 import io.provenance.aggregate.service.DynamoConfig
 import io.provenance.aggregate.service.Environment
 import io.provenance.aggregate.service.S3Config
 import io.provenance.aggregate.service.aws.dynamodb.AwsDynamo
 import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
+import io.provenance.aggregate.service.aws.dynamodb.DynamoTable
 import io.provenance.aggregate.service.aws.s3.AwsS3
 import io.provenance.aggregate.service.aws.s3.AwsS3Interface
 import io.provenance.aggregate.service.logger
@@ -23,16 +23,16 @@ import kotlin.time.ExperimentalTime
 import java.time.Duration as JavaDuration
 
 @OptIn(ExperimentalTime::class)
-abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConfig, val dogStatsClient: StatsDClient) {
+abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConfig) {
 
     companion object {
         val DEFAULT_REGION: Region = Region.US_EAST_1
 
-        fun create(environment: Environment, s3Config: S3Config, dynamoConfig: DynamoConfig, dogStatsClient: StatsDClient): AwsInterface {
+        fun create(environment: Environment, s3Config: S3Config, dynamoConfig: DynamoConfig): AwsInterface {
             return when (environment) {
-                Environment.local -> LocalStackAwsInterface(s3Config, dynamoConfig, dogStatsClient)
-                Environment.development -> DefaultAwsInterface(s3Config, dynamoConfig, dogStatsClient)
-                Environment.production -> DefaultAwsInterface(s3Config, dynamoConfig, dogStatsClient)
+                Environment.local -> LocalStackAwsInterface(s3Config, dynamoConfig)
+                Environment.development -> DefaultAwsInterface(s3Config, dynamoConfig)
+                Environment.production -> DefaultAwsInterface(s3Config, dynamoConfig)
             }
         }
     }
@@ -113,8 +113,7 @@ abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConf
             dynamoClient,
             dynamoConfig.blockBatchTable,
             dynamoConfig.blockMetadataTable,
-            dynamoConfig.serviceMetadataTable,
-            dogStatsClient,
+            dynamoConfig.serviceMetadataTable
         )
     }
 }

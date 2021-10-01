@@ -32,7 +32,6 @@ open class AwsDynamo(
     private val blockBatchTable: DynamoTable,
     private val blockMetadataTable: DynamoTable,
     private val serviceMetadataTable: DynamoTable,
-    private val dogStatsClient: StatsDClient,
 ) : AwsDynamoInterface {
 
     val DYNAMODB_MAX_TRANSACTION_ITEMS: Int = 25
@@ -130,7 +129,6 @@ open class AwsDynamo(
                                 .item(prop)
                                 .build()
                         )
-                        dogStatsClient.recordMaxBlockHeight(foundMaxHistoricalHeight)
                         reservedSlots.incrementAndGet()
                         totalProcessed.incrementAndGet()
                     } else if (foundMaxHistoricalHeight > storedMaxHistoricalHeight) {
@@ -140,7 +138,6 @@ open class AwsDynamo(
                                 .item(prop)
                                 .build()
                         )
-                        dogStatsClient.recordMaxBlockHeight(foundMaxHistoricalHeight)
                         reservedSlots.incrementAndGet()
                         totalProcessed.incrementAndGet()
                     }

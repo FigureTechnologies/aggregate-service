@@ -27,7 +27,9 @@ import kotlinx.cli.default
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import java.net.URI
@@ -129,6 +131,8 @@ fun main(args: Array<String>) {
         .build()
     val wsStreamBuilder = configureEventStreamBuilder(config.event.stream.websocketUri)
     val tendermintService = TendermintServiceClient(config.event.stream.rpcUri)
+    val aws: AwsInterface = AwsInterface.create(environment, config.s3, config.dynamodb)
+    val dynamo = aws.dynamo()
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
         NonBlockingStatsDClientBuilder()
@@ -142,8 +146,6 @@ fun main(args: Array<String>) {
         log.info("Datadog client disabled.")
         NoOpStatsDClient()
     }
-    val aws: AwsInterface = AwsInterface.create(environment, config.s3, config.dynamodb, dogStatsClient)
-    val dynamo = aws.dynamo()
 
     runBlocking(Dispatchers.IO) {
 
@@ -160,6 +162,16 @@ fun main(args: Array<String>) {
             |}
             """.trimMargin("|")
         )
+
+        launch {
+            while (true) {
+                dynamo.getMaxHistoricalBlockHeight()
+                    ?.let(dogStatsClient::recordMaxBlockHeight)
+                    ?.getOrElse { log.error("DD metric failure", it) }
+
+                delay(60_000)
+            }
+        }
 
         val highest = dynamo.getMaxHistoricalBlockHeight()
         log.info("Maximum historical block height found: ${highest ?: "--"}")

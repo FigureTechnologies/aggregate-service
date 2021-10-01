@@ -84,4 +84,6 @@ fun <T, U, V> transform(properties: Map<String, Any?>, key: String, f: (U) -> V)
 @JvmName("mapAndRenameDelegateOnPropertyMap")
 fun <T, U, V> Map<String, Any?>.transform(key: String, f: (U) -> V): ReadOnlyProperty<T, V> = transform(this, key, f)
 
-fun StatsDClient.recordMaxBlockHeight(height: Long) = this.gauge("block_height", height)
+fun StatsDClient.recordMaxBlockHeight(height: Long) = runCatching {
+    this.gauge("block_height", height)
+}

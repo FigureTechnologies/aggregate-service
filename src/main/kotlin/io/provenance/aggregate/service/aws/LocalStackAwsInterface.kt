@@ -1,6 +1,5 @@
 package io.provenance.aggregate.service.aws
 
-import com.timgroup.statsd.StatsDClient
 import io.provenance.aggregate.service.DynamoConfig
 import io.provenance.aggregate.service.S3Config
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
@@ -8,8 +7,8 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import java.net.URI
 
-open class LocalStackAwsInterface(s3Config: S3Config, dynamoConfig: DynamoConfig, dogStatsClient: StatsDClient) :
-    AwsInterface(s3Config, dynamoConfig, dogStatsClient) {
+open class LocalStackAwsInterface(s3Config: S3Config, dynamoConfig: DynamoConfig) :
+    AwsInterface(s3Config, dynamoConfig) {
 
     companion object {
         const val LOCALSTACK_ACCESS_TOKEN = "test"
