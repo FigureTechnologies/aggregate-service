@@ -10,6 +10,7 @@ object Version {
     }
 
     const val AWS = "2.17.40"
+    const val DatadogStats = "2.13.0"
     const val GRPC = "1.39.0"
     const val Hoplite = "1.4.7"
     const val JUnit = "5.1.0"
@@ -73,6 +74,9 @@ dependencies {
     implementation("com.tinder.scarlet", "stream-adapter-coroutines", Version.Scarlet)
     implementation("com.tinder.scarlet", "websocket-okhttp", Version.Scarlet)
     implementation("com.tinder.scarlet", "message-adapter-moshi", Version.Scarlet)
+
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("com.datadoghq", "java-dogstatsd-client", Version.DatadogStats)
 
     implementation("io.grpc", "grpc-alts", Version.GRPC)
     implementation("io.grpc", "grpc-netty", Version.GRPC)
