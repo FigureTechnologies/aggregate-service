@@ -12,26 +12,27 @@ import com.tinder.scarlet.Scarlet
 import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
+import io.provenance.aggregate.service.adapter.json.JSONObjectAdapter
 import io.provenance.aggregate.service.aws.AwsInterface
 import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
 import io.provenance.aggregate.service.extensions.decodeBase64
-import io.provenance.aggregate.service.stream.*
-import io.provenance.aggregate.service.adapter.json.JSONObjectAdapter
 import io.provenance.aggregate.service.extensions.recordMaxBlockHeight
+import io.provenance.aggregate.service.flow.extensions.cancelOnSignal
+import io.provenance.aggregate.service.stream.EventStream
+import io.provenance.aggregate.service.stream.EventStreamUploader
+import io.provenance.aggregate.service.stream.EventStreamViewer
+import io.provenance.aggregate.service.stream.TendermintServiceClient
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.UploadResult
 import io.provenance.aggregate.service.stream.models.extensions.dateTime
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.default
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import org.slf4j.Logger
 import java.net.URI
 import java.util.concurrent.TimeUnit
 
@@ -47,6 +48,23 @@ fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
         )
         .addMessageAdapterFactory(MoshiMessageAdapter.Factory())
         .addStreamAdapterFactory(CoroutinesStreamAdapterFactory())
+}
+
+/**
+ * Installs a shutdown a handler to clean up resources when the returnerd Channel receives its one (and only) element.
+ * This is primary intended to be used to clean up resources allocated by Flows.
+ */
+fun installShutdownHook(log: Logger): Channel<Unit> {
+    val signal = Channel<Unit>(1)
+    Runtime.getRuntime().addShutdownHook(object : Thread() {
+        override fun run() = runBlocking {
+            log.warn("Sending cancel signal")
+            signal.send(Unit)
+            delay(500)
+            log.warn("Shutting down")
+        }
+    })
+    return signal
 }
 
 @OptIn(FlowPreview::class)
@@ -146,6 +164,8 @@ fun main(args: Array<String>) {
         NoOpStatsDClient()
     }
 
+    val signal: Channel<Unit> = installShutdownHook(log)
+
     runBlocking(Dispatchers.IO) {
 
         log.info(
@@ -236,6 +256,7 @@ fun main(args: Array<String>) {
             )
             EventStreamUploader(factory, aws, moshi, options)
                 .upload()
+                .cancelOnSignal(signal)
                 .collect { result: UploadResult ->
                     println("uploaded #${result.batchId} => S3 ETag: ${result.eTag}")
                 }
