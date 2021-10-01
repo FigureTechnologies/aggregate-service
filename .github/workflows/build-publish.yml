@@ -46,8 +46,7 @@ jobs:
 
   docker_build:
     name: Push to GitHub Docker Package Registry
-    # TODO add back after testing
-    # if: github.event_name == 'release'
+    if: github.event_name == 'release'
     needs: java_build
     runs-on: ubuntu-latest
     steps:
