@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.mocks
 
+import com.timgroup.statsd.NoOpStatsDClient
 import io.provenance.aggregate.service.aws.dynamodb.AwsDynamo
 import io.provenance.aggregate.service.aws.dynamodb.DynamoTable
 import kotlinx.coroutines.future.await
@@ -11,7 +12,7 @@ class LocalStackDynamo(
     blockMetadataTable: DynamoTable,
     serviceMetadataTable: DynamoTable
 ) :
-    AwsDynamo(dynamoClient, blockBatchTable, blockMetadataTable, serviceMetadataTable) {
+    AwsDynamo(dynamoClient, blockBatchTable, blockMetadataTable, serviceMetadataTable, NoOpStatsDClient()) {
 
     suspend fun createTables() {
         SERVICE_METADATA_TABLE.createTable().await()
