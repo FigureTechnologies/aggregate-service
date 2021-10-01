@@ -6,6 +6,8 @@ import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.timgroup.statsd.NoOpStatsDClient
+import com.timgroup.statsd.NonBlockingStatsDClientBuilder
 import com.tinder.scarlet.Scarlet
 import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
@@ -15,6 +17,7 @@ import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
 import io.provenance.aggregate.service.extensions.decodeBase64
 import io.provenance.aggregate.service.stream.*
 import io.provenance.aggregate.service.adapter.json.JSONObjectAdapter
+import io.provenance.aggregate.service.extensions.recordMaxBlockHeight
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.UploadResult
 import io.provenance.aggregate.service.stream.models.extensions.dateTime
@@ -24,7 +27,9 @@ import kotlinx.cli.default
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import java.net.URI
@@ -57,7 +62,7 @@ fun main(args: Array<String>) {
     // See https://github.com/sksamuel/hoplite#environmentvariablespropertysource
 
     val parser = ArgParser("aggregate-service")
-    val rawEnv by parser.option(
+    val envFlag by parser.option(
         ArgType.Choice<Environment>(),
         shortName = "e",
         fullName = "env",
@@ -85,11 +90,21 @@ fun main(args: Array<String>) {
         fullName = "skip-if-seen",
         description = "Skip blocks that have already been seen (stored in DynamoDB)"
     ).default(true)
+    val ddHostFlag by parser.option(
+        ArgType.String, fullName = "dd-host", description = "Datadog agent metrics will be sent to"
+    )
+    val ddTagsFlag by parser.option(
+        ArgType.String, fullName = "dd-tags", description = "Datadog tags that will be sent with every metric"
+    )
 
     parser.parse(args)
 
+    val ddEnabled = runCatching { System.getenv("DD_ENABLED") }.getOrNull() == "true"
+    val ddHost = ddHostFlag ?: runCatching { System.getenv("DD_HOST") }.getOrElse { "localhost" }
+    val ddTags = ddTagsFlag ?: runCatching { System.getenv("DD_TAGS") }.getOrElse { "" }
+
     val environment: Environment =
-        rawEnv ?: runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
+        envFlag ?: runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
             .getOrElse {
                 error("Not a valid environment: ${System.getenv("ENVIRONMENT")}")
             }
@@ -107,6 +122,8 @@ fun main(args: Array<String>) {
         .build()
         .loadConfigOrThrow()
 
+    val log = object {}.logger()
+
     val moshi: Moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
         .add(JSONObjectAdapter())
@@ -115,8 +132,19 @@ fun main(args: Array<String>) {
     val tendermintService = TendermintServiceClient(config.event.stream.rpcUri)
     val aws: AwsInterface = AwsInterface.create(environment, config.s3, config.dynamodb)
     val dynamo = aws.dynamo()
-
-    val log = object {}.logger()
+    val dogStatsClient = if (ddEnabled) {
+        log.info("Initializing Datadog client...")
+        NonBlockingStatsDClientBuilder()
+            .prefix("aggregate-service")
+            .hostname(ddHost)
+            .timeout(5_000)
+            .enableTelemetry(false)
+            .constantTags(*ddTags.split(" ").toTypedArray())
+            .build()
+    } else {
+        log.info("Datadog client disabled.")
+        NoOpStatsDClient()
+    }
 
     runBlocking(Dispatchers.IO) {
 
@@ -127,12 +155,23 @@ fun main(args: Array<String>) {
             |    to-height = $toHeight
             |    skip-if-empty = $skipIfEmpty
             |    skip-if-seen = $skipIfSeen
+            |    dd-enabled = $ddEnabled
+            |    dd-host = $ddHost
+            |    dd-tags = $ddTags
             |}
             """.trimMargin("|")
         )
 
-        val highest = dynamo.getMaxHistoricalBlockHeight()
-        log.info("Maximum historical block height found: ${highest ?: "--"}")
+        launch {
+            while (true) {
+                dynamo.getMaxHistoricalBlockHeight()
+                    .also { log.info("Maximum block height: ${it ?: "--"}") }
+                    ?.let(dogStatsClient::recordMaxBlockHeight)
+                    ?.getOrElse { log.error("DD metric failure", it) }
+
+                delay(60_000)
+            }
+        }
 
         // https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#provenance.attribute.v1.AttributeType
         val checkForEvents = setOf(
