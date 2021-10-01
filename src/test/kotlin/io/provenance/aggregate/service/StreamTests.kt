@@ -242,7 +242,7 @@ class StreamTests : TestBase() {
                     .toList()
 
                 assert(collectedNoSkip.size.toLong() == EXPECTED_TOTAL_BLOCKS)
-                assert(collectedNoSkip.all { it.isRight() && it.orNull()?.historical ?: false })
+                assert(collectedNoSkip.all { it.historical ?: false })
 
                 // If skipping empty blocks, we should get EXPECTED_NONEMPTY_BLOCKS:
                 val collectedSkip = Builders.eventStream()
@@ -254,7 +254,7 @@ class StreamTests : TestBase() {
                     .toList()
 
                 assert(collectedSkip.size.toLong() == EXPECTED_NONEMPTY_BLOCKS)
-                assert(collectedSkip.all { it.isRight() && it.orNull()?.historical ?: false })
+                assert(collectedSkip.all { it.historical ?: false })
             }
         }
 
@@ -287,7 +287,7 @@ class StreamTests : TestBase() {
                 assert(collected.size == eventStreamService.expectedResponseCount().toInt())
 
                 // All blocks should be marked as "live":
-                assert(collected.all { it.isRight() && !(it.orNull()?.historical ?: true) })
+                assert(collected.all { !(it.historical ?: true) })
             }
         }
 

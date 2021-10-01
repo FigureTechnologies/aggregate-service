@@ -368,7 +368,7 @@ class EventStream(
      * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.Flow/flat-map-merge.html
      * @return A Flow of historical blocks and associated events
      */
-    fun streamHistoricalBlocks(): Flow<Either<Throwable, StreamBlock>> =
+    fun streamHistoricalBlocks(): Flow<StreamBlock> =
         flow {
             val startingHeight: Long = options.fromHeight ?: error("No starting height set")
             val lastBlockHeight: Long = tendermintService.abciInfo().result?.response?.lastBlockHeight ?: 0
@@ -434,26 +434,19 @@ class EventStream(
                     Pair(seenBlockMap, availableBlocks)
                 }
 
-                availableBlocks.map { height: Long ->
-                    if (seenBlockMap[height] != null) {
-                        println("FOUND METADATA => ${seenBlockMap[height]}")
-                    }
-                    Pair(height, seenBlockMap[height])
-                }
+                availableBlocks.map { height: Long -> Pair(height, seenBlockMap[height]) }
             }
             .flowOn(dispatchers.io())
             .flatMapMerge(options.concurrency) { queryBlocks(it) }
             .flowOn(dispatchers.io())
-            .map { Either.Right(it.copy(historical = true)) }
-
-    //.catch { e -> Either.Left(e) }
+            .map { it.copy(historical = true) }
 
     /**
      * Constructs a Flow of newly minted blocks and associated events as the blocks are added to the chain.
      *
      * @return A Flow of newly minted blocks and associated events
      */
-    fun streamLiveBlocks(): Flow<Either<Throwable, StreamBlock>> {
+    fun streamLiveBlocks(): Flow<StreamBlock> {
 
         // Toggle the Lifecycle register start state :
         eventStreamService.startListening()
@@ -483,7 +476,7 @@ class EventStream(
                                                     queryBlock(Either.Right(it), skipIfNoTxs = false)
                                                 }
                                             if (streamBlock != null) {
-                                                emit(Either.Right(streamBlock))
+                                                emit(streamBlock)
                                             }
                                         }
                                     }
@@ -494,9 +487,8 @@ class EventStream(
                                 log.warn("live::binary message payload not supported")
                             }
                         }
-                    is WebSocket.Event.OnConnectionFailed ->
-                        emit(Either.Left(event.throwable))
-                    else -> emit(Either.Left(Throwable("live::unexpected event type: $event")))
+                    is WebSocket.Event.OnConnectionFailed -> throw event.throwable
+                    else -> throw Throwable("live::unexpected event type: $event")
                 }
             }
         }
@@ -504,7 +496,7 @@ class EventStream(
                 log.info("live::starting")
             }
             .onEach {
-                log.info("live::got block #${it.orNull()?.height}")
+                log.info("live::got block #${it.height}")
             }
             .onCompletion {
                 eventStreamService.stopListening()
@@ -538,12 +530,6 @@ class EventStream(
             log.info("Listening for live blocks only")
             streamLiveBlocks()
         }
-            .transform {
-                when (it) {
-                    is Either.Left -> log.error("${it.value}")
-                    is Either.Right -> emit(it.value)
-                }
-            }
             .cancellable()
             .retryWhen { cause: Throwable, attempt: Long ->
                 log.warn("streamBlocks::error; recovering Flow (attempt ${attempt + 1})")
