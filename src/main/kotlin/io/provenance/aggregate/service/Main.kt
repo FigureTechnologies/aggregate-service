@@ -100,7 +100,7 @@ fun main(args: Array<String>) {
     parser.parse(args)
 
     val ddEnabled = runCatching { System.getenv("DD_ENABLED") }.getOrNull() == "true"
-    val ddHost = ddHostFlag ?: runCatching { System.getenv("DD_HOST") }.getOrElse { "localhost" }
+    val ddHost = ddHostFlag ?: runCatching { System.getenv("DD_AGENT_HOST") }.getOrElse { "localhost" }
     val ddTags = ddTagsFlag ?: runCatching { System.getenv("DD_TAGS") }.getOrElse { "" }
 
     val environment: Environment =
