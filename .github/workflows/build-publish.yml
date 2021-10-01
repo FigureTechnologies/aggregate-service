@@ -4,7 +4,7 @@ name: Build and Deploy Serverless
 on:
   release:
     types:
-      - create
+      - created
   push:
     branches:
       - main
