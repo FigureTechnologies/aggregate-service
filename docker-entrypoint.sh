@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
 
-java $JAVA_OPTS -jar $1
+exec java $JAVA_OPTS -jar $1
