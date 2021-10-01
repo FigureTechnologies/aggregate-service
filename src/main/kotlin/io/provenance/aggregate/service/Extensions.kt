@@ -1,6 +1,7 @@
 package io.provenance.aggregate.service.extensions
 
 import com.google.common.io.BaseEncoding
+import com.timgroup.statsd.StatsDClient
 import io.provenance.aggregate.service.utils.sha256
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -82,3 +83,5 @@ fun <T, U, V> transform(properties: Map<String, Any?>, key: String, f: (U) -> V)
 
 @JvmName("mapAndRenameDelegateOnPropertyMap")
 fun <T, U, V> Map<String, Any?>.transform(key: String, f: (U) -> V): ReadOnlyProperty<T, V> = transform(this, key, f)
+
+fun StatsDClient.recordMaxBlockHeight(height: Long) = this.gauge("block_height", height)

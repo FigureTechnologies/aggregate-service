@@ -6,6 +6,8 @@ import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.timgroup.statsd.NoOpStatsDClient
+import com.timgroup.statsd.NonBlockingStatsDClientBuilder
 import com.tinder.scarlet.Scarlet
 import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
@@ -15,6 +17,7 @@ import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
 import io.provenance.aggregate.service.extensions.decodeBase64
 import io.provenance.aggregate.service.stream.*
 import io.provenance.aggregate.service.adapter.json.JSONObjectAdapter
+import io.provenance.aggregate.service.extensions.recordMaxBlockHeight
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.UploadResult
 import io.provenance.aggregate.service.stream.models.extensions.dateTime
@@ -85,6 +88,17 @@ fun main(args: Array<String>) {
         fullName = "skip-if-seen",
         description = "Skip blocks that have already been seen (stored in DynamoDB)"
     ).default(true)
+    val ddEnabled by parser.option(
+        ArgType.Choice(listOf(false, true), { it.toBooleanStrict() }),
+        fullName = "dd-enabled",
+        description = "Sends block metric data to Datadog"
+    ).default(false)
+    val ddHost by parser.option(
+        ArgType.String, fullName = "dd-host", description = "Datadog agent metrics will be sent to"
+    ).default("localhost")
+    val ddTags by parser.option(
+        ArgType.String, fullName = "dd-tags", description = "Datadog tags that will be sent with every metric"
+    ).default("")
 
     parser.parse(args)
 
@@ -107,16 +121,29 @@ fun main(args: Array<String>) {
         .build()
         .loadConfigOrThrow()
 
+    val log = object {}.logger()
+
     val moshi: Moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
         .add(JSONObjectAdapter())
         .build()
     val wsStreamBuilder = configureEventStreamBuilder(config.event.stream.websocketUri)
     val tendermintService = TendermintServiceClient(config.event.stream.rpcUri)
-    val aws: AwsInterface = AwsInterface.create(environment, config.s3, config.dynamodb)
+    val dogStatsClient = if (ddEnabled) {
+        log.info("Initializing Datadog client...")
+        NonBlockingStatsDClientBuilder()
+            .prefix("aggregate-service")
+            .hostname(ddHost)
+            .timeout(5_000)
+            .enableTelemetry(false)
+            .constantTags(*ddTags.split(" ").toTypedArray())
+            .build()
+    } else {
+        log.info("Datadog client disabled.")
+        NoOpStatsDClient()
+    }
+    val aws: AwsInterface = AwsInterface.create(environment, config.s3, config.dynamodb, dogStatsClient)
     val dynamo = aws.dynamo()
-
-    val log = object {}.logger()
 
     runBlocking(Dispatchers.IO) {
 
@@ -127,6 +154,9 @@ fun main(args: Array<String>) {
             |    to-height = $toHeight
             |    skip-if-empty = $skipIfEmpty
             |    skip-if-seen = $skipIfSeen
+            |    dd-enabled = $ddEnabled
+            |    dd-host = $ddHost
+            |    dd-tags = $ddTags
             |}
             """.trimMargin("|")
         )

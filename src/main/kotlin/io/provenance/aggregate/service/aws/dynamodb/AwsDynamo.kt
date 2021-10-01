@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.aws.dynamodb
 
+import com.timgroup.statsd.StatsDClient
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.ImmutableTableSchema
 import software.amazon.awssdk.enhanced.dynamodb.model.*
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import io.provenance.aggregate.service.aws.dynamodb.extensions.*
+import io.provenance.aggregate.service.extensions.recordMaxBlockHeight
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.batch.BatchId
 import kotlinx.coroutines.Deferred
@@ -29,7 +31,8 @@ open class AwsDynamo(
     private val dynamoClient: DynamoDbAsyncClient,
     private val blockBatchTable: DynamoTable,
     private val blockMetadataTable: DynamoTable,
-    private val serviceMetadataTable: DynamoTable
+    private val serviceMetadataTable: DynamoTable,
+    private val dogStatsClient: StatsDClient,
 ) : AwsDynamoInterface {
 
     val DYNAMODB_MAX_TRANSACTION_ITEMS: Int = 25
@@ -127,6 +130,7 @@ open class AwsDynamo(
                                 .item(prop)
                                 .build()
                         )
+                        dogStatsClient.recordMaxBlockHeight(foundMaxHistoricalHeight)
                         reservedSlots.incrementAndGet()
                         totalProcessed.incrementAndGet()
                     } else if (foundMaxHistoricalHeight > storedMaxHistoricalHeight) {
@@ -136,6 +140,7 @@ open class AwsDynamo(
                                 .item(prop)
                                 .build()
                         )
+                        dogStatsClient.recordMaxBlockHeight(foundMaxHistoricalHeight)
                         reservedSlots.incrementAndGet()
                         totalProcessed.incrementAndGet()
                     }
