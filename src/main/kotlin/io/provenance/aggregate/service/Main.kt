@@ -62,7 +62,7 @@ fun main(args: Array<String>) {
     // See https://github.com/sksamuel/hoplite#environmentvariablespropertysource
 
     val parser = ArgParser("aggregate-service")
-    val rawEnv by parser.option(
+    val envFlag by parser.option(
         ArgType.Choice<Environment>(),
         shortName = "e",
         fullName = "env",
@@ -90,22 +90,21 @@ fun main(args: Array<String>) {
         fullName = "skip-if-seen",
         description = "Skip blocks that have already been seen (stored in DynamoDB)"
     ).default(true)
-    val ddEnabled by parser.option(
-        ArgType.Choice(listOf(false, true), { it.toBooleanStrict() }),
-        fullName = "dd-enabled",
-        description = "Sends block metric data to Datadog"
-    ).default(false)
-    val ddHost by parser.option(
+    val ddHostFlag by parser.option(
         ArgType.String, fullName = "dd-host", description = "Datadog agent metrics will be sent to"
-    ).default("localhost")
-    val ddTags by parser.option(
+    )
+    val ddTagsFlag by parser.option(
         ArgType.String, fullName = "dd-tags", description = "Datadog tags that will be sent with every metric"
-    ).default("")
+    )
 
     parser.parse(args)
 
+    val ddEnabled = runCatching { System.getenv("DD_ENABLED") }.getOrNull() == "true"
+    val ddHost = ddHostFlag ?: runCatching { System.getenv("DD_HOST") }.getOrElse { "localhost" }
+    val ddTags = ddTagsFlag ?: runCatching { System.getenv("DD_TAGS") }.getOrElse { "" }
+
     val environment: Environment =
-        rawEnv ?: runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
+        envFlag ?: runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
             .getOrElse {
                 error("Not a valid environment: ${System.getenv("ENVIRONMENT")}")
             }
@@ -166,15 +165,13 @@ fun main(args: Array<String>) {
         launch {
             while (true) {
                 dynamo.getMaxHistoricalBlockHeight()
+                    .also { log.info("Maximum block height: ${it ?: "--"}") }
                     ?.let(dogStatsClient::recordMaxBlockHeight)
                     ?.getOrElse { log.error("DD metric failure", it) }
 
                 delay(60_000)
             }
         }
-
-        val highest = dynamo.getMaxHistoricalBlockHeight()
-        log.info("Maximum historical block height found: ${highest ?: "--"}")
 
         // https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#provenance.attribute.v1.AttributeType
         val checkForEvents = setOf(
