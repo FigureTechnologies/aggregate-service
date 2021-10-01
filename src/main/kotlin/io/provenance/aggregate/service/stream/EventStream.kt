@@ -544,6 +544,7 @@ class EventStream(
                     is Either.Right -> emit(it.value)
                 }
             }
+            .cancellable()
             .retryWhen { cause: Throwable, attempt: Long ->
                 log.warn("streamBlocks::error; recovering Flow (attempt ${attempt + 1})")
                 when (cause) {

@@ -1,12 +1,44 @@
 package io.provenance.aggregate.service.flow.extensions
 
-// Adapted from https://github.com/Kotlin/kotlinx.coroutines/pull/1558
-
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
-import kotlin.math.*
+import kotlin.math.max
+import kotlin.math.min
+
+/**
+ * Cancels the flow upon receipt of a signal from
+ *
+ * Adapted from https://stackoverflow.com/a/59109105
+ *
+ * @see https://stackoverflow.com/a/59109105
+ */
+@OptIn(ExperimentalStdlibApi::class, InternalCoroutinesApi::class, FlowPreview::class)
+fun <T> Flow<T>.cancelOnSignal(
+    signal: Channel<Unit>
+): Flow<T> = flow {
+    val outer = this
+    try {
+        coroutineScope {
+            launch {
+                signal.receive()
+                this@coroutineScope.cancel()
+            }
+
+            collect(object : FlowCollector<T> {
+                override suspend fun emit(value: T) {
+                    outer.emit(value)
+                }
+            })
+        }
+    } catch (e: CancellationException) {
+        //ignore
+    }
+}
+
+// Code below is adapted from https://github.com/Kotlin/kotlinx.coroutines/pull/1558
 
 /**
  * Returns a flow of lists each not exceeding the given [size].
@@ -14,7 +46,6 @@ import kotlin.math.*
  *
  * @param size the number of elements to take in each list, must be positive and can be greater than the number of elements in this flow.
  */
-
 @OptIn(FlowPreview::class)
 fun <T> Flow<T>.chunked(size: Int): Flow<List<T>> = chunked(size) { it.toList() }
 
@@ -30,7 +61,6 @@ fun <T> Flow<T>.chunked(size: Int): Flow<List<T>> = chunked(size) { it.toList() 
  *
  * @param size the number of elements to take in each list, must be positive and can be greater than the number of elements in this flow.
  */
-
 @OptIn(FlowPreview::class)
 fun <T, R> Flow<T>.chunked(size: Int, transform: suspend (List<T>) -> R): Flow<R> {
     require(size > 0) { "Size should be greater than 0, but was $size" }
@@ -49,7 +79,6 @@ fun <T, R> Flow<T>.chunked(size: Int, transform: suspend (List<T>) -> R): Flow<R
  * @param step the number of elements to move the window forward by on an each step
  * @param partialWindows controls whether or not to keep partial windows in the end if any.
  */
-
 @OptIn(FlowPreview::class)
 fun <T> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean): Flow<List<T>> =
     windowed(size, step, partialWindows) { it.toList() }
@@ -70,8 +99,7 @@ fun <T> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean): Flow<Li
  * @param step the number of elements to move the window forward by on an each step.
  * @param partialWindows controls whether or not to keep partial windows in the end if any.
  */
-
-@OptIn(ExperimentalStdlibApi::class, kotlinx.coroutines.InternalCoroutinesApi::class, FlowPreview::class)
+@OptIn(ExperimentalStdlibApi::class, InternalCoroutinesApi::class, FlowPreview::class)
 fun <T, R> Flow<T>.windowed(
     size: Int,
     step: Int,
