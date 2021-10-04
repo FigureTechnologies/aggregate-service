@@ -51,7 +51,7 @@ fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
 }
 
 /**
- * Installs a shutdown a handler to clean up resources when the returnerd Channel receives its one (and only) element.
+ * Installs a shutdown a handler to clean up resources when the returned Channel receives its one (and only) element.
  * This is primary intended to be used to clean up resources allocated by Flows.
  */
 fun installShutdownHook(log: Logger): Channel<Unit> {
