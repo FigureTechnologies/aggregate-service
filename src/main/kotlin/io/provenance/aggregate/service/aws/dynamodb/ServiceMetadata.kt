@@ -19,18 +19,17 @@ class ServiceMetadata(
     @get:DynamoDbAttribute(value = "Value") val value: String,
     @get:DynamoDbAttribute(value = "UpdatedAt") val updatedAt: String
 ) {
-    enum class Properties(val key: String) {
+    sealed class Properties(val key: String) {
+        /**
+         * Create a new `ServiceMetadata` for the Property (using the given key value)
+         */
+        fun newEntry(value: String): ServiceMetadata =
+            ServiceMetadata(property = key, value = value, updatedAt = timestamp())
+
         /**
          * References the current historical maximum block height seen so far.
          */
-        MAX_HISTORICAL_BLOCK_HEIGHT("MaxHistoricalBlockHeight");
-
-        fun newEntry(value: String): ServiceMetadata =
-            ServiceMetadata(
-                property = key,
-                value = value,
-                updatedAt = timestamp()
-            )
+        object MaxHistoricalBlockHeight : Properties("MaxHistoricalBlockHeight")
 
         override fun toString() = key
     }
@@ -57,4 +56,6 @@ class ServiceMetadata(
             updatedAt = updatedAt
         )
     }
+
+    override fun toString(): String = "<<Property: $property; Value: $value; UpdatedAt: $updatedAt>>"
 }

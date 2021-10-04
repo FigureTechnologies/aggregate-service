@@ -2,9 +2,6 @@ package io.provenance.aggregate.service.aws.dynamodb
 
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable
@@ -19,6 +16,7 @@ import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.batch.BatchId
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.future.asDeferred
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
@@ -100,12 +98,11 @@ open class AwsDynamo(
                 .maxOrNull()
 
         val totalProcessed = AtomicInteger(0)
-        val reservedSlots = AtomicInteger(0)
+        var reservedSlots: Int = 0
         val futures = mutableListOf<Deferred<Void>>()
 
         futures.add(
             enhancedClient.transactWriteItems { request: TransactWriteItemsEnhancedRequest.Builder ->
-                // TODO: record the S3 location of each file generated
                 // Add the `BlockBatch` entry:
                 request.addPutItem(
                     BLOCK_BATCH_TABLE,
@@ -114,20 +111,23 @@ open class AwsDynamo(
                         .item(batch)
                         .build()
                 )
-                reservedSlots.incrementAndGet()
+                reservedSlots += 1
                 totalProcessed.incrementAndGet()
+
                 // Put/Update the maximum historical block height seen:
                 if (foundMaxHistoricalHeight != null) {
+                    log.info("Found historical block height -> $foundMaxHistoricalHeight; stored = $storedMaxHistoricalHeight")
                     val prop =
-                        ServiceMetadata.Properties.MAX_HISTORICAL_BLOCK_HEIGHT.newEntry(foundMaxHistoricalHeight.toString())
+                        ServiceMetadata.Properties.MaxHistoricalBlockHeight.newEntry(foundMaxHistoricalHeight.toString())
                     if (storedMaxHistoricalHeight == null) {
                         request.addPutItem(
                             SERVICE_METADATA_TABLE,
                             TransactPutItemEnhancedRequest.builder(ServiceMetadata::class.java)
+                                //.item
                                 .item(prop)
                                 .build()
                         )
-                        reservedSlots.incrementAndGet()
+                        reservedSlots += 1
                         totalProcessed.incrementAndGet()
                     } else if (foundMaxHistoricalHeight > storedMaxHistoricalHeight) {
                         request.addUpdateItem(
@@ -136,7 +136,7 @@ open class AwsDynamo(
                                 .item(prop)
                                 .build()
                         )
-                        reservedSlots.incrementAndGet()
+                        reservedSlots += 1
                         totalProcessed.incrementAndGet()
                     }
                 }
@@ -144,7 +144,7 @@ open class AwsDynamo(
                 // `DYNAMODB_MAX_TRANSACTION_ITEMS`, to stay under the limit:
                 createStreamBlockPutRequests(
                     BatchId(batch.batchId),
-                    blocks.take(DYNAMODB_MAX_TRANSACTION_ITEMS - reservedSlots.getAcquire())
+                    blocks.take(DYNAMODB_MAX_TRANSACTION_ITEMS - reservedSlots)
                 ).forEach {
                     request.addPutItem(BLOCK_METADATA_TABLE, it)
                     totalProcessed.incrementAndGet()
@@ -179,7 +179,7 @@ open class AwsDynamo(
         runCatching {
             SERVICE_METADATA_TABLE.getItem(
                 Key.builder()
-                    .partitionValue(ServiceMetadata.Properties.MAX_HISTORICAL_BLOCK_HEIGHT.name)
+                    .partitionValue(ServiceMetadata.Properties.MaxHistoricalBlockHeight.key)
                     .build()
             )
                 .await()
@@ -195,7 +195,7 @@ open class AwsDynamo(
      */
     override suspend fun writeMaxHistoricalBlockHeight(blockHeight: Long): WriteResult {
         SERVICE_METADATA_TABLE.putItem { request ->
-            request.item(ServiceMetadata.Properties.MAX_HISTORICAL_BLOCK_HEIGHT.newEntry(blockHeight.toString()))
+            request.item(ServiceMetadata.Properties.MaxHistoricalBlockHeight.newEntry(blockHeight.toString()))
         }
             .await()
 

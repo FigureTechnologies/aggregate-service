@@ -145,13 +145,17 @@ class AWSTests : TestBase() {
             }
 
             assert(uploadResults != null && uploadResults.isNotEmpty())
-            assert(uploadResults?.sumOf { it.batchSize } ?: 0 == expectedTotal.toInt()) {
+            assert((uploadResults?.sumOf { it.batchSize } ?: 0) == expectedTotal.toInt()) {
                 "EventStreamUploader: Collection timed out (probably waiting for more live blocks that aren't coming)"
             }
 
             // check S3 and make sure there's <expectTotal> objects in the bucket:
             val keys = s3.listBucketObjectKeys()
-            assert(keys.isNotEmpty() && keys.size == uploadResults?.size ?: 0)
+            assert(keys.isNotEmpty() && keys.size == (uploadResults?.size ?: 0))
+
+            // The max height should have been set:
+            val maxHeight = dynamo.getMaxHistoricalBlockHeight()
+            assert(dynamo.getMaxHistoricalBlockHeight() != null && maxHeight is Long)
         }
     }
 
