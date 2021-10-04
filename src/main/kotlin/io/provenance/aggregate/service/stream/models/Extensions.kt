@@ -2,13 +2,9 @@ package io.provenance.aggregate.service.stream.models.extensions
 
 import io.provenance.aggregate.service.extensions.decodeBase64
 import io.provenance.aggregate.service.extensions.hash
-import io.provenance.aggregate.service.stream.RpcResponse
 import io.provenance.aggregate.service.stream.models.*
-import org.json.JSONObject
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
-
-fun RpcResponse<JSONObject>.isEmpty(): Boolean = this.result?.isEmpty ?: true
 
 fun Block.txHash(index: Int): String? = this.data?.txs?.get(index)?.hash()
 

@@ -14,9 +14,11 @@ import io.provenance.aggregate.service.aws.dynamodb.BlockStorageMetadata
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.models.*
 import io.provenance.aggregate.service.stream.models.extensions.blockEvents
-import io.provenance.aggregate.service.stream.models.extensions.isEmpty
 import io.provenance.aggregate.service.stream.models.extensions.txEvents
 import io.provenance.aggregate.service.stream.models.extensions.txHash
+import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
+import io.provenance.aggregate.service.stream.models.rpc.response.MessageType
+import io.provenance.aggregate.service.stream.models.rpc.response.RpcResponse
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.json.JSONObject
@@ -77,7 +79,7 @@ class EventStream(
             fun concurrency(value: Int) = apply { concurrency = value }
 
             /**
-             * Sets the maximum number of blocks that will be fetched concurrently.
+             * Sets the maximum number of blocks that will be fetched and processed concurrently.
              */
             fun batchSize(size: Int) = apply { batchSize = size }
 
@@ -166,48 +168,14 @@ class EventStream(
         }
     }
 
-    sealed interface MessageType {
-        object Empty : MessageType
-        data class NewBlock(val block: NewBlockResult) : MessageType
-    }
-
     private val log = logger()
 
-    // We have to build a reified, parameterized type suitable to pass to `moshi.adapter`
-    // because it's not possible to do something like `RpcResponse<NewBlockResult>::class.java`:
-    // See https://stackoverflow.com/questions/46193355/moshi-generic-type-adapter
-    val rpcEmptyResponseReader: JsonAdapter<RpcResponse<JSONObject>> = moshi.adapter(
-        Types.newParameterizedType(
-            RpcResponse::class.java,
-            JSONObject::class.java
-        )
-    )
-
-    val rpcNewBlockResponseReader: JsonAdapter<RpcResponse<NewBlockResult>> = moshi.adapter(
-        Types.newParameterizedType(
-            RpcResponse::class.java,
-            NewBlockResult::class.java
-        )
-    )
+    private val responseMessageDecoder = MessageType.Decoder(moshi)
 
     /**
      * Serialize data of a given class type
      */
     fun <T> serialize(clazz: Class<T>, data: T) = moshi.adapter<T>(clazz).toJson(data)
-
-    private fun deserializeMessage(input: String): MessageType? {
-        try {
-            if (rpcEmptyResponseReader.fromJson(input)?.isEmpty() ?: true) {
-                return MessageType.Empty
-            }
-        } catch (_: JsonDataException) {
-        }
-        return rpcNewBlockResponseReader.fromJson(input)
-            ?.let {
-                it.result?.let { MessageType.NewBlock(it) }
-            }
-    }
-
 
     private fun getBlockHeightQueryRanges(minHeight: Long, maxHeight: Long): Sequence<Pair<Long, Long>> {
         if (minHeight > maxHeight) {
@@ -463,23 +431,29 @@ class EventStream(
                         when (event.message) {
                             is Message.Text -> {
                                 val message = event.message as Message.Text
-                                val messageType = deserializeMessage(message.value)
-                                if (messageType != null) {
-                                    when (messageType) {
-                                        is MessageType.Empty -> {
-                                            log.info("received empty ACK message => ${message.value}")
-                                        }
-                                        is MessageType.NewBlock -> {
-                                            val streamBlock: StreamBlock? =
-                                                messageType.block.data.value.block.let {
-                                                    log.info("live::received NewBlock message: #${it.header?.height}")
-                                                    queryBlock(Either.Right(it), skipIfNoTxs = false)
-                                                }
-                                            if (streamBlock != null) {
-                                                emit(streamBlock)
+                                when (val type = responseMessageDecoder.decode(message.value)) {
+                                    is MessageType.Empty ->
+                                        log.info("received empty ACK message => ${message.value}")
+                                    is MessageType.NewBlock -> {
+                                        val streamBlock: StreamBlock? =
+                                            type.block.data.value.block.let {
+                                                log.info("live::received NewBlock message: #${it.header?.height}")
+                                                queryBlock(Either.Right(it), skipIfNoTxs = false)
                                             }
+                                        if (streamBlock != null) {
+                                            emit(streamBlock)
                                         }
                                     }
+                                    is MessageType.Error -> {
+
+                                    }
+                                    is MessageType.Panic -> {
+                                        log.error("Upstream panic from RPC endpoint: ${type.error}")
+                                        throw CancellationException("RPC endpoint panic: ${type.error}")
+                                    }
+                                    is MessageType.Unknown ->
+                                        log.info("unknown message type; skipping message => ${message.value}")
+
                                 }
                             }
                             is Message.Bytes -> {
