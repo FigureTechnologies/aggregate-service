@@ -2,11 +2,15 @@ name: Build and Deploy Serverless
 
 # Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
+  release:
+    types:
+      - created
   push:
-    branches: [ main, develop ]
+    branches:
+      - main
   pull_request:
-    branches: [ main, develop ]
+    branches:
+      - main
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -48,6 +52,7 @@ jobs:
 
   docker_job_build:
     name: Push to GitHub Docker Package Registry
+    if: github.event_name == 'release'
     needs: java_job_build
     runs-on: ubuntu-latest
     steps:
@@ -59,9 +64,6 @@ jobs:
 
           # Strip "v" prefix from tag name
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "main" ] && VERSION=latest
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
@@ -136,6 +138,7 @@ jobs:
 
   docker_service_build:
     name: Push to GitHub Docker Package Registry
+    if: github.event_name == 'release'
     needs: java_service_build
     runs-on: ubuntu-latest
     steps:
@@ -147,9 +150,6 @@ jobs:
 
           # Strip "v" prefix from tag name
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "main" ] && VERSION=latest
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
@@ -176,7 +176,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: aggregate-service
-          path: aggregate-service/build/libs
+          path: build/libs
 
       - name: Log into registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -184,7 +184,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          context: aggregate-service
+          context: .
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true

@@ -31,7 +31,7 @@ build-dist:
 	$(GRADLEW) installDist
 
 run-local:  build-dist
-	AWS_REGION=us-east-1 $(BUILD)/install/$(NAME)/bin/$(NAME) $(ARGS)
+	AWS_REGION=us-east-1 ENVIRONMENT=local $(BUILD)/install/$(NAME)/bin/$(NAME) $(ARGS)
 
 test: clean-test
 	$(GRADLEW) test -i

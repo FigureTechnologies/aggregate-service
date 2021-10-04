@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service
 
+import com.squareup.moshi.JsonEncodingException
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
 import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
@@ -8,14 +9,14 @@ import io.provenance.aggregate.service.mocks.MockEventStreamService
 import io.provenance.aggregate.service.mocks.MockTendermintService
 import io.provenance.aggregate.service.mocks.ServiceMocker
 import io.provenance.aggregate.service.stream.TendermintService
-import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
-import io.provenance.aggregate.service.stream.models.BlockResponse
-import io.provenance.aggregate.service.stream.models.BlockResultsResponse
-import io.provenance.aggregate.service.stream.models.BlockchainResponse
+import io.provenance.aggregate.service.stream.models.*
+import io.provenance.aggregate.service.stream.models.extensions.toDecodedMap
+import io.provenance.aggregate.service.stream.models.rpc.response.MessageType
 import io.provenance.aggregate.service.utils.Builders
 import io.provenance.aggregate.service.utils.EXPECTED_NONEMPTY_BLOCKS
 import io.provenance.aggregate.service.utils.EXPECTED_TOTAL_BLOCKS
 import io.provenance.aggregate.service.utils.MIN_BLOCK_HEIGHT
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.count
 import kotlinx.coroutines.flow.toList
@@ -28,6 +29,8 @@ class StreamTests : TestBase() {
     // block metadata by block height:
     val noopDynamo = NoOpDynamo()
 
+    val decoder = MessageType.Decoder(moshi)
+
     @BeforeAll
     override fun setup() {
         super.setup()
@@ -39,6 +42,83 @@ class StreamTests : TestBase() {
     }
 
     @Nested
+    @DisplayName("Tendermint RPC response message decoding")
+    inner class RPCResponseDecoding {
+
+        @Test
+        fun testDecodeEmptyACKMessage() {
+            val response: MessageType = decoder.decode(templates.read("rpc/responses/empty.json"))
+            assert(response is MessageType.Empty)
+        }
+
+        @Test
+        fun testDecodeUnknownMessage() {
+            val response: MessageType = decoder.decode(templates.read("rpc/responses/unknown.json"))
+            assert(response is MessageType.Unknown)
+        }
+
+        @Test
+        fun testTryDecodeMalformedMessage() {
+            assertThrows<JsonEncodingException> {
+                val response: MessageType = decoder.decode(templates.read("rpc/responses/malformed.json"))
+            }
+        }
+
+        @Test
+        fun testDecodeNewBlockMessage() {
+            val response: MessageType = decoder.decode(templates.read("live/3126935.json"))
+            assert(response is MessageType.NewBlock)
+        }
+
+        @Test
+        fun testDecodeErrorUnwrappedMessage() {
+            val response: MessageType = decoder.decode(templates.read("rpc/responses/error_unwrapped.json"))
+            assert(response is MessageType.Error)
+            assert((response as MessageType.Error).error.code == -1000)
+            assert((response as MessageType.Error).error.text()?.contains("something bad happened") ?: false)
+        }
+
+        @Test
+        fun testDecodeErrorWrappedMessage() {
+            val response: MessageType = decoder.decode(templates.read("rpc/responses/error_wrapped.json"))
+            assert(response is MessageType.Error)
+            assert((response as MessageType.Error).error.code == -1000)
+            assert((response as MessageType.Error).error.text()?.contains("something bad happened") ?: false)
+        }
+
+        @Test
+        fun testDecodePanicMessage() {
+            val response: MessageType = decoder.decode(templates.read("rpc/responses/panic.json"))
+            assert(response is MessageType.Panic)
+            assert((response as MessageType.Panic).error.text()?.contains("panic") ?: false)
+        }
+    }
+
+    @Nested
+    @DisplayName("Event attributes")
+    inner class EventAttributes {
+
+        @Test
+        fun testDecodingIntoMap() {
+            val recordAddrValue =
+                "InJlY29yZDFxMm0zeGFneDc2dXl2ZzRrN3l2eGM3dWhudWdnOWc2bjBsY2Robm43YXM2YWQ4a3U4Z3ZmdXVnZjZ0aiI="
+            val sessionAddrValue =
+                "InNlc3Npb24xcXhtM3hhZ3g3NnV5dmc0azd5dnhjN3VobnVnMHpwdjl1cTNhdTMzMmsyNzY2NmplMGFxZ2o4Mmt3dWUi"
+            val scopeAddrValue = "InNjb3BlMXF6bTN4YWd4NzZ1eXZnNGs3eXZ4Yzd1aG51Z3F6ZW1tbTci"
+            val eventAttributes: List<Event> = listOf(
+                Event(key = "cmVjb3JkX2FkZHI=", value = recordAddrValue, index = false),
+                Event(key = "c2Vzc2lvbl9hZGRy", value = sessionAddrValue, index = false),
+                Event(key = "c2NvcGVfYWRkcg==", value = scopeAddrValue, index = false)
+            )
+            val attributeMap = eventAttributes.toDecodedMap()
+            assert("record_addr" in attributeMap && attributeMap["record_addr"] == recordAddrValue)
+            assert("session_addr" in attributeMap && attributeMap["session_addr"] == sessionAddrValue)
+            assert("scope_addr" in attributeMap && attributeMap["scope_addr"] == scopeAddrValue)
+        }
+    }
+
+    @Nested
+    @DisplayName("Tendermint API")
     inner class TendermintAPI {
 
         @Test
@@ -168,6 +248,7 @@ class StreamTests : TestBase() {
     }
 
     @Nested
+    @DisplayName("Streaming block data functionality")
     inner class Streaming {
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -222,7 +303,7 @@ class StreamTests : TestBase() {
                     .toList()
 
                 assert(collectedNoSkip.size.toLong() == EXPECTED_TOTAL_BLOCKS)
-                assert(collectedNoSkip.all { it.isRight() && it.orNull()?.historical ?: false })
+                assert(collectedNoSkip.all { it.historical })
 
                 // If skipping empty blocks, we should get EXPECTED_NONEMPTY_BLOCKS:
                 val collectedSkip = Builders.eventStream()
@@ -234,7 +315,7 @@ class StreamTests : TestBase() {
                     .toList()
 
                 assert(collectedSkip.size.toLong() == EXPECTED_NONEMPTY_BLOCKS)
-                assert(collectedSkip.all { it.isRight() && it.orNull()?.historical ?: false })
+                assert(collectedSkip.all { it.historical })
             }
         }
 
@@ -267,7 +348,7 @@ class StreamTests : TestBase() {
                 assert(collected.size == eventStreamService.expectedResponseCount().toInt())
 
                 // All blocks should be marked as "live":
-                assert(collected.all { it.isRight() && !(it.orNull()?.historical ?: true) })
+                assert(collected.all { !it.historical })
             }
         }
 
@@ -304,9 +385,39 @@ class StreamTests : TestBase() {
                 assert(collected.filter { !it.historical }.size.toLong() == eventStreamService.expectedResponseCount())
             }
         }
+
+        @OptIn(ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
+        @Test
+        fun testCombinedBlockStreamingCancelledOnpanic() {
+            assertThrows<CancellationException> {
+                dispatcherProvider.runBlockingTest {
+
+                    val eventStreamService = Builders.eventStreamService(includeLiveBlocks = true)
+                        // Add a panic, which should cause the stream to terminate.
+                        .response(templates.read("rpc/responses/panic.json"))
+                        .dispatchers(dispatcherProvider)
+                        .build()
+
+                    val tendermintService = Builders.tendermintService()
+                        .build(MockTendermintService::class.java)
+
+                    val eventStream = Builders.eventStream()
+                        .dispatchers(dispatcherProvider)
+                        .eventStreamService(eventStreamService)
+                        .tendermintService(tendermintService)
+                        .dynamoInterface(noopDynamo)
+                        .fromHeight(MIN_BLOCK_HEIGHT)
+                        .skipIfEmpty(true)
+                        .build()
+
+                    eventStream.streamBlocks().toList()
+                }
+            }
+        }
     }
 
     @Nested
+    @DisplayName("Filtering blocks data from the stream")
     inner class StreamFiltering {
         @OptIn(ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
         @Test

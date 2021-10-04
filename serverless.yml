@@ -15,10 +15,23 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:custom.environment.BUCKET_NAME}
-    usersTable:
+    BlockBatchTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:custom.environment.DYNAMODB_TABLE_NAME}
+        TableName: ${self:custom.environment.AWS_DYNAMODB_BLOCK_BATCH_TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: BatchId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: BatchId
+            KeyType: HASH
+        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 25 reads and writes for now.
+          ReadCapacityUnits: 25
+          WriteCapacityUnits: 25
+    BlockMetadataTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.environment.AWS_DYNAMODB_BLOCK_METADATA_TABLE_NAME}
         AttributeDefinitions:
           - AttributeName: BlockHeight
             AttributeType: N
@@ -28,6 +41,20 @@ resources:
         ProvisionedThroughput: # Might need to turn on auto-scaling, default to 25 reads and writes for now.
           ReadCapacityUnits: 25
           WriteCapacityUnits: 25
+    ServiceMetadataTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.environment.AWS_DYNAMODB_SERVICE_METADATA_TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: Property
+            AttributeType: S
+        KeySchema:
+          - AttributeName: Property
+            KeyType: HASH
+        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 25 reads and writes for now.
+          ReadCapacityUnits: 25
+          WriteCapacityUnits: 25
+
 
 ## Below is to run serverless against localstack
 #plugins:

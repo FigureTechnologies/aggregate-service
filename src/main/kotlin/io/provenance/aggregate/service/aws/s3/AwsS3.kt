@@ -6,13 +6,22 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import kotlinx.coroutines.future.await
 
-open class AwsS3(protected val s3Client: S3AsyncClient, protected val bucket: Bucket) : AwsS3Interface {
-    override suspend fun streamObject(key: String, body: AsyncRequestBody): PutObjectResponse {
+open class AwsS3(protected val s3Client: S3AsyncClient, protected val bucket: S3Bucket) : AwsS3Interface {
+    override suspend fun streamObject(
+        key: S3Key,
+        body: AsyncRequestBody,
+        metadata: Map<String, String>?
+    ): PutObjectResponse {
         return s3Client.putObject(
             PutObjectRequest
                 .builder()
                 .bucket(bucket.name)
-                .key(key)
+                .key(key.value)
+                .apply {
+                    if (metadata != null) {
+                        metadata(metadata)
+                    }
+                }
                 .build(),
             body
         ).await()

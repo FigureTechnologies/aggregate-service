@@ -7,7 +7,7 @@ import com.tinder.scarlet.WebSocket
 import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.EventStreamService
-import io.provenance.aggregate.service.stream.Subscribe
+import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
 import io.provenance.aggregate.service.utils.Defaults
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -61,7 +61,7 @@ class MockEventStreamService private constructor(
                 channel = channel,
                 responseCount = payloads.size.toLong(),
                 moshi = moshi,
-                dispatchers = dispatchers ?: throw IllegalStateException("dispatchers must be provided")
+                dispatchers = dispatchers ?: error("dispatchers must be provided")
             )
         }
     }

@@ -1,20 +1,33 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 object Version {
-    val arrow = "0.12.1"
-    val apacheCommons = "1.9"
-    val aws = "2.17.40"
-    val grpc = "1.39.0"
-    val hoplite = "1.4.7"
-    val junit = "5.1.0"
-    val kotlinx = "1.5.2"
-    val logback = "0.1.5"
-    val moshi = "1.12.0"
-    val provenance = "1.5.0"
-    val scarlet = "0.1.12"
-    val awsSdk = "2.17.32"
-    val localstack = "0.2.15"
-    val junitPioneer = "1.4.2"
+    const val Arrow = "0.12.1"
+
+    object ApacheCommons {
+        const val CSV = "1.9.0"
+        const val Text = "1.9"
+        const val IO = "2.11.0"
+    }
+
+    const val AWS = "2.17.40"
+    const val DatadogStats = "2.13.0"
+    const val GRPC = "1.39.0"
+    const val Hoplite = "1.4.7"
+    const val JUnit = "5.1.0"
+    const val JUnitPioneer = "1.4.2"
+    const val JSON = "20210307"
+
+    object Kotlinx {
+        const val Core = "1.5.2"
+        const val CLI = "0.3.3"
+    }
+
+    const val Logback = "0.1.5"
+    const val Moshi = "1.12.0"
+    const val Provenance = "1.5.0"
+    const val Scarlet = "0.1.12"
+    const val AWSSDK = "2.17.32"
+    const val LocalStack = "0.2.15"
 }
 
 plugins {
@@ -22,9 +35,6 @@ plugins {
     id("org.jetbrains.kotlin.kapt")
     id("com.google.protobuf") version "0.8.17"
     id("org.openapi.generator") version "5.2.1"
-    // kotlin("plugin.spring") version "1.5.21"
-    // id("org.springframework.boot") version "2.5.3"
-    // id("io.spring.dependency-management") version "1.0.11.RELEASE"
     application
     idea
 }
@@ -46,51 +56,51 @@ dependencies {
     implementation("org.jetbrains.kotlin", "kotlin-stdlib")
     implementation("org.jetbrains.kotlin", "kotlin-reflect")
 
-    implementation("org.jetbrains.kotlinx", "kotlinx-cli-jvm", "0.3.3")
-    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.kotlinx)
-    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.kotlinx)
-    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-reactive", Version.kotlinx)
+    implementation("org.jetbrains.kotlinx", "kotlinx-cli-jvm", Version.Kotlinx.CLI)
+    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.Kotlinx.Core)
+    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.Kotlinx.Core)
+    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-reactive", Version.Kotlinx.Core)
 
-    testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-test", Version.kotlinx)
-    testImplementation("org.junit.jupiter", "junit-jupiter-engine", Version.junit)
-    testImplementation("org.apache.commons", "commons-text", Version.apacheCommons)
-    testImplementation("org.junit-pioneer", "junit-pioneer", Version.junitPioneer)
+    testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-test", Version.Kotlinx.Core)
+    testImplementation("org.junit.jupiter", "junit-jupiter-engine", Version.JUnit)
+    testImplementation("org.apache.commons", "commons-text", Version.ApacheCommons.Text)
+    testImplementation("org.junit-pioneer", "junit-pioneer", Version.JUnitPioneer)
 
-    implementation("io.arrow-kt", "arrow-core", Version.arrow)
+    implementation("io.arrow-kt", "arrow-core", Version.Arrow)
+    implementation("org.apache.commons", "commons-csv", Version.ApacheCommons.CSV)
+    implementation("commons-io", "commons-io", Version.ApacheCommons.IO)
 
-    implementation("com.tinder.scarlet", "scarlet", Version.scarlet)
-    implementation("com.tinder.scarlet", "stream-adapter-coroutines", Version.scarlet)
-    implementation("com.tinder.scarlet", "websocket-okhttp", Version.scarlet)
-    implementation("com.tinder.scarlet", "message-adapter-moshi", Version.scarlet)
+    implementation("com.tinder.scarlet", "scarlet", Version.Scarlet)
+    implementation("com.tinder.scarlet", "stream-adapter-coroutines", Version.Scarlet)
+    implementation("com.tinder.scarlet", "websocket-okhttp", Version.Scarlet)
+    implementation("com.tinder.scarlet", "message-adapter-moshi", Version.Scarlet)
 
-    implementation("io.grpc", "grpc-alts", Version.grpc)
-    implementation("io.grpc", "grpc-netty", Version.grpc)
-    implementation("io.grpc", "grpc-protobuf", Version.grpc)
-    implementation("io.grpc", "grpc-stub", Version.grpc)
+    implementation("com.datadoghq", "java-dogstatsd-client", Version.DatadogStats)
 
-    implementation("io.provenance.protobuf", "pb-proto-java", Version.provenance)
+    implementation("io.grpc", "grpc-alts", Version.GRPC)
+    implementation("io.grpc", "grpc-netty", Version.GRPC)
+    implementation("io.grpc", "grpc-protobuf", Version.GRPC)
+    implementation("io.grpc", "grpc-stub", Version.GRPC)
 
-    implementation("ch.qos.logback.contrib", "logback-json-core", Version.logback)
-    implementation("ch.qos.logback.contrib", "logback-json-classic", Version.logback)
+    implementation("io.provenance.protobuf", "pb-proto-java", Version.Provenance)
 
-    implementation("com.squareup.moshi", "moshi-kotlin-codegen", Version.moshi)
-    kapt("com.squareup.moshi:moshi-kotlin-codegen:${Version.moshi}")
+    implementation("ch.qos.logback.contrib", "logback-json-core", Version.Logback)
+    implementation("ch.qos.logback.contrib", "logback-json-classic", Version.Logback)
 
-    implementation("com.sksamuel.hoplite", "hoplite-core", Version.hoplite)
+    implementation("com.squareup.moshi", "moshi-kotlin-codegen", Version.Moshi)
+    kapt("com.squareup.moshi:moshi-kotlin-codegen:${Version.Moshi}")
 
-    implementation("org.json", "json", "20210307")
+    implementation("com.sksamuel.hoplite", "hoplite-core", Version.Hoplite)
 
-    implementation(platform("software.amazon.awssdk:bom:${Version.aws}"))
+    implementation("org.json", "json", Version.JSON)
+
+    implementation(platform("software.amazon.awssdk:bom:${Version.AWS}"))
     implementation("software.amazon.awssdk:netty-nio-client")
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:dynamodb")
     implementation("software.amazon.awssdk:dynamodb-enhanced")
 
-    implementation("cloud.localstack", "localstack-utils", Version.localstack)
-
-//    implementation("org.springframework.boot:spring-boot-starter-web")
-//    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-//    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    implementation("cloud.localstack", "localstack-utils", Version.LocalStack)
 }
 
 sourceSets {
@@ -188,7 +198,7 @@ tasks.withType<Jar> {
     from(sourceSets.main.get().output)
     dependsOn(configurations.runtimeClasspath)
     from({
-        configurations.runtimeClasspath.get().map { if(it.isDirectory) it else zipTree(it)}
+        configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }
     })
 
 

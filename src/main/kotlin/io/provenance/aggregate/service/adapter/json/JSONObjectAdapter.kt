@@ -1,4 +1,4 @@
-package io.provenance.aggregate.service.stream.json
+package io.provenance.aggregate.service.adapter.json
 
 import com.squareup.moshi.*
 import okio.Buffer

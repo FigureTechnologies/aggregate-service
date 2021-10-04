@@ -7,7 +7,8 @@ import io.provenance.aggregate.service.base.TestBase
 import io.provenance.aggregate.service.mocks.*
 import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.EventStreamUploader
-import io.provenance.aggregate.service.stream.UploadResult
+import io.provenance.aggregate.service.stream.models.StreamBlock
+import io.provenance.aggregate.service.stream.models.UploadResult
 import io.provenance.aggregate.service.utils.Builders
 import io.provenance.aggregate.service.utils.Defaults
 import io.provenance.aggregate.service.utils.EXPECTED_NONEMPTY_BLOCKS
@@ -58,7 +59,7 @@ class AWSTests : TestBase() {
         // the AWS SDK v2 async clients
         runBlocking(dispatcherProvider.main()) {
             s3.createBucket()
-            dynamo.createTable()
+            dynamo.createTables()
         }
     }
 
@@ -67,7 +68,7 @@ class AWSTests : TestBase() {
         // TODO: Change this to runBlockingTest when issues are fixed. See https://github.com/Kotlin/kotlinx.coroutines/issues/1204
         runBlocking(dispatcherProvider.main()) {
             s3.emptyAndDeleteBucket()
-            dynamo.dropTable()
+            dynamo.dropTables()
         }
     }
 
@@ -131,7 +132,7 @@ class AWSTests : TestBase() {
                 .skipIfEmpty(true)
                 .build()
 
-            val collected: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
+            val uploadResults: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
                 EventStreamUploader(
                     stream,
                     aws,
@@ -143,13 +144,14 @@ class AWSTests : TestBase() {
                     .toList()
             }
 
-            assert(collected != null && collected.size == expectedTotal.toInt()) {
+            assert(uploadResults != null && uploadResults.isNotEmpty())
+            assert(uploadResults?.sumOf { it.batchSize } ?: 0 == expectedTotal.toInt()) {
                 "EventStreamUploader: Collection timed out (probably waiting for more live blocks that aren't coming)"
             }
 
             // check S3 and make sure there's <expectTotal> objects in the bucket:
             val keys = s3.listBucketObjectKeys()
-            assert(keys.isNotEmpty() && keys.size == expectedTotal.toInt())
+            assert(keys.isNotEmpty() && keys.size == uploadResults?.size ?: 0)
         }
     }
 
@@ -170,8 +172,8 @@ class AWSTests : TestBase() {
         runBlocking(dispatcherProvider.main()) {
 
             // === (CASE 1 -- Never seen) ==============================================================================
-
-            val collected1: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
+            var inspected1 = false
+            val uploadResults1: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
                 EventStreamUploader(
                     createSimpleEventStream(includeLiveBlocks = true, skipIfEmpty = true, skipIfSeen = false),
                     aws,
@@ -179,18 +181,23 @@ class AWSTests : TestBase() {
                     EventStream.Options.DEFAULT,
                     dispatchers = dispatcherProvider
                 )
-                    .upload()
+                    .upload { block ->
+                        // Inspect each block
+                        inspected1 = true
+                        // There should be no storage metadata attached to any of the blocks because they haven't been
+                        // seen yet. Both historical and live blocks won't have any metadata.
+                        assert(block.metadata == null)
+                    }
                     .toList()
             }
-            assert(collected1 != null) { "Stream (1) failed to collect in time" }
-            // There should be no storage metadata attached to any of the blocks because they haven't been seen yet.
-            // Both historical and live blocks won't have any metadata.
-            assert(collected1!!.isNotEmpty() && collected1.all { it.streamBlock.metadata == null })
+            assert(uploadResults1 != null && uploadResults1.isNotEmpty()) { "Stream (1) failed to collect in time" }
+            assert(inspected1) { "Stream 1: no blocks emitted" }
 
             // === (CASE 2 -- Seen and skipped ) =======================================================================
 
             // Re-run on a different instance of the stream that's using the same data:
-            val collected2: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
+            val blocks2 = mutableListOf<StreamBlock>()
+            val uploadResults2: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
                 EventStreamUploader(
                     createSimpleEventStream(includeLiveBlocks = true, skipIfEmpty = true, skipIfSeen = true),
                     aws,
@@ -198,23 +205,21 @@ class AWSTests : TestBase() {
                     EventStream.Options.DEFAULT,
                     dispatchers = dispatcherProvider
                 )
-                    .upload()
+                    .upload { block -> blocks2.add(block) }
                     .toList()
             }
-            assert(collected2 != null) { "Stream (2) failed to collect in time" }
-
-            val collected2Historical = collected2!!.filter { it.streamBlock.historical }
-            val collected2Live = collected2.filter { !it.streamBlock.historical }
-
-            assert(collected2Historical.isEmpty()) { "Stream (2) : historical blocks not empty" }
+            assert(uploadResults2 != null && uploadResults2.isNotEmpty()) { "Stream (2) failed to collect in time" }
+            assert(blocks2.isNotEmpty()) { "Stream (2): no blocks emitted" }
+            assert(blocks2.none { it.historical && it.metadata != null }) { "Stream (2) : historical blocks not empty" }
             // "Live" technically haven't been seen, so they will always appear, even if `skipIfSeen` = true
-            assert(collected2Live.isNotEmpty()) { "Stream (2) : live blocks empty" }
+            assert(blocks2.any { !it.historical && it.metadata == null }) { "Stream (2) : live blocks empty" }
 
             // === (CASE 3 -- Seen and not skipped) ====================================================================
 
             // Re-run for a third time, but don't skip seen blocks. The returned stream blocks should all have a
             // `BlockStorageMetadata` value, since they've been tracked in Dynamo:
-            val collected3: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
+            val blocks3 = mutableListOf<StreamBlock>()
+            val uploadResults3: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
                 EventStreamUploader(
                     createSimpleEventStream(includeLiveBlocks = true, skipIfEmpty = true, skipIfSeen = false),
                     aws,
@@ -222,21 +227,22 @@ class AWSTests : TestBase() {
                     EventStream.Options.DEFAULT,
                     dispatchers = dispatcherProvider
                 )
-                    .upload()
+                    .upload { block -> blocks3.add(block) }
                     .toList()
             }
-            assert(collected3 != null) { "Stream (3) failed to collect in time" }
-            assert(collected3!!.size == collected1.size) { "Stream (3) expected to be the same length as stream (1)" }
+            assert(uploadResults3 != null && uploadResults3.isNotEmpty()) { "Stream (3) failed to collect in time" }
+            assert(blocks3.isNotEmpty()) { "Stream (3): no blocks emitted" }
+            assert(uploadResults3!!.size == uploadResults1!!.size) { "Stream (3) expected to be the same length as stream (1)" }
 
-            val collected3Historical = collected3.filter { it.streamBlock.historical }
-            val collected3Live = collected3.filter { !it.streamBlock.historical }
+            val historicalBlocks = blocks3.filter { it.historical }
+            val liveBlocks = blocks3.filter { !it.historical }
 
-            assert(collected3Historical.isNotEmpty()) { "Stream (3) : historical blocks empty" }
-            assert(collected3Live.isNotEmpty()) { "Stream (3) : live blocks empty" }
+            assert(historicalBlocks.isNotEmpty()) { "Stream (3) : historical blocks empty" }
+            assert(liveBlocks.isNotEmpty()) { "Stream (3) : live blocks empty" }
 
             // Historical blocks should have a Dynamo storage metadata entry:
-            assert(collected3Historical.all { it.streamBlock.metadata != null }) { "Stream (3) historical blocks should all have metadata " }
-            assert(collected3Live.all { it.streamBlock.metadata == null }) { "Stream (3) live blocks should not have any metadata " }
+            assert(historicalBlocks.all { it.metadata != null }) { "Stream (3) historical blocks should all have metadata " }
+            assert(liveBlocks.all { it.metadata == null }) { "Stream (3) live blocks should not have any metadata " }
         }
     }
 }

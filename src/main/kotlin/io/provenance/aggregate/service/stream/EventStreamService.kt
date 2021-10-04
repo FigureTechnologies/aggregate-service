@@ -8,6 +8,7 @@ import com.tinder.scarlet.ws.Receive
 import com.tinder.scarlet.ws.Send
 import io.provenance.aggregate.service.stream.models.Block
 import io.provenance.aggregate.service.stream.models.BlockResultsResponseResultEvents
+import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
 import kotlinx.coroutines.channels.ReceiveChannel
 
 @JsonClass(generateAdapter = true)
@@ -31,42 +32,6 @@ data class NewBlockEventResultBeginBlock(
 data class NewBlockEventResultValue(
     val block: Block,
     val result_begin_block: NewBlockEventResultBeginBlock
-)
-
-@JsonClass(generateAdapter = true)
-data class Subscribe(
-    val jsonrpc: String = "2.0",
-    val id: String = "0",
-    val method: String = "subscribe",
-    val params: SubscribeParams
-) {
-    constructor(query: String) : this(params = SubscribeParams(query))
-}
-
-@JsonClass(generateAdapter = true)
-open class RpcRequest(val method: String, val params: Any? = null) {
-    open val jsonrpc: String = "2.0"
-    open val id: String = "0"
-}
-
-@JsonClass(generateAdapter = true)
-data class RpcResponse<T>(
-    val jsonrpc: String,
-    val id: String,
-    val result: T? = null,
-    val error: RpcError? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class RpcError(
-    val code: Int,
-    val message: String,
-    val data: String
-)
-
-@JsonClass(generateAdapter = true)
-data class SubscribeParams(
-    val query: String
 )
 
 interface TendermintRPCStream {

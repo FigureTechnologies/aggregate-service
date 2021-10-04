@@ -1,0 +1,19 @@
+{
+  "TableName": "Aggregate-Service-Block-Batch",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "BatchId",
+      "AttributeType": "S"
+    }
+  ],
+  "KeySchema": [
+    {
+      "AttributeName": "BatchId",
+      "KeyType": "HASH"
+    }
+  ],
+  "ProvisionedThroughput": {
+    "ReadCapacityUnits": 1,
+    "WriteCapacityUnits": 1
+  }
+}
