@@ -3,20 +3,51 @@ package io.provenance.aggregate.service.extensions
 import com.google.common.io.BaseEncoding
 import com.timgroup.statsd.StatsDClient
 import io.provenance.aggregate.service.utils.sha256
+import org.apache.commons.lang3.StringUtils
+import org.json.JSONArray
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 // === String methods ==================================================================================================
 
 /**
- * Remove surrounding quotation marks fro a string.
+ * Remove surrounding quotation marks from a string.
  */
 fun String.stripQuotes(): String = this.removeSurrounding("\"")
 
 /**
- * Base64 decode a string.
+ * Base64 decode a string. In the event of failure, the original string is returned.
  */
-fun String.decodeBase64(): String = BaseEncoding.base64().decode(this).decodeToString()
+fun String.decodeBase64(): String =
+    runCatching { BaseEncoding.base64().decode(this).decodeToString() }.getOrDefault(this)
+
+/**
+ * Checks if the string contains only ASCII printable characters.
+ */
+fun String.isAsciiPrintable(): Boolean = StringUtils.isAsciiPrintable(this)
+
+/**
+ * Decodes a string repeatedly base64 encoded, terminating when:
+ *
+ * - the decoded string stops changing or
+ * - the maximum number of iterations is reached
+ * - or the decoded string is no longer ASCII printable
+ *
+ * In the event of failure, the last successfully decoded string is returned.
+ */
+fun String.repeatDecodeBase64(): String {
+    var s: String = this.toString() // copy
+    var t: String = s.decodeBase64().stripQuotes()
+    repeat(10) {
+        if (s == t || !t.isAsciiPrintable()) {
+            return s
+        }
+        s = t
+        t = t.decodeBase64().stripQuotes()
+
+    }
+    return s
+}
 
 /**
  * Compute a hex-encoded (printable) version of a SHA-256 encoded string.

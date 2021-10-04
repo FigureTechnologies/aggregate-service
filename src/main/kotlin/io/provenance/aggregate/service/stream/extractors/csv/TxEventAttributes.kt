@@ -27,7 +27,7 @@ class TxEventAttributes(val s3: AwsS3Interface) : Extractor {
         BufferedOutputStream(Files.newOutputStream(outputFile, StandardOpenOption.APPEND, StandardOpenOption.WRITE))
 
     val headers: Array<String> =
-        arrayOf("height", "name", "value", "updatedValue", "type", "updatedType", "account", "owner")
+        arrayOf("eventType", "height", "name", "value", "type", "account", "owner")
 
     private val writer: ApacheCommonsCSVRecordWriter = ApacheCommonsCSVRecordWriter
         .Builder()
@@ -55,13 +55,15 @@ class TxEventAttributes(val s3: AwsS3Interface) : Extractor {
                 ?.toEventRecord()
                 ?.let { record ->
                     synchronized(this) {
+                        // Output transformations that make the output data easier to work with:
+                        // If `updatedValue` is non-null, write that, otherwise fallback to `value`
+                        // If `updatedType` is non-null, write that, otherwise fallback to `type`
                         writer.writeRecord(
+                            e.eventType,
                             record.height,
                             record.name,
-                            record.value,
-                            record.updatedValue,
-                            record.type,
-                            record.updatedType,
+                            record.updatedValue ?: record.value,
+                            record.updatedType ?: record.type,
                             record.account,
                             record.owner
                         )

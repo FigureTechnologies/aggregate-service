@@ -5,8 +5,9 @@ object Version {
 
     object ApacheCommons {
         const val CSV = "1.9.0"
-        const val Text = "1.9"
         const val IO = "2.11.0"
+        const val Lang3 = "3.12.0"
+        const val Text = "1.9"
     }
 
     const val AWS = "2.17.40"
@@ -67,8 +68,10 @@ dependencies {
     testImplementation("org.junit-pioneer", "junit-pioneer", Version.JUnitPioneer)
 
     implementation("io.arrow-kt", "arrow-core", Version.Arrow)
+
     implementation("org.apache.commons", "commons-csv", Version.ApacheCommons.CSV)
     implementation("commons-io", "commons-io", Version.ApacheCommons.IO)
+    implementation("org.apache.commons", "commons-lang3", Version.ApacheCommons.Lang3)
 
     implementation("com.tinder.scarlet", "scarlet", Version.Scarlet)
     implementation("com.tinder.scarlet", "stream-adapter-coroutines", Version.Scarlet)
