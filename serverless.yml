@@ -14,6 +14,10 @@ functions:
     handler: ./serverless/handler.hello
     name: test-lambda
     description: A test lambda
+    events:
+      - s3:
+         bucket: ${self:custom.environment.BUCKET_NAME}
+         event: s3:ObjectCreated:*
 
 resources:
   Resources:
