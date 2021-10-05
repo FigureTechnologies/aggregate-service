@@ -16,7 +16,7 @@ functions:
     description: A test lambda
     events:
       - s3:
-         bucket: ${self:custom.environment.BUCKET_NAME}
+         bucket: ${self:custom.environment.BUCKET_NAME}-1
          event: s3:ObjectCreated:*
 
 resources:
