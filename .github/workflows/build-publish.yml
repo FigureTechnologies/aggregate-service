@@ -1,16 +1,7 @@
 name: Build and Deploy Serverless
 
 # Controls when the workflow will run
-on:
-  release:
-    types:
-      - created
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+on: push
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
