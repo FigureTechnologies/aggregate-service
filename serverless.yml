@@ -9,12 +9,6 @@ custom:
   defaultStage: default
   environment: ${file(env.yml):${self:provider.stage}, file(env.yml):default}
 
-functions:
-  hello:
-    handler: ./serverless/handler.hello
-    name: test-lambda
-    description: A test lambda
-
 resources:
   Resources:
     S3Assets:
