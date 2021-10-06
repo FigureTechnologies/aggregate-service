@@ -23,6 +23,10 @@ functions:
 
 resources:
   Resources:
+    S3Assets:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.environment.BUCKET_NAME}
     BlockBatchTable:
       Type: AWS::DynamoDB::Table
       Properties:
