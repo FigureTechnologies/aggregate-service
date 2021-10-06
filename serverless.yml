@@ -12,8 +12,8 @@ custom:
 functions:
   hello:
     handler: ./serverless/handler.hello
-    name: test-lambda
-    description: A test lambda
+    name: ${self:custom.environment.AWS_EVENT_LISTENER_LAMBDA}
+    description: Lambda that listens for object uploads to s3 to send that data to a data warehouse.
     events:
       - s3:
          bucket: ${self:custom.environment.BUCKET_NAME}
