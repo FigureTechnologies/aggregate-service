@@ -10,14 +10,16 @@ custom:
   environment: ${file(env.yml):${self:provider.stage}, file(env.yml):default}
 
 functions:
-  hello:
+  s3-event-listener:
     handler: ./serverless/handler.hello
     name: ${self:custom.environment.AWS_EVENT_LISTENER_LAMBDA}
     description: Lambda that listens for object uploads to s3 to send that data to a data warehouse.
     events:
       - s3:
-         bucket: ${self:custom.environment.BUCKET_NAME}
-         event: s3:ObjectCreated:*
+        bucket: ${self:custom.environment.BUCKET_NAME}
+        event: s3:ObjectCreated:*
+        rules:
+          - suffix: .json
 
 resources:
   Resources:
