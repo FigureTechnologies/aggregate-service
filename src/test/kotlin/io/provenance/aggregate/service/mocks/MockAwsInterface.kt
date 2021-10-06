@@ -1,10 +1,9 @@
-package io.provenance.aggregate.service.mocks
+package io.provenance.aggregate.service.test.mocks
 
 import io.provenance.aggregate.service.DynamoConfig
 import io.provenance.aggregate.service.S3Config
 import io.provenance.aggregate.service.aws.LocalStackAwsInterface
 import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
-import io.provenance.aggregate.service.aws.dynamodb.DynamoTable
 import io.provenance.aggregate.service.aws.s3.AwsS3Interface
 
 open class MockAwsInterface protected constructor(s3Config: S3Config, dynamoConfig: DynamoConfig) :

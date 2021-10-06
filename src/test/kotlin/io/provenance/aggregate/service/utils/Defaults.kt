@@ -44,7 +44,7 @@ object Defaults {
             }
             .toTypedArray()
 
-    val s3Config: S3Config = S3Config(region = S3_REGION, bucket = S3Bucket(S3_BUCKET))
+    val s3Config: S3Config = S3Config(bucket = S3Bucket(S3_BUCKET))
 
     val dynamoConfig: DynamoConfig =
         DynamoConfig(

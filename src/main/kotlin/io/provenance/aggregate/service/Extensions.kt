@@ -85,6 +85,7 @@ fun ByteArray.toHexString(): String = BaseEncoding.base16().encode(this)
  * @see https://kotlinlang.org/docs/delegated-properties.html#property-delegate-requirements
  * Note: adapted from https://stackoverflow.com/a/36602770
  */
+@Suppress("UNCHECKED_CAST")
 fun <T, V> transform(properties: Map<String, Any?>, key: String): ReadOnlyProperty<T, V> =
     ReadOnlyProperty { _: T, _: KProperty<*> -> properties[key]!! as V }
 
@@ -97,6 +98,7 @@ fun <T, V> Map<String, Any?>.transform(key: String): ReadOnlyProperty<T, V> = tr
  * @see https://kotlinlang.org/docs/delegated-properties.html#property-delegate-requirements
  * Note: adapted from https://stackoverflow.com/a/36602770
  */
+@Suppress("UNCHECKED_CAST")
 fun <T, U, V> transform(properties: Map<String, Any?>, f: (U) -> V): ReadOnlyProperty<T, V> =
     ReadOnlyProperty { _: T, property: KProperty<*> -> f(properties[property.name]!! as U) }
 
@@ -109,6 +111,7 @@ fun <T, U, V> Map<String, Any?>.transform(f: (U) -> V): ReadOnlyProperty<T, V> =
  * @see https://kotlinlang.org/docs/delegated-properties.html#property-delegate-requirements
  * Note: adapted from https://stackoverflow.com/a/36602770
  */
+@Suppress("UNCHECKED_CAST")
 fun <T, U, V> transform(properties: Map<String, Any?>, key: String, f: (U) -> V): ReadOnlyProperty<T, V> =
     ReadOnlyProperty { _: T, _: KProperty<*> -> f(properties[key]!! as U) }
 

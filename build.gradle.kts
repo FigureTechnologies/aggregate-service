@@ -13,7 +13,7 @@ object Version {
     const val AWS = "2.17.40"
     const val DatadogStats = "2.13.0"
     const val GRPC = "1.39.0"
-    const val Hoplite = "1.4.7"
+    const val Hoplite = "1.4.9"
     const val JUnit = "5.1.0"
     const val JUnitPioneer = "1.4.2"
     const val JSON = "20210307"
@@ -94,6 +94,7 @@ dependencies {
     kapt("com.squareup.moshi:moshi-kotlin-codegen:${Version.Moshi}")
 
     implementation("com.sksamuel.hoplite", "hoplite-core", Version.Hoplite)
+    implementation("com.sksamuel.hoplite", "hoplite-yaml", Version.Hoplite)
 
     implementation("org.json", "json", Version.JSON)
 

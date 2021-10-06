@@ -1,4 +1,4 @@
-package io.provenance.aggregate.service.base
+package io.provenance.aggregate.service.test.base
 
 import io.provenance.aggregate.service.DispatcherProvider
 import kotlinx.coroutines.CoroutineDispatcher

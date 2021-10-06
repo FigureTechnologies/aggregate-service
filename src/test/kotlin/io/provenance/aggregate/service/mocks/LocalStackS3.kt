@@ -1,4 +1,4 @@
-package io.provenance.aggregate.service.mocks
+package io.provenance.aggregate.service.test.mocks
 
 import io.provenance.aggregate.service.aws.s3.AwsS3
 import io.provenance.aggregate.service.aws.s3.S3Bucket
@@ -32,8 +32,8 @@ class LocalStackS3(s3Client: S3AsyncClient, bucket: S3Bucket) : AwsS3(s3Client, 
     suspend fun deleteBucketObjects(): DeleteObjectsResponse? {
         val keys: List<String> = listBucketObjectKeys()
         val identifiers: List<ObjectIdentifier> = keys.map { ObjectIdentifier.builder().key(it).build() }
-        if (identifiers.isNotEmpty()) {
-            return s3Client.deleteObjects(
+        return if (identifiers.isNotEmpty()) {
+            s3Client.deleteObjects(
                 DeleteObjectsRequest.builder()
                     .bucket(bucket.name)
                     .delete(Delete.builder().objects(identifiers).build())
@@ -41,7 +41,7 @@ class LocalStackS3(s3Client: S3AsyncClient, bucket: S3Bucket) : AwsS3(s3Client, 
             )
                 .await()
         } else {
-            return null
+            null
         }
     }
 
