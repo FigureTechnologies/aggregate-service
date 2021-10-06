@@ -12,7 +12,7 @@ custom:
 functions:
   s3-event-listener:
     handler: ./serverless/handler.hello
-    name: ${self:custom.environment.AWS_EVENT_LISTENER_LAMBDA}
+    name: test
     description: Lambda that listens for object uploads to s3 to send that data to a data warehouse.
     events:
       - s3:
