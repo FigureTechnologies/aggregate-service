@@ -16,15 +16,11 @@ functions:
     description: A test lambda
     events:
       - s3:
-         bucket: ${self:custom.environment.BUCKET_NAME}-1
+         bucket: ${self:custom.environment.BUCKET_NAME}
          event: s3:ObjectCreated:*
 
 resources:
   Resources:
-    S3Assets:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: ${self:custom.environment.BUCKET_NAME}
     BlockBatchTable:
       Type: AWS::DynamoDB::Table
       Properties:
