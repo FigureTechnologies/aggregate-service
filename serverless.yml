@@ -31,9 +31,9 @@ resources:
         KeySchema:
           - AttributeName: BatchId
             KeyType: HASH
-        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 25 reads and writes for now.
-          ReadCapacityUnits: 25
-          WriteCapacityUnits: 25
+        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 50 reads and writes for now.
+          ReadCapacityUnits: 50
+          WriteCapacityUnits: 50
     BlockMetadataTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -44,9 +44,9 @@ resources:
         KeySchema:
           - AttributeName: BlockHeight
             KeyType: HASH
-        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 25 reads and writes for now.
-          ReadCapacityUnits: 25
-          WriteCapacityUnits: 25
+        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 50 reads and writes for now.
+          ReadCapacityUnits: 50
+          WriteCapacityUnits: 50
     ServiceMetadataTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -57,9 +57,9 @@ resources:
         KeySchema:
           - AttributeName: Property
             KeyType: HASH
-        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 25 reads and writes for now.
-          ReadCapacityUnits: 25
-          WriteCapacityUnits: 25
+        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 50 reads and writes for now.
+          ReadCapacityUnits: 50
+          WriteCapacityUnits: 50
 
 
 ## Below is to run serverless against localstack
