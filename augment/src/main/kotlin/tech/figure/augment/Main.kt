@@ -1,70 +1,69 @@
 package tech.figure.augment
 
-import com.github.jasync.sql.db.ConnectionPoolConfigurationBuilder
-import com.github.jasync.sql.db.postgresql.PostgreSQLConnectionBuilder
 import io.grpc.ManagedChannelBuilder
-import kotlinx.coroutines.future.await
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.serialization.json.Json
+import org.apache.commons.dbutils.ResultSetIterator
 import org.slf4j.LoggerFactory
 import tech.figure.augment.db.sql
 import tech.figure.augment.dsl.DbSource
 import tech.figure.augment.dsl.Job
 import tech.figure.augment.dsl.RpcSource
 import tech.figure.augment.dsl.emptyData
-import tech.figure.augment.dsl.job
 import tech.figure.augment.provenance.ProvenanceClient
 import tech.figure.augment.provenance.query
 import java.net.URI
-import java.util.concurrent.TimeUnit
+import java.sql.DriverManager
+import java.util.Properties
 
 fun main(args: Array<String>) {
-    val log = LoggerFactory.getLogger(object {}::class.java)
-    // val job = Json.decodeFromString(Job.serializer(), System.getenv("JOB_JSON"))
-    val job = job {
-        name = "test-1"
-        cron = "cron text"
-        query {
-            dbSource {
-                table = "attributes"
-                column { "address" }
-                filter {
-                    left = "key"
-                    right = "nycb.kyc.pb"
-                    operator = "="
-                }
-            }
-            rpcSource {
-                module = "bank"
-                filter {
-                    setter = "denom"
-                    value = "nhash"
-                }
-            }
-            loggingOutput {
-                column { "address" }
-                column { "balance" }
-                column { "timestamp" }
-                column { "block_height" }
-            }
-        }
-    }
+    val log = LoggerFactory.getLogger("main")
+    val job = Json.decodeFromString(Job.serializer(), System.getenv("JOB_JSON"))
+    // val job = job {
+    //     name = "test-1"
+    //     cron = "cron text"
+    //     query {
+    //         dbSource {
+    //             table = "attributes"
+    //             column { "account" }
+    //             filter {
+    //                 left = "name"
+    //                 right = "funds.passport.pb"
+    //                 operator = "="
+    //             }
+    //         }
+    //         rpcSource {
+    //             module = "bank"
+    //             filter {
+    //                 setter = "denom"
+    //                 value = "nhash"
+    //             }
+    //         }
+    //         loggingOutput {
+    //             column { "account" }
+    //             column { "balance" }
+    //             column { "timestamp" }
+    //             column { "height" }
+    //         }
+    //     }
+    // }
 
     log.info("Running job - ${job.name}")
     log.info("Job config - ${Json.encodeToString(Job.serializer(), job)}")
 
-    val dbConfig = ConnectionPoolConfigurationBuilder().apply {
-        host = "localhost"
-        database = "object-store"
-        maxActiveConnections = 2
-        maxIdleTime = TimeUnit.MINUTES.toMillis(5)
-        maxPendingQueries = 5
-        queryTimeout = TimeUnit.SECONDS.toMillis(10)
-        username = "postgres"
-        password = "password1"
+    val properties = Properties().apply {
+        put("user", System.getenv("DB_USER"))
+        put("password", System.getenv("DB_PASSWORD"))
+        put("warehouse", System.getenv("DB_WAREHOUSE"))
+        put("db", System.getenv("DB_DATABASE"))
+        put("schema", System.getenv("DB_SCHEMA"))
+        put("networkTimeout", "30")
+        put("queryTimeout", "30")
     }
-    val dbConnection = PostgreSQLConnectionBuilder.createConnectionPool(dbConfig)
+    val dbConnection = DriverManager.getConnection("jdbc:snowflake://${System.getenv("DB_HOST")}.snowflakecomputing.com", properties)
 
     val provenanceUri = URI(System.getenv("PROVENANCE_GRPC_URL"))
     val channel = ManagedChannelBuilder
@@ -86,7 +85,7 @@ fun main(args: Array<String>) {
         // Set default fields present on every row. These may not be used in all queries.
         val defaultData = mapOf(
             "timestamp" to latestBlock.block.header.time.seconds.toString(),
-            "block_height" to latestBlock.block.header.height.toString(),
+            "height" to latestBlock.block.header.height.toString(),
         )
 
         val sourceStepResult = job.query.sources.fold(emptyData()) { acc, source ->
@@ -95,13 +94,19 @@ fun main(args: Array<String>) {
                 // this means it only supports queries where there's one DbSource and it's the first source
                 is DbSource -> {
                     val (sql, params) = sql(source)
-                    val result = dbConnection.sendPreparedStatement(sql.value, params.value, true).await()
+                    val result = runBlocking {
+                        val statement = dbConnection.prepareStatement(sql.value).apply {
+                            params.value.forEachIndexed { index, param -> setString(index + 1, param) }
+                        }
+                        ResultSetIterator(statement.executeQuery())
+                    }.asFlow().toList(mutableListOf())
 
                     // TODO acc is useless here based on the TODO above
-                    acc + result.rows.map { row ->
-                        source.columns.associateWith { column ->
-                            row[column] as String
-                        } + defaultData
+                    acc + result.map { row ->
+                        source.columns.mapIndexed { index, column ->
+                            log.info("$index $column ${row[index]}")
+                            column to row[index].toString()
+                        }.toMap() + defaultData
                     }
                 }
                 // TODO RpcSource does not currently account for a blank accumulator

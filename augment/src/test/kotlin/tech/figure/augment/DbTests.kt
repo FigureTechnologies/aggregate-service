@@ -17,7 +17,7 @@ class DbTests {
         )
         val (sql, params) = sql(source)
 
-        assertEquals("SELECT \"_a_\", \"_b_\" FROM \"_table_\";", sql.value)
+        assertEquals("SELECT \"_A_\", \"_B_\" FROM \"_TABLE_\"", sql.value)
         assertEquals(0, params.value.size, "params is not null = $params")
     }
 
@@ -30,7 +30,7 @@ class DbTests {
         )
         val (sql, params) = sql(source)
 
-        assertEquals("SELECT \"_a_\", \"_b_\" FROM \"_table_\" WHERE \"_left_\" = ?;", sql.value)
+        assertEquals("SELECT \"_A_\", \"_B_\" FROM \"_TABLE_\" WHERE \"_LEFT_\" = ?", sql.value)
         assertEquals(listOf("_right_"), params.value)
     }
 }

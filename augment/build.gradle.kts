@@ -27,7 +27,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.5.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.2")
 
-    implementation("com.github.jasync-sql:jasync-postgresql:2.0.2")
+    // implementation("com.github.jasync-sql:jasync-postgresql:2.0.2")
+    implementation("net.snowflake:snowflake-jdbc:3.13.8")
+    implementation("commons-dbutils:commons-dbutils:1.7")
 
     runtimeOnly("io.grpc:grpc-netty-shaded:1.39.0")
 

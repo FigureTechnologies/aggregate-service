@@ -7,7 +7,6 @@ import cosmos.bank.v1beta1.QueryOuterClass as BankOuterClass
 import cosmos.bank.v1beta1.QueryGrpc as BankGrpc
 import io.grpc.ManagedChannel
 import io.grpc.Metadata
-import io.grpc.stub.AbstractFutureStub
 import io.grpc.stub.AbstractStub
 import io.grpc.stub.MetadataUtils
 import kotlinx.coroutines.guava.asDeferred

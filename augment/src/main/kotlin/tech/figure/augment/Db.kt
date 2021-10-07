@@ -3,7 +3,7 @@ package tech.figure.augment.db
 import tech.figure.augment.dsl.DbSource
 import tech.figure.augment.dsl.Operator
 
-fun String.escape() = "\"$this\""
+fun String.escape() = "\"${this.toUpperCase()}\""
 
 data class Sql(val value: String)
 data class SqlParams(val value: List<String>)
@@ -19,5 +19,5 @@ fun sql(source: DbSource): Pair<Sql, SqlParams> {
     val filter = source.filter?.let { "${it.left.escape()} ${it.operator.toSql()} ?" }
     val params = SqlParams(listOfNotNull(source.filter?.right))
 
-    return "SELECT $columns FROM ${source.table.escape()}${ if (filter != null) " WHERE $filter;" else ";" }".toSql() to params
+    return "SELECT $columns FROM ${source.table.escape()}${ if (filter != null) " WHERE $filter" else "" }".toSql() to params
 }
