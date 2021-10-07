@@ -1,21 +1,16 @@
-package io.provenance.aggregate.service
+package io.provenance.aggregate.service.test
 
 import com.squareup.moshi.JsonEncodingException
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
 import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
-import io.provenance.aggregate.service.base.TestBase
-import io.provenance.aggregate.service.mocks.MockEventStreamService
-import io.provenance.aggregate.service.mocks.MockTendermintService
-import io.provenance.aggregate.service.mocks.ServiceMocker
 import io.provenance.aggregate.service.stream.TendermintService
 import io.provenance.aggregate.service.stream.models.*
 import io.provenance.aggregate.service.stream.models.extensions.toDecodedMap
 import io.provenance.aggregate.service.stream.models.rpc.response.MessageType
-import io.provenance.aggregate.service.utils.Builders
-import io.provenance.aggregate.service.utils.EXPECTED_NONEMPTY_BLOCKS
-import io.provenance.aggregate.service.utils.EXPECTED_TOTAL_BLOCKS
-import io.provenance.aggregate.service.utils.MIN_BLOCK_HEIGHT
+import io.provenance.aggregate.service.test.base.TestBase
+import io.provenance.aggregate.service.test.mocks.*
+import io.provenance.aggregate.service.utils.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.count
@@ -60,7 +55,7 @@ class StreamTests : TestBase() {
         @Test
         fun testTryDecodeMalformedMessage() {
             assertThrows<JsonEncodingException> {
-                val response: MessageType = decoder.decode(templates.read("rpc/responses/malformed.json"))
+                decoder.decode(templates.read("rpc/responses/malformed.json"))
             }
         }
 
@@ -75,7 +70,7 @@ class StreamTests : TestBase() {
             val response: MessageType = decoder.decode(templates.read("rpc/responses/error_unwrapped.json"))
             assert(response is MessageType.Error)
             assert((response as MessageType.Error).error.code == -1000)
-            assert((response as MessageType.Error).error.text()?.contains("something bad happened") ?: false)
+            assert(response.error.text()?.contains("something bad happened") ?: false)
         }
 
         @Test
@@ -83,7 +78,7 @@ class StreamTests : TestBase() {
             val response: MessageType = decoder.decode(templates.read("rpc/responses/error_wrapped.json"))
             assert(response is MessageType.Error)
             assert((response as MessageType.Error).error.code == -1000)
-            assert((response as MessageType.Error).error.text()?.contains("something bad happened") ?: false)
+            assert(response.error.text()?.contains("something bad happened") ?: false)
         }
 
         @Test

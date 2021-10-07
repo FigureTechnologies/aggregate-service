@@ -2,13 +2,11 @@ package io.provenance.aggregate.service.stream.models
 
 import io.provenance.aggregate.service.extensions.*
 import io.provenance.aggregate.service.logger
-import io.provenance.aggregate.service.writer.Record
-import io.provenance.aggregate.service.writer.RecordWriter
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
 
-private fun debase64(t: String): String = t.decodeBase64().stripQuotes()
+private fun debase64(t: String): String = t.repeatDecodeBase64()
 
 private fun toEventTypeEnum(t: String): ProvenanceEventAttributeType = ProvenanceEventAttributeType.valueOf(t)
 
@@ -62,7 +60,7 @@ sealed class ProvenanceEventAttribute(val height: Long) {
     class EventAttributeAdd(height: Long, val attributes: Map<String, Any?>) : ProvenanceEventAttribute(height) {
 
         val name: String by attributes.transform(::debase64)
-        val value: String by attributes // leave encoded
+        val value: String by attributes.transform(::debase64)
         val type: ProvenanceEventAttributeType by attributes.transform { t: String ->
             toEventTypeEnum(debase64(t))
         }
@@ -91,11 +89,11 @@ sealed class ProvenanceEventAttribute(val height: Long) {
     class EventAttributeUpdate(height: Long, attributes: Map<String, Any?>) : ProvenanceEventAttribute(height) {
 
         val name: String by attributes.transform(::debase64)
-        val originalValue: String by attributes.transform("original_value")
+        val originalValue: String by attributes.transform("original_value", ::debase64)
         val originalType: ProvenanceEventAttributeType by attributes.transform("original_type") { t: String ->
             toEventTypeEnum(debase64(t))
         }
-        val updateValue: String by attributes.transform("update_value")
+        val updateValue: String by attributes.transform("update_value", ::debase64)
         val updateType: ProvenanceEventAttributeType by attributes.transform("update_type") { t: String ->
             toEventTypeEnum(debase64(t))
         }
@@ -142,14 +140,14 @@ sealed class ProvenanceEventAttribute(val height: Long) {
     }
 
     /**
-     * Event emitted when attribute is deleted with matching value
+     * Event emitted when attribute is deleted with matching value.
      * @see https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#eventattributedistinctdelete
      */
     @MappedProvenanceEvent("provenance.attribute.v1.EventAttributeDistinctDelete")
-    class AttributeDistinctDelete(height: Long, attributes: Map<String, Any?>) : ProvenanceEventAttribute(height) {
+    class EventAttributeDistinctDelete(height: Long, attributes: Map<String, Any?>) : ProvenanceEventAttribute(height) {
 
         val name: String by attributes.transform(::debase64)
-        val value: String by attributes // leave encoded
+        val value: String by attributes.transform(::debase64)
         val attributeType: ProvenanceEventAttributeType by attributes.transform("attribute_type") { t: String ->
             toEventTypeEnum(debase64(t))
         }

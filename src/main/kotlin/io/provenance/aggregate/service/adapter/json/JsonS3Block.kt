@@ -11,7 +11,7 @@ import software.amazon.awssdk.core.async.AsyncRequestBody
 
 class JsonS3Block(block: StreamBlock, moshi: Moshi) : StreamableObject {
 
-    private fun generateKeyPrefix(block: Block) = block.dateTime()?.let { S3Key.createPrefix(it) } ?: "undated"
+    private fun generateKeyPrefix(block: Block) = block.dateTime()?.let(S3Key::createPrefix) ?: "undated"
 
     val adapter: JsonAdapter<StreamBlock> = moshi.adapter(StreamBlock::class.java)
 

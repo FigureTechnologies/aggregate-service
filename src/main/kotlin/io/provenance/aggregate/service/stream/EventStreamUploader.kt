@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.*
 import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import java.time.OffsetDateTime
+import kotlin.reflect.KClass
 
 @OptIn(FlowPreview::class)
 @ExperimentalCoroutinesApi
@@ -33,7 +34,7 @@ class EventStreamUploader(
     private val aws: AwsInterface,
     private val moshi: Moshi,
     private val options: EventStream.Options = EventStream.Options.DEFAULT,
-    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider()
 ) {
     constructor(
         eventStreamFactory: EventStream.Factory,
@@ -48,8 +49,57 @@ class EventStreamUploader(
 
     private val log = logger()
 
+    private val extractorClassNames: MutableList<String> = mutableListOf()
+
     private fun csvS3Key(id: BatchId, d: OffsetDateTime?, label: String): S3Key =
         S3Key("${d?.run { S3Key.createPrefix(this) } ?: "undated"}/${id}/${label}.csv")
+
+    /**
+     * The fully-qualified class names of the Class instances to load.
+     *
+     * If `throwOnError` is false, classes that cannot be loaded will be omitted from the output and a message will
+     * be logged.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun loadExtractorClasses(
+        fqClassNames: List<String>,
+        throwOnError: Boolean = false
+    ): List<KClass<out Extractor>> {
+        val kclasses = mutableListOf<KClass<out Extractor>>()
+        for (className in fqClassNames) {
+            try {
+                val cls: KClass<out Extractor> = Class.forName(className).kotlin as KClass<out Extractor>
+                kclasses.add(cls)
+            } catch (e: Exception) {
+                if (throwOnError) {
+                    throw e
+                } else {
+                    log.error("Failed to load extractor class: $className; skipping")
+                }
+            }
+        }
+        return kclasses
+    }
+
+    /**
+     * Add one or more fully-qualified extractor classes to use when extracting data from blocks streamed from
+     * event stream.
+     *
+     * Classes are expected to:
+     *  - Be fully qualified class names.
+     *      Example: "io.provenance.aggregate.service.stream.extractors.csv.TxEventAttributes"
+     *  - Implement the `Extractor` interface.
+     *
+     *  @see Extractor
+     *  @see Batch.Builder.withExtractor
+     */
+    fun addExtractor(vararg fqClassName: String): EventStreamUploader = apply {
+        extractorClassNames.addAll(fqClassName)
+    }
+
+    fun addExtractor(fqClassNames: Iterable<String>): EventStreamUploader = apply {
+        extractorClassNames.addAll(fqClassNames)
+    }
 
     /**
      * Run the upload action. The steps for uploading are as follows:
@@ -86,9 +136,12 @@ class EventStreamUploader(
 
         val batchBlueprint: Batch.Builder = Batch.Builder()
             .dispatchers(dispatchers)
-            // Extractors are specified via their Kotlin class (KClass), along with any arguments to pass to the
-            // constructor:
-            .withExtractor(io.provenance.aggregate.service.stream.extractors.csv.TxEventAttributes::class, s3)
+            // Extractors are specified via their Kotlin class, along with any arguments to pass to the constructor:
+            .apply {
+                for (cls in loadExtractorClasses(extractorClassNames)) {
+                    withExtractor(cls, s3)
+                }
+            }
 
         return eventStream.streamBlocks()
             .onEach {

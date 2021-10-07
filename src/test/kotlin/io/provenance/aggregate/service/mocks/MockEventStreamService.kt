@@ -1,4 +1,4 @@
-package io.provenance.aggregate.service.mocks
+package io.provenance.aggregate.service.test.mocks
 
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi

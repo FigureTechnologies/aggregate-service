@@ -145,14 +145,14 @@ class EventStream(
 
         fun create(setOptions: (options: Options.Builder) -> Unit = ::noop): EventStream {
             val optionsBuilder = Options.Builder()
-                .batchSize(config.event.stream.batchSize)
+                .batchSize(config.eventStream.batchSize)
                 .skipIfEmpty(true)
             setOptions(optionsBuilder)
             return create(optionsBuilder.build())
         }
 
         fun create(options: Options): EventStream {
-            val lifecycle = LifecycleRegistry(config.event.stream.throttleDurationMs)
+            val lifecycle = LifecycleRegistry(config.eventStream.websocket.throttleDurationMs)
             val scarlet: Scarlet = eventStreamBuilder.lifecycle(lifecycle).build()
             val tendermintRpc: TendermintRPCStream = scarlet.create()
             val eventStreamService = TendermintEventStreamService(tendermintRpc, lifecycle)

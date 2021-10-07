@@ -1,4 +1,4 @@
-package io.provenance.aggregate.service.mocks
+package io.provenance.aggregate.service.test.mocks
 
 import io.provenance.aggregate.service.aws.dynamodb.AwsDynamo
 import io.provenance.aggregate.service.aws.dynamodb.DynamoTable

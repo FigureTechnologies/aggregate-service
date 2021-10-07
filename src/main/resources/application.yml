@@ -1,0 +1,31 @@
+---
+aws:
+  region: ${AWS_REGION}
+  s3:
+    bucket: ${AWS_S3_BUCKET_NAME}
+  dynamodb:
+    service-metadata-table: ${AWS_DYNAMODB_SERVICE_METADATA_TABLE_NAME}
+    block-batch-table: ${AWS_DYNAMODB_BLOCK_BATCH_TABLE_NAME}
+    block-metadata-table: ${AWS_DYNAMODB_BLOCK_METADATA_TABLE_NAME}
+
+event-stream:
+  websocket:
+    uri: ${EVENT_STREAM_WEBSOCKET_URI}
+    throttle-duration-ms: 0
+  rpc:
+    uri: ${EVENT_STREAM_RPC_URI}
+  batch-size: 16
+  filter:
+    tx-events:
+      - provenance.attribute.v1.EventAttributeAdd
+      - provenance.attribute.v1.EventAttributeUpdate
+      - provenance.attribute.v1.EventAttributeDelete
+      - provenance.attribute.v1.EventAttributeDistinctDelete
+    # block-events:
+    # - event1
+    # - event2
+    # ...
+
+upload:
+  extractors:
+    - io.provenance.aggregate.service.stream.extractors.csv.TxEventAttributes

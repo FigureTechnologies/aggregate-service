@@ -4,10 +4,6 @@ import com.squareup.moshi.Moshi
 import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.service.aws.AwsInterface
 import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
-import io.provenance.aggregate.service.mocks.MockAwsInterface
-import io.provenance.aggregate.service.mocks.MockEventStreamService
-import io.provenance.aggregate.service.mocks.MockTendermintService
-import io.provenance.aggregate.service.mocks.ServiceMocker
 import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.EventStreamService
 import io.provenance.aggregate.service.stream.TendermintService
@@ -15,6 +11,10 @@ import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
 import io.provenance.aggregate.service.stream.models.BlockResponse
 import io.provenance.aggregate.service.stream.models.BlockResultsResponse
 import io.provenance.aggregate.service.stream.models.BlockchainResponse
+import io.provenance.aggregate.service.test.mocks.MockAwsInterface
+import io.provenance.aggregate.service.test.mocks.MockEventStreamService
+import io.provenance.aggregate.service.test.mocks.MockTendermintService
+import io.provenance.aggregate.service.test.mocks.ServiceMocker
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi

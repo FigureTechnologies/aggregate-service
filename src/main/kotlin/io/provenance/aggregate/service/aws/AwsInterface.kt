@@ -23,7 +23,7 @@ import kotlin.time.ExperimentalTime
 import java.time.Duration as JavaDuration
 
 @OptIn(ExperimentalTime::class)
-abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConfig) {
+abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConfig, val region: String? = null) {
 
     companion object {
         val DEFAULT_REGION: Region = Region.US_EAST_1
@@ -43,7 +43,7 @@ abstract class AwsInterface(val s3Config: S3Config, val dynamoConfig: DynamoConf
 
     protected open fun getS3MaxConcurrency(): Int = 64
 
-    protected open fun getRegion(): Region = s3Config.region?.let { Region.of(it) } ?: DEFAULT_REGION
+    protected open fun getRegion(): Region = region?.let { Region.of(it) } ?: DEFAULT_REGION
 
     protected open fun getCredentialsProvider(): AwsCredentialsProvider = DefaultCredentialsProvider.create()
 
