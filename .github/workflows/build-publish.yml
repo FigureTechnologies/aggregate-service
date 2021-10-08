@@ -101,18 +101,18 @@ jobs:
           EOF
       - name: Set env.BRANCH
         run: echo "BRANCH=$(echo $GITHUB_REF | cut -d'/' -f 3)" >> $GITHUB_ENV
-      - name: serverless deploy prod
-        uses: serverless/github-action@v1
-        with:
-          args: remove --stage prod
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_TOKEN }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
-          SLS_DEBUG: 1
+#      - name: serverless deploy prod
+#        uses: serverless/github-action@v1
+#        with:
+#          args: deploy --stage prod
+#        env:
+#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_TOKEN }}
+#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
+#          SLS_DEBUG: 1
       - name: serverless deploy dev
         uses: serverless/github-action@v1
         with:
-          args: remove --stage default
+          args: deploy --stage default
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_TOKEN }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
