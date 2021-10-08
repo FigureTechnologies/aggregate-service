@@ -208,7 +208,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_TOKEN }}
           SLS_DEBUG: 1
       - name: serverless deploy dev
-        if: env.BRANCH != 'main'
         uses: serverless/github-action@v1
         with:
           args: deploy --stage default
