@@ -41,7 +41,7 @@ class AWSTests : TestBase() {
     val dynamo: LocalStackDynamo = aws.dynamo() as LocalStackDynamo
 
     val DEFAULT_EXTRACTORS: Array<String> =
-        arrayOf("io.provenance.aggregate.service.stream.extractors.csv.impl.TxEventAttributes")
+        arrayOf("io.provenance.aggregate.service.test.stream.extractors.csv.impl.EventMetdataSessionCreated")
 
     @BeforeAll
     override fun setup() {
