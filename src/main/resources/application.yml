@@ -21,6 +21,16 @@ event-stream:
       - provenance.attribute.v1.EventAttributeUpdate
       - provenance.attribute.v1.EventAttributeDelete
       - provenance.attribute.v1.EventAttributeDistinctDelete
+      - provenance.marker.v1.EventMarkerActivate
+      - provenance.marker.v1.EventMarkerAdd
+      - provenance.marker.v1.EventMarkerBurn
+      - provenance.marker.v1.EventMarkerCancel
+      - provenance.marker.v1.EventMarkerDelete
+      - provenance.marker.v1.EventMarkerFinalize
+      - provenance.marker.v1.EventMarkerMint
+      - provenance.marker.v1.EventMarkerSetDenomMetadata
+      - provenance.marker.v1.EventMarkerTransfer
+      - provenance.marker.v1.EventMarkerWithdraw
     # block-events:
     # - event1
     # - event2
@@ -28,4 +38,6 @@ event-stream:
 
 upload:
   extractors:
-    - io.provenance.aggregate.service.stream.extractors.csv.TxEventAttributes
+    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxEventAttributes
+    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMarkerTransfer
+    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMarkerSupply

@@ -1,6 +1,5 @@
 package io.provenance.aggregate.service.stream
 
-import arrow.core.Either
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.ExperimentalCoroutinesApi

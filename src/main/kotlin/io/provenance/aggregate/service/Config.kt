@@ -4,6 +4,8 @@ import com.sksamuel.hoplite.ConfigAlias
 import io.provenance.aggregate.service.aws.dynamodb.DynamoTable
 import io.provenance.aggregate.service.aws.s3.S3Bucket
 
+// Data classes in this file are intended to be instantiated by the hoplite configuration library
+
 data class WebsocketStreamConfig(
     val uri: String,
     @ConfigAlias("throttle_duration_ms") val throttleDurationMs: Long = 0

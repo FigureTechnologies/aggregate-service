@@ -4,7 +4,6 @@ import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.EnvironmentVariablesPropertySource
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
-import com.sksamuel.hoplite.yaml.YamlPropertySource
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.timgroup.statsd.NoOpStatsDClient
@@ -16,7 +15,6 @@ import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
 import io.provenance.aggregate.service.adapter.json.JSONObjectAdapter
 import io.provenance.aggregate.service.aws.AwsInterface
 import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
-import io.provenance.aggregate.service.extensions.decodeBase64
 import io.provenance.aggregate.service.extensions.recordMaxBlockHeight
 import io.provenance.aggregate.service.extensions.repeatDecodeBase64
 import io.provenance.aggregate.service.flow.extensions.cancelOnSignal
@@ -94,8 +92,8 @@ fun main(args: Array<String>) {
     val toHeight by parser.option(
         ArgType.Int, fullName = "to", description = "Fetch blocks up to height, inclusive"
     )
-    val viewOnly by parser.option(
-        ArgType.Boolean, fullName = "view", description = "View blocks instead of upload"
+    val observe by parser.option(
+        ArgType.Boolean, fullName = "observe", description = "Observe blocks instead of upload"
     ).default(false)
     val verbose by parser.option(
         ArgType.Boolean, shortName = "v", fullName = "verbose", description = "Enables verbose output"
@@ -190,7 +188,6 @@ fun main(args: Array<String>) {
                     .also { log.info("Maximum block height: ${it ?: "--"}") }
                     ?.let(dogStatsClient::recordMaxBlockHeight)
                     ?.getOrElse { log.error("DD metric failure", it) }
-
                 delay(60_000)
             }
         }
@@ -203,28 +200,37 @@ fun main(args: Array<String>) {
             .skipIfSeen(skipIfSeen)
             .apply {
                 if (config.eventStream.filter.txEvents.isNotEmpty()) {
-                    log.info("Listening for tx events:")
-                    for (event in config.eventStream.filter.txEvents) {
-                        log.info(" - $event")
-                    }
                     matchTxEvent { it in config.eventStream.filter.txEvents }
                 }
             }
             .apply {
                 if (config.eventStream.filter.blockEvents.isNotEmpty()) {
+                    matchBlockEvent { it in config.eventStream.filter.blockEvents }
+                }
+            }
+            .also {
+                if (config.eventStream.filter.txEvents.isNotEmpty()) {
+                    log.info("Listening for tx events:")
+                    for (event in config.eventStream.filter.txEvents) {
+                        log.info(" - $event")
+                    }
+                }
+                if (config.eventStream.filter.blockEvents.isNotEmpty()) {
                     log.info("Listening for block events:")
                     for (event in config.eventStream.filter.blockEvents) {
                         log.info(" - $event")
                     }
-                    matchBlockEvent { it in config.eventStream.filter.blockEvents }
                 }
             }
             .build()
 
-        if (viewOnly) {
-            log.info("*** viewing blocks & events only ***")
-            val factory = EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, NoOpDynamo())
-            EventStreamViewer(factory, options)
+        if (observe) {
+            log.info("*** Observing blocks and events. No action will be taken. ***")
+
+            EventStreamViewer(
+                EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, NoOpDynamo()),
+                options
+            )
                 .consume { b: StreamBlock ->
                     val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
                     println(
@@ -258,8 +264,12 @@ fun main(args: Array<String>) {
                 }
             }
 
-            val factory = EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, dynamo)
-            EventStreamUploader(factory, aws, moshi, options)
+            EventStreamUploader(
+                EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, dynamo),
+                aws,
+                moshi,
+                options
+            )
                 .addExtractor(config.upload.extractors)
                 .upload()
                 .cancelOnSignal(signal)

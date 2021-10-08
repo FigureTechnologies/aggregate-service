@@ -8,7 +8,7 @@ import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.EventStreamService
 import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
-import io.provenance.aggregate.service.utils.Defaults
+import io.provenance.aggregate.service.test.utils.Defaults
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelIterator
