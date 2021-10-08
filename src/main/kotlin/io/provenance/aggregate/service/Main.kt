@@ -87,13 +87,20 @@ fun main(args: Array<String>) {
         description = "Specify the application environment. If not present, fall back to the `\$ENVIRONMENT` envvar",
     )
     val fromHeight by parser.option(
-        ArgType.Int, fullName = "from", description = "Fetch blocks starting from height, inclusive"
+        ArgType.Int,
+        fullName = "from",
+        description = "Fetch blocks starting from height, inclusive."
     )
     val toHeight by parser.option(
         ArgType.Int, fullName = "to", description = "Fetch blocks up to height, inclusive"
     )
     val observe by parser.option(
         ArgType.Boolean, fullName = "observe", description = "Observe blocks instead of upload"
+    ).default(false)
+    val restart by parser.option(
+        ArgType.Boolean,
+        fullName = "restart",
+        description = "Restart processing blocks from the last maximum historical block height recorded"
     ).default(false)
     val verbose by parser.option(
         ArgType.Boolean, shortName = "v", fullName = "verbose", description = "Enables verbose output"
@@ -171,6 +178,7 @@ fun main(args: Array<String>) {
         log.info(
             """
             |run options => {
+            |    restart = $restart
             |    from-height = $fromHeight 
             |    to-height = $toHeight
             |    skip-if-empty = $skipIfEmpty
@@ -192,9 +200,32 @@ fun main(args: Array<String>) {
             }
         }
 
+        // Try to figure out if there's a maximum historical block height that's been seen already.
+        // * If `--restart` is provided, try to start from there.
+        // * If no height exists, `--restart` implies that the caller is interested in historical blocks,
+        //   so issue a warning and start at 0.
+        //
+        // Note: `--restart` can be combined with `--from=HEIGHT`. If both are given, the maximum value
+        // will be chosen as the starting height
+
+        val maxHistoricalHeight: Long? = dynamo.getMaxHistoricalBlockHeight()
+
+        log.info("Start :: historical max block height = $maxHistoricalHeight")
+
+        val startFromHeight: Long? = if (restart) {
+            if (maxHistoricalHeight == null) {
+                log.warn("No historical max block height found; defaulting to 0")
+            } else {
+                log.info("Restarting from historical max block height: $maxHistoricalHeight")
+            }
+            maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)
+        } else {
+            fromHeight?.toLong()
+        }
+
         val options = EventStream.Options
             .builder()
-            .fromHeight(fromHeight?.toLong())
+            .fromHeight(startFromHeight)
             .toHeight(toHeight?.toLong())
             .skipIfEmpty(skipIfEmpty)
             .skipIfSeen(skipIfSeen)
