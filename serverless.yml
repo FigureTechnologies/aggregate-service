@@ -39,7 +39,7 @@ resources:
           - AttributeName: BlockHeight
             KeyType: HASH
         ProvisionedThroughput: # Might need to turn on auto-scaling, default to 50 reads and writes for now.
-          ReadCapacityUnits: 50
+          ReadCapacityUnits: 300
           WriteCapacityUnits: 50
     ServiceMetadataTable:
       Type: AWS::DynamoDB::Table
