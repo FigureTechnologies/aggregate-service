@@ -10,8 +10,9 @@ import io.provenance.aggregate.service.stream.models.provenance.marker.EventMark
  * Extract data related to the overall supply of a marker.
  */
 class TxMarkerSupply(val s3: AwsS3Interface) : CSVFileExtractor(
-    "tx_marker_supply",
-    listOf(
+    name = "tx_marker_supply",
+    headers = listOf(
+        "hash",
         "event_type",
         "block_height",
         "block_timestamp",
@@ -27,7 +28,8 @@ class TxMarkerSupply(val s3: AwsS3Interface) : CSVFileExtractor(
         "metadata_denom_units",
         "metadata_name",
         "metadata_symbol"
-    )
+    ),
+    generateHash = true
 ) {
     override suspend fun extract(block: StreamBlock) {
         for (event in block.txEvents) {

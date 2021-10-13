@@ -1,3 +1,8 @@
+Schema definition
+=================
+
+_Note: The hash value of a row is computed by the concatenation of the column values (barring `hash` itself) in the
+order they're defined. If a value is null, it will be skipped._
 
 tx_event_attributes
 -------------------
@@ -8,14 +13,16 @@ tx_event_attributes
 
 ### Description
 
-Provides a consolidated view of the `provenance.attribute.v1.EventAttributeAdd`, `provenance.attribute.v1.EventAttributeUpdate`,
-`provenance.attribute.v1.EventAttributeDelete`, and `provenance.attribute.v1.EventAttributeDistinctDelete` Provenance 
+Provides a consolidated view of the `provenance.attribute.v1.EventAttributeAdd`
+, `provenance.attribute.v1.EventAttributeUpdate`,
+`provenance.attribute.v1.EventAttributeDelete`, and `provenance.attribute.v1.EventAttributeDistinctDelete` Provenance
 `attribute` transaction events combined together.
 
 ### Structure
 
 | Column           | Type           | Nullable? |
 | ---------------- | -------------- | --------- |
+| hash             | string         | false     |
 | event_type       | string         | false     |
 | block_height     | integer        | false     |
 | block_timestamp  | string         | true      |
@@ -25,8 +32,8 @@ Provides a consolidated view of the `provenance.attribute.v1.EventAttributeAdd`,
 | account          | string         | false     |
 | owner            | string         | false     |
 
-where the values of `type` is an enumeration with the
-following values (as defined in https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#attributetype)
+where the values of `type` is an enumeration with the following values (as defined
+in https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#attributetype)
 
 | Name                         | Number | Description                                                                         |
 | ---------------------------- | ------ | ----------------------------------------------------------------------------------- |
@@ -50,16 +57,17 @@ tx_marker_supply
 ### Description
 
 Provides a consolidated view of the `provenance.marker.v1.EventMarkerActivate`, `provenance.marker.v1.EventMarkerAdd`,
-`provenance.marker.v1.EventMarkerBurn`, `provenance.marker.v1.EventMarkerCancel`, 
-`provenance.marker.v1.EventMarkerDelete`, `provenance.marker.v1.EventMarkerFinalize`, 
-`provenance.marker.v1.EventMarkerMint`, `provenance.marker.v1.EventMarkerSetDenomMetadata`, and 
-`provenance.marker.v1.EventMarkerWithdraw` Provenance `marker` transaction events combined. Together, these events 
+`provenance.marker.v1.EventMarkerBurn`, `provenance.marker.v1.EventMarkerCancel`,
+`provenance.marker.v1.EventMarkerDelete`, `provenance.marker.v1.EventMarkerFinalize`,
+`provenance.marker.v1.EventMarkerMint`, `provenance.marker.v1.EventMarkerSetDenomMetadata`, and
+`provenance.marker.v1.EventMarkerWithdraw` Provenance `marker` transaction events combined. Together, these events
 relate to the supply of a marker on the Provenance network.
 
 ### Structure
 
 | Column               | Type   | Nullable? |
 | -------------------- | -------| --------- |
+| hash                 | string | false     |
 | event_type           | string | false     |
 | block_height         | integer| false     |
 | block_timestamp      | string | true      |
@@ -84,13 +92,14 @@ tx_marker_transfer
 
 ### Description
 
-Records instances of the Provenance `provenance.marker.v1.EventMarkerTransfer` transaction event. This event 
-corresponds to the transfer of a marker between accounts on the network.
+Records instances of the Provenance `provenance.marker.v1.EventMarkerTransfer` transaction event. This event corresponds
+to the transfer of a marker between accounts on the network.
 
 ### Structure
 
 | Column          | Type    | Nullable? |
 | --------------- | ------- | --------- |
+| hash            | string  | false     |
 | event_type      | string  | false     |
 | block_height    | integer | false     |
 | block_timestamp | string  | true      |

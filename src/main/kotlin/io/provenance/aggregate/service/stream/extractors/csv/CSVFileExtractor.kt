@@ -1,17 +1,29 @@
 package io.provenance.aggregate.service.stream.extractors.csv
 
+import io.provenance.aggregate.service.extensions.*
 import io.provenance.aggregate.service.stream.extractors.FileExtractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
+import io.provenance.aggregate.service.utils.sha256
 import io.provenance.aggregate.service.writer.csv.ApacheCommonsCSVRecordWriter
 import org.apache.commons.csv.CSVFormat
 import java.io.OutputStreamWriter
 
 abstract class CSVFileExtractor(
+    /**
+     * The filename base to use for the output file.
+     */
     name: String,
+
     /**
      * If provided, these headers will be used when generating the output file.
      */
-    val headers: Iterable<String>? = null
+    val headers: Iterable<String>? = null,
+
+    /**
+     * If true, a hash will be generated for each written row
+     */
+    val generateHash: Boolean = true
+
 ) : FileExtractor(name) {
     /**
      * The underlying CSV writer implementation used to produce output.
@@ -35,15 +47,26 @@ abstract class CSVFileExtractor(
     @Volatile
     private var flagWriteOutput: Boolean = false
 
+
     /**
      * Synchronously write a record to the CSV output writer using a synchronized(<lock>) { ... }
      */
     fun syncWriteRecord(vararg values: Any?) {
         synchronized(this) {
             flagWriteOutput = true
-            writer.writeRecord(*values)
+            if (generateHash) {
+                val hash = computeRowHash(*values)
+                writer.writeRecord(hash, *values)
+            } else {
+                writer.writeRecord(*values)
+            }
         }
     }
+
+    /**
+     * Compute the hash of a given row, returning a hex-encoded string.
+     */
+    fun computeRowHash(vararg values: Any?): String = sha256(values.mapNotNull { it?.toString() }).toHexString()
 
     /**
      * Only files with more than 1 now, excluding header, should actually be written.
