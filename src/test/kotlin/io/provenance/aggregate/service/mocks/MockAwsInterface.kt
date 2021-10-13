@@ -5,6 +5,7 @@ import io.provenance.aggregate.service.S3Config
 import io.provenance.aggregate.service.aws.LocalStackAwsInterface
 import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
 import io.provenance.aggregate.service.aws.s3.AwsS3Interface
+import io.provenance.aggregate.service.test.utils.Defaults
 
 open class MockAwsInterface protected constructor(s3Config: S3Config, dynamoConfig: DynamoConfig) :
     LocalStackAwsInterface(s3Config, dynamoConfig) {
@@ -16,7 +17,10 @@ open class MockAwsInterface protected constructor(s3Config: S3Config, dynamoConf
         fun <I : AwsS3Interface> s3Implementation(impl: I) = apply { s3Impl = impl }
         fun <I : AwsDynamoInterface> dynamoImplementation(impl: I) = apply { dynamoImpl = impl }
 
-        fun build(s3Config: S3Config, dynamoConfig: DynamoConfig): MockAwsInterface {
+        fun build(
+            s3Config: S3Config = Defaults.s3Config,
+            dynamoConfig: DynamoConfig = Defaults.dynamoConfig
+        ): MockAwsInterface {
             return object : MockAwsInterface(s3Config, dynamoConfig) {
                 override fun s3(): AwsS3Interface {
                     return s3Impl ?: LocalStackS3(s3Client, s3Config.bucket)

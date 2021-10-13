@@ -3,6 +3,10 @@ package io.provenance.aggregate.service.test
 import cloud.localstack.ServiceName
 import cloud.localstack.docker.LocalstackDockerExtension
 import cloud.localstack.docker.annotation.LocalstackDockerProperties
+import io.provenance.aggregate.service.aws.dynamodb.AwsDynamo
+import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
+import io.provenance.aggregate.service.clients.FailingDynamoDbAsyncClient
+import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.EventStreamUploader
 import io.provenance.aggregate.service.stream.models.StreamBlock
@@ -22,6 +26,8 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junitpioneer.jupiter.SetEnvironmentVariable
 import org.junitpioneer.jupiter.SetEnvironmentVariable.SetEnvironmentVariables
+import org.slf4j.Logger
+import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
@@ -31,8 +37,12 @@ import kotlin.time.ExperimentalTime
 @LocalstackDockerProperties(services = [ServiceName.S3, ServiceName.DYNAMO])
 class AWSTests : TestBase() {
 
-    private val aws: MockAwsInterface = MockAwsInterface.builder()
+    private val log: Logger = logger()
+
+    private val aws: MockAwsInterface = MockAwsInterface.Builder()
         .build(Defaults.s3Config, Defaults.dynamoConfig)
+
+    private val dynamoClient = aws.dynamoClient
 
     // Get a view of the AWS S3 interface with more stuff on it needed during testing
     val s3: LocalStackS3 = aws.s3() as LocalStackS3
@@ -79,6 +89,7 @@ class AWSTests : TestBase() {
         includeLiveBlocks: Boolean = true,
         skipIfEmpty: Boolean = true,
         skipIfSeen: Boolean = true,
+        dynamoInterface: AwsDynamoInterface = dynamo
     ): Pair<EventStream, Long> {
         val eventStreamService: MockEventStreamService =
             Builders.eventStreamService(includeLiveBlocks = includeLiveBlocks)
@@ -91,7 +102,7 @@ class AWSTests : TestBase() {
         val stream = Builders.eventStream()
             .eventStreamService(eventStreamService)
             .tendermintService(tendermintService)
-            .dynamoInterface(dynamo)  // use LocalStack's Dynamo instance:
+            .dynamoInterface(dynamoInterface)  // use LocalStack's Dynamo instance:
             .dispatchers(dispatcherProvider)
             .fromHeight(MIN_BLOCK_HEIGHT)
             .skipIfEmpty(skipIfEmpty)
@@ -268,6 +279,134 @@ class AWSTests : TestBase() {
             // Historical blocks should have a Dynamo storage metadata entry:
             assert(historicalBlocks.all { it.metadata != null }) { "Stream (3) historical blocks should all have metadata " }
             assert(liveBlocks.all { it.metadata == null }) { "Stream (3) live blocks should not have any metadata " }
+        }
+    }
+
+    @OptIn(FlowPreview::class, ExperimentalTime::class, ExperimentalCoroutinesApi::class)
+    @Test
+    @SetEnvironmentVariables(
+        SetEnvironmentVariable(
+            key = "AWS_ACCESS_KEY_ID",
+            value = "test",
+        ),
+        SetEnvironmentVariable(
+            key = "AWS_SECRET_ACCESS_KEY",
+            value = "test"
+        )
+    )
+    fun testDynamoRecoversFromCommitFailure() {
+
+        runBlocking(dispatcherProvider.main()) {
+
+            // Fails when `transactWriteItems` is called
+            val failingDynamoClient = FailingDynamoDbAsyncClient(aws.dynamoClient) { method, callCount ->
+                // First two calls fail:
+                val shouldFail = callCount == 2 || callCount == 4 // fail for 2 calls
+                log.info("${method}:$callCount :: should fail? $shouldFail")
+                shouldFail
+            }
+
+            val failingDynamo = object : AwsDynamo(
+                failingDynamoClient,
+                Defaults.dynamoConfig.blockBatchTable,
+                Defaults.dynamoConfig.blockMetadataTable,
+                Defaults.dynamoConfig.serviceMetadataTable
+            ) {
+                // TODO: Replace this when runBlockingTest is fixed:
+                // https://github.com/Kotlin/kotlinx.coroutines/pull/2978
+                override suspend fun doDelay(duration: Duration) {
+                    log.info("Faking delay for ${duration.inWholeMilliseconds} milliseconds")
+                }
+            }
+
+            val failingAws: MockAwsInterface = MockAwsInterface.builder()
+                .dynamoImplementation(failingDynamo)
+                .build()
+
+            val uploadResults: List<UploadResult>? =
+                withTimeoutOrNull(Duration.seconds(10)) {
+                    val (stream, _) = createSimpleEventStream(
+                        includeLiveBlocks = true,
+                        skipIfEmpty = true,
+                        skipIfSeen = false,
+                        dynamoInterface = failingDynamo
+                    )
+                    EventStreamUploader(
+                        stream,
+                        failingAws,
+                        Defaults.moshi,
+                        EventStream.Options.DEFAULT,
+                        dispatchers = dispatcherProvider
+                    )
+                        .addExtractor(*DEFAULT_EXTRACTORS)
+                        .upload()
+                        .toList()
+                }
+
+            assert(uploadResults != null && uploadResults.isNotEmpty()) { "Stream failed to collect in time" }
+        }
+    }
+
+    @OptIn(FlowPreview::class, ExperimentalTime::class, ExperimentalCoroutinesApi::class)
+    @Test
+    @SetEnvironmentVariables(
+        SetEnvironmentVariable(
+            key = "AWS_ACCESS_KEY_ID",
+            value = "test",
+        ),
+        SetEnvironmentVariable(
+            key = "AWS_SECRET_ACCESS_KEY",
+            value = "test"
+        )
+    )
+    fun testDynamoFailsForTooManyConsecutiveCommitFailures() {
+
+        assertThrows<TransactionCanceledException> {
+
+            runBlocking(dispatcherProvider.main()) {
+
+                // Fails when `transactWriteItems` is called
+                val failingDynamoClient = FailingDynamoDbAsyncClient(aws.dynamoClient) { method, callCount ->
+                    // Make all calls fail, exceeding the reattempt threshold `DYNAMODB_MAX_TRANSACTION_RETRIES`:
+                    true
+                }
+
+                val failingDynamo = object : AwsDynamo(
+                    failingDynamoClient,
+                    Defaults.dynamoConfig.blockBatchTable,
+                    Defaults.dynamoConfig.blockMetadataTable,
+                    Defaults.dynamoConfig.serviceMetadataTable
+                ) {
+                    // TODO: Replace this when runBlockingTest is fixed:
+                    // https://github.com/Kotlin/kotlinx.coroutines/pull/2978
+                    override suspend fun doDelay(duration: Duration) {
+                        log.info("Faking delay for ${duration.inWholeMilliseconds} milliseconds")
+                    }
+                }
+
+                val failingAws: MockAwsInterface = MockAwsInterface.builder()
+                    .dynamoImplementation(failingDynamo)
+                    .build()
+
+                withTimeoutOrNull(Duration.seconds(10)) {
+                    val (stream, _) = createSimpleEventStream(
+                        includeLiveBlocks = true,
+                        skipIfEmpty = true,
+                        skipIfSeen = false,
+                        dynamoInterface = failingDynamo
+                    )
+                    EventStreamUploader(
+                        stream,
+                        failingAws,
+                        Defaults.moshi,
+                        EventStream.Options.DEFAULT,
+                        dispatchers = dispatcherProvider
+                    )
+                        .addExtractor(*DEFAULT_EXTRACTORS)
+                        .upload()
+                        .toList()
+                }
+            }
         }
     }
 }

@@ -160,39 +160,43 @@ class EventStreamUploader(
                     streamBlocks.mapNotNull { block -> block.block.dateTime() }.minOrNull()
 
                 // Run the extract steps:
-                coroutineScope {
-                    streamBlocks.map { block ->
-                        onEachBlock(block)
-                        async { batch.processBlock(block) }
-                    }
-                }
-                    .awaitAll()
+                val uploaded: List<UploadResult> = coroutineScope {
+                    withContext(dispatchers.io()) {
 
-                // Upload the results to S3:
-                val uploaded: List<UploadResult> = batch.complete { batchId: BatchId, extractor: Extractor ->
-                    val key: S3Key = csvS3Key(batchId, earliestDate, extractor.name)
-                    when (val out = extractor.output()) {
-                        is OutputType.FilePath -> {
-                            if (extractor.shouldOutput()) {
-                                val putResponse: PutObjectResponse = s3.streamObject(object : StreamableObject {
-                                    override val key: S3Key get() = key
-                                    override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(out.path)
-                                    override val metadata: Map<String, String>? get() = out.metadata
-                                })
-                                log.info("${batchId}/${extractor.name} => put.eTag = ${putResponse.eTag()}")
-                                UploadResult(
-                                    batchId = batch.id,
-                                    batchSize = streamBlocks.size,
-                                    eTag = putResponse.eTag(),
-                                    s3Key = key
-                                )
-                            } else {
-                                null
+                        streamBlocks.map { block ->
+                            onEachBlock(block)
+                            async { batch.processBlock(block) }
+                        }
+                            .awaitAll()
+
+                        // Upload the results to S3:
+                        batch.complete { batchId: BatchId, extractor: Extractor ->
+                            val key: S3Key = csvS3Key(batchId, earliestDate, extractor.name)
+                            when (val out = extractor.output()) {
+                                is OutputType.FilePath -> {
+                                    if (extractor.shouldOutput()) {
+                                        val putResponse: PutObjectResponse = s3.streamObject(object : StreamableObject {
+                                            override val key: S3Key get() = key
+                                            override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(out.path)
+                                            override val metadata: Map<String, String>? get() = out.metadata
+                                        })
+                                        log.info("${batchId}/${extractor.name} => put.eTag = ${putResponse.eTag()}")
+                                        UploadResult(
+                                            batchId = batch.id,
+                                            batchSize = streamBlocks.size,
+                                            eTag = putResponse.eTag(),
+                                            s3Key = key
+                                        )
+                                    } else {
+                                        null
+                                    }
+                                }
+                                else -> null
                             }
                         }
-                        else -> null
+                            .filterNotNull()
                     }
-                }.filterNotNull()
+                }
 
                 // Mark the blocks as having been processed:
                 val s3Keys = uploaded.map { it.s3Key }
