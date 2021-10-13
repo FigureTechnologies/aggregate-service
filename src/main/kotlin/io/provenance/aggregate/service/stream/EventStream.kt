@@ -20,6 +20,7 @@ import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.extensions.dateTime
 import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
 import io.provenance.aggregate.service.stream.models.rpc.response.MessageType
+import io.provenance.aggregate.service.utils.backoff
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.net.ConnectException
@@ -43,7 +44,7 @@ class EventStream(
 ) {
 
     companion object {
-        const val DEFAULT_BATCH_SIZE = 8
+        const val DEFAULT_BATCH_SIZE = 4
         const val TENDERMINT_MAX_QUERY_RANGE = 20
         const val DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS = 100
     }
@@ -513,7 +514,7 @@ class EventStream(
                     is ConnectException,
                     is SocketTimeoutException,
                     is SocketException -> {
-                        val duration = Backoff.forAttempt(attempt)
+                        val duration = backoff(attempt, jitter = false)
                         log.error("Reconnect attempt #$attempt; waiting ${duration.inWholeSeconds}s before trying again: $cause")
                         delay(duration)
                         true
