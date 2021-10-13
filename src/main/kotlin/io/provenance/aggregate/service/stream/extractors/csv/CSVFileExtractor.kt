@@ -19,11 +19,6 @@ abstract class CSVFileExtractor(
      */
     val headers: Iterable<String>? = null,
 
-    /**
-     * If true, a hash will be generated for each written row
-     */
-    val generateHash: Boolean = true
-
 ) : FileExtractor(name) {
     /**
      * The underlying CSV writer implementation used to produce output.
@@ -50,11 +45,13 @@ abstract class CSVFileExtractor(
 
     /**
      * Synchronously write a record to the CSV output writer using a synchronized(<lock>) { ... }
+     *
+     * If `includeHash` is true, the computed hash value will be the first entry of the written record.
      */
-    fun syncWriteRecord(vararg values: Any?) {
+    fun syncWriteRecord(vararg values: Any?, includeHash: Boolean = true) {
         synchronized(this) {
             flagWriteOutput = true
-            if (generateHash) {
+            if (includeHash) {
                 val hash = computeRowHash(*values)
                 writer.writeRecord(hash, *values)
             } else {

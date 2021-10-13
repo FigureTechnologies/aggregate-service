@@ -28,8 +28,7 @@ class TxMarkerSupply(val s3: AwsS3Interface) : CSVFileExtractor(
         "metadata_denom_units",
         "metadata_name",
         "metadata_symbol"
-    ),
-    generateHash = true
+    )
 ) {
     override suspend fun extract(block: StreamBlock) {
         for (event in block.txEvents) {

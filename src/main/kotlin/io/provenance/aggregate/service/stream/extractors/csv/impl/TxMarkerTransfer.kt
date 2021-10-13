@@ -21,8 +21,7 @@ class TxMarkerTransfer(val s3: AwsS3Interface) : CSVFileExtractor(
         "administrator",
         "to_address",
         "from_address"
-    ),
-    generateHash = true
+    )
 ) {
     override suspend fun extract(block: StreamBlock) {
         for (event in block.txEvents) {

@@ -21,8 +21,7 @@ class TxEventAttributes(val s3: AwsS3Interface) : CSVFileExtractor(
         "type",
         "account",
         "owner"
-    ),
-    generateHash = true
+    )
 ) {
     override suspend fun extract(block: StreamBlock) {
         for (event in block.txEvents) {
