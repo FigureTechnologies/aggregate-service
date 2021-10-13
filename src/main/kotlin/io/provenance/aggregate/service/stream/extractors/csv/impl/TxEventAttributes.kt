@@ -10,8 +10,18 @@ import io.provenance.aggregate.service.stream.models.provenance.attribute.EventA
  * Extract transaction attributes (add, update, delete, delete distinct) to CSV.
  */
 class TxEventAttributes(val s3: AwsS3Interface) : CSVFileExtractor(
-    "tx_event_attributes",
-    listOf("event_type", "block_height", "block_timestamp", "name", "value", "type", "account", "owner")
+    name = "tx_event_attributes",
+    headers = listOf(
+        "hash",
+        "event_type",
+        "block_height",
+        "block_timestamp",
+        "name",
+        "value",
+        "type",
+        "account",
+        "owner"
+    )
 ) {
     override suspend fun extract(block: StreamBlock) {
         for (event in block.txEvents) {

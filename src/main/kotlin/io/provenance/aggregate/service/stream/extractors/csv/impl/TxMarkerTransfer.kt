@@ -10,8 +10,18 @@ import io.provenance.aggregate.service.stream.models.provenance.marker.EventMark
  * Extract data related to the transfer of a marker between parties.
  */
 class TxMarkerTransfer(val s3: AwsS3Interface) : CSVFileExtractor(
-    "tx_marker_transfer",
-    listOf("event_type", "block_height", "block_timestamp", "amount", "denom", "administrator", "to_address", "from_address")
+    name = "tx_marker_transfer",
+    headers = listOf(
+        "hash",
+        "event_type",
+        "block_height",
+        "block_timestamp",
+        "amount",
+        "denom",
+        "administrator",
+        "to_address",
+        "from_address"
+    )
 ) {
     override suspend fun extract(block: StreamBlock) {
         for (event in block.txEvents) {
