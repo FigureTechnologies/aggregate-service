@@ -6,7 +6,8 @@ import io.provenance.aggregate.service.stream.batch.BatchId
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.utils.DelayShim
 import io.provenance.aggregate.service.utils.backoff
-import kotlinx.coroutines.*
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapConcat
@@ -18,10 +19,12 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient
 import software.amazon.awssdk.enhanced.dynamodb.Key
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema
 import software.amazon.awssdk.enhanced.dynamodb.mapper.ImmutableTableSchema
-import software.amazon.awssdk.enhanced.dynamodb.model.*
+import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest
+import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetResultPage
+import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch
+import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.ExperimentalTime
 
@@ -92,10 +95,36 @@ open class AwsDynamo(
                 .build()
         }
 
+    /**
+     * Retry a wrapped transaction.
+     *
+     * See https://stackoverflow.com/q/54245599. This happens due to AWS use of Optimistic Concurrency Control
+     * Using jitter for retry timing: https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
+     */
     @OptIn(ExperimentalTime::class)
+    private suspend fun <T> retryTx(upTo: Int, context: String, f: suspend () -> T): T {
+        var ex: TransactionCanceledException? = null
+        for (attempt in 0..upTo) {
+            try {
+                return f()
+            } catch (txCancelledEx: TransactionCanceledException) {
+                ex = txCancelledEx
+                log.info("TransactionCanceledException: Retry attempt: $attempt")
+                log.info("  context: $context")
+                for (reason in txCancelledEx.cancellationReasons()) {
+                    log.info("  ${reason.code()}:${reason.message()} => ${reason.item()}")
+                }
+                // Wait before retrying again:
+                // TODO: Replace with delay. See `DelayShim` interface notes
+                doDelay(backoff(attempt, base = 100.0))
+            }
+        }
+        throw ex ?: error("tx cancelled: impossible state")
+    }
+
+    @OptIn(ExperimentalTime::class, kotlin.ExperimentalStdlibApi::class)
     override suspend fun trackBlocks(batch: BlockBatch, blocks: Iterable<StreamBlock>): WriteResult {
 
-        // TODO: figure out how to fetch + update this transactionally:
         val storedMaxHistoricalHeight: Long? = getMaxHistoricalBlockHeight()
 
         // Find the historical max block height in the bunch:
@@ -105,19 +134,12 @@ open class AwsDynamo(
                 .map { it.height }
                 .maxOrNull()
 
-        var lastException: Throwable? = null
+        val totalProcessed = AtomicInteger(0)
 
-        // See https://stackoverflow.com/q/54245599. This happens due to AWS use of Optimistic Concurrency Control
-        // Using jitter for retry timing: https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
-        // Try up to 5 times:
-        for (attempt in 0..DYNAMODB_MAX_TRANSACTION_RETRIES) {
-            try {
-                val futures = mutableListOf<Deferred<Void>>()
-                val totalProcessed = AtomicInteger(0)
-                var reservedSlots: Int = 0
-
-                futures.add(
-                    enhancedClient.transactWriteItems { request: TransactWriteItemsEnhancedRequest.Builder ->
+        buildList {
+            add(
+                retryTx(DYNAMODB_MAX_TRANSACTION_RETRIES, "BLOCK_BATCH/SERVICE_METADATA") {
+                    enhancedClient.transactWriteItems { request ->
                         // Add the `BlockBatch` entry:
                         request.addPutItem(
                             BLOCK_BATCH_TABLE,
@@ -126,14 +148,14 @@ open class AwsDynamo(
                                 .item(batch)
                                 .build()
                         )
-                        reservedSlots += 1
                         totalProcessed.incrementAndGet()
-
                         // Put/Update the maximum historical block height seen:
                         if (foundMaxHistoricalHeight != null) {
                             log.info("Found historical block height -> $foundMaxHistoricalHeight; stored = $storedMaxHistoricalHeight")
                             val prop =
-                                ServiceMetadata.Properties.MaxHistoricalBlockHeight.newEntry(foundMaxHistoricalHeight.toString())
+                                ServiceMetadata.Properties.MaxHistoricalBlockHeight.newEntry(
+                                    foundMaxHistoricalHeight.toString()
+                                )
                             if (storedMaxHistoricalHeight == null || foundMaxHistoricalHeight > storedMaxHistoricalHeight) {
                                 request.addPutItem(
                                     SERVICE_METADATA_TABLE,
@@ -141,52 +163,34 @@ open class AwsDynamo(
                                         .item(prop)
                                         .build()
                                 )
-                                reservedSlots += 1
                                 totalProcessed.incrementAndGet()
                             }
                         }
-                        // For the initial put batch for blocks, we need to subtract `reservedSlots` from
-                        // `DYNAMODB_MAX_TRANSACTION_ITEMS`, to stay under the limit:
-                        createStreamBlockPutRequests(
-                            BatchId(batch.batchId),
-                            blocks.take(DYNAMODB_MAX_TRANSACTION_ITEMS - reservedSlots)
-                        ).forEach {
-                            request.addPutItem(BLOCK_METADATA_TABLE, it)
-                            totalProcessed.incrementAndGet()
-                        }
                     }
                         .asDeferred()
-                )
-
-                futures.addAll(
-                    blocks.chunked(DYNAMODB_MAX_TRANSACTION_ITEMS)
-                        .map { chunk ->
-                            val future: CompletableFuture<Void> =
-                                enhancedClient.transactWriteItems { request: TransactWriteItemsEnhancedRequest.Builder ->
-                                    createStreamBlockPutRequests(BatchId(batch.batchId), chunk).forEach {
-                                        request.addPutItem(BLOCK_METADATA_TABLE, it)
-                                        totalProcessed.incrementAndGet()
-                                    }
+                }
+            )
+            addAll(
+                blocks
+                    .chunked(DYNAMODB_MAX_TRANSACTION_ITEMS)
+                    .filter { it.isNotEmpty() }
+                    .map { blockChunk: List<StreamBlock> ->
+                        val context = "block-chunk:[${blockChunk.map { it.height }.joinToString("")}]"
+                        retryTx(DYNAMODB_MAX_TRANSACTION_RETRIES, context) {
+                            enhancedClient.transactWriteItems { request ->
+                                createStreamBlockPutRequests(BatchId(batch.batchId), blockChunk).forEach {
+                                    request.addPutItem(BLOCK_METADATA_TABLE, it)
+                                    totalProcessed.incrementAndGet()
                                 }
-                            future.asDeferred()
+                            }
+                                .asDeferred()
                         }
-                )
-
-                futures.awaitAll()
-
-                return WriteResult.ok(totalProcessed.getAcquire())
-
-            } catch (txCancelledEx: TransactionCanceledException) {
-
-                lastException = txCancelledEx
-
-                // Wait before retrying again:
-                // TODO: Replace with delay. See `DelayShim` interface notes
-                doDelay(backoff(attempt, base = 100.0))
-            }
+                    }
+            )
         }
+            .awaitAll()
 
-        throw lastException ?: Exception("tx failed: impossible condition")
+        return WriteResult.ok(totalProcessed.getAcquire())
     }
 
     /**
