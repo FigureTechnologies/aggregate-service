@@ -1,5 +1,8 @@
 package io.provenance.aggregate.service
 
+/**
+ * An enumeration encoding various runtime environments.
+ */
 enum class Environment {
     local {
         override fun isLocal(): Boolean = true

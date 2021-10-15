@@ -4,7 +4,7 @@ import com.squareup.moshi.JsonClass
 import java.time.OffsetDateTime
 
 /**
- * Used to represent block-level events like "reward", "commission", etc.
+ * Used to represent block-level events like `reward`, `commission`, etc.
  */
 @JsonClass(generateAdapter = true)
 data class BlockEvent(

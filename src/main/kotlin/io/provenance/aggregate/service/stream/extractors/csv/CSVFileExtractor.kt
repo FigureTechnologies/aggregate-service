@@ -8,6 +8,13 @@ import io.provenance.aggregate.service.writer.csv.ApacheCommonsCSVRecordWriter
 import org.apache.commons.csv.CSVFormat
 import java.io.OutputStreamWriter
 
+/**
+ * An extractor that generates a CSV file.
+ *
+ * @property name The base name of the output file, sans extension.
+ * @property headers An optional list of headers. If provided, the first output record will consist of the headers
+ * provided.
+ */
 abstract class CSVFileExtractor(
     /**
      * The filename base to use for the output file.
@@ -18,8 +25,7 @@ abstract class CSVFileExtractor(
      * If provided, these headers will be used when generating the output file.
      */
     val headers: Iterable<String>? = null,
-
-) : FileExtractor(name) {
+) : FileExtractor(name, suffix = ".csv") {
     /**
      * The underlying CSV writer implementation used to produce output.
      */

@@ -3,12 +3,12 @@ package io.provenance.aggregate.service.test
 import cloud.localstack.ServiceName
 import cloud.localstack.docker.LocalstackDockerExtension
 import cloud.localstack.docker.annotation.LocalstackDockerProperties
-import io.provenance.aggregate.service.aws.dynamodb.AwsDynamo
-import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
+import io.provenance.aggregate.service.aws.dynamodb.client.DefaultDynamoClient
+import io.provenance.aggregate.service.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.service.clients.FailingDynamoDbAsyncClient
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.EventStream
-import io.provenance.aggregate.service.stream.EventStreamUploader
+import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.UploadResult
 import io.provenance.aggregate.service.test.base.TestBase
@@ -39,7 +39,7 @@ class AWSTests : TestBase() {
 
     private val log: Logger = logger()
 
-    private val aws: MockAwsInterface = MockAwsInterface.Builder()
+    private val aws: MockAwsClient = MockAwsClient.Builder()
         .build(Defaults.s3Config, Defaults.dynamoConfig)
 
     private val dynamoClient = aws.dynamoClient
@@ -48,7 +48,7 @@ class AWSTests : TestBase() {
     val s3: LocalStackS3 = aws.s3() as LocalStackS3
 
     // Get a view of the AWS S3 interface with more stuff on it needed during testing
-    val dynamo: LocalStackDynamo = aws.dynamo() as LocalStackDynamo
+    val dynamo: LocalStackDynamoClient = aws.dynamo() as LocalStackDynamoClient
 
     val DEFAULT_EXTRACTORS: Array<String> =
         arrayOf("io.provenance.aggregate.service.test.stream.extractors.csv.impl.EventMetdataSessionCreated")
@@ -89,15 +89,15 @@ class AWSTests : TestBase() {
         includeLiveBlocks: Boolean = true,
         skipIfEmpty: Boolean = true,
         skipIfSeen: Boolean = true,
-        dynamoInterface: AwsDynamoInterface = dynamo
+        dynamoInterface: DynamoClient = dynamo
     ): Pair<EventStream, Long> {
         val eventStreamService: MockEventStreamService =
             Builders.eventStreamService(includeLiveBlocks = includeLiveBlocks)
                 .dispatchers(dispatcherProvider)
                 .build()
 
-        val tendermintService: MockTendermintService = Builders.tendermintService()
-            .build(MockTendermintService::class.java)
+        val tendermintService: MockTendermintServiceClient = Builders.tendermintService()
+            .build(MockTendermintServiceClient::class.java)
 
         val stream = Builders.eventStream()
             .eventStreamService(eventStreamService)
@@ -306,7 +306,7 @@ class AWSTests : TestBase() {
                 shouldFail
             }
 
-            val failingDynamo = object : AwsDynamo(
+            val failingDynamo = object : DefaultDynamoClient(
                 failingDynamoClient,
                 Defaults.dynamoConfig.blockBatchTable,
                 Defaults.dynamoConfig.blockMetadataTable,
@@ -319,7 +319,7 @@ class AWSTests : TestBase() {
                 }
             }
 
-            val failingAws: MockAwsInterface = MockAwsInterface.builder()
+            val failingAws: MockAwsClient = MockAwsClient.builder()
                 .dynamoImplementation(failingDynamo)
                 .build()
 
@@ -371,7 +371,7 @@ class AWSTests : TestBase() {
                     true
                 }
 
-                val failingDynamo = object : AwsDynamo(
+                val failingDynamo = object : DefaultDynamoClient(
                     failingDynamoClient,
                     Defaults.dynamoConfig.blockBatchTable,
                     Defaults.dynamoConfig.blockMetadataTable,
@@ -384,7 +384,7 @@ class AWSTests : TestBase() {
                     }
                 }
 
-                val failingAws: MockAwsInterface = MockAwsInterface.builder()
+                val failingAws: MockAwsClient = MockAwsClient.builder()
                     .dynamoImplementation(failingDynamo)
                     .build()
 

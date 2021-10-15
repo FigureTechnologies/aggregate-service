@@ -2,18 +2,18 @@ package io.provenance.aggregate.service.test.utils
 
 import com.squareup.moshi.Moshi
 import io.provenance.aggregate.service.DispatcherProvider
-import io.provenance.aggregate.service.aws.AwsInterface
-import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
+import io.provenance.aggregate.service.aws.AwsClient
+import io.provenance.aggregate.service.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.EventStreamService
-import io.provenance.aggregate.service.stream.TendermintService
+import io.provenance.aggregate.service.stream.TendermintServiceClient
 import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
 import io.provenance.aggregate.service.stream.models.BlockResponse
 import io.provenance.aggregate.service.stream.models.BlockResultsResponse
 import io.provenance.aggregate.service.stream.models.BlockchainResponse
-import io.provenance.aggregate.service.test.mocks.MockAwsInterface
+import io.provenance.aggregate.service.test.mocks.MockAwsClient
 import io.provenance.aggregate.service.test.mocks.MockEventStreamService
-import io.provenance.aggregate.service.test.mocks.MockTendermintService
+import io.provenance.aggregate.service.test.mocks.MockTendermintServiceClient
 import io.provenance.aggregate.service.test.mocks.ServiceMocker
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -59,7 +59,7 @@ object Builders {
     }
 
     object AwsInterfaceBuilder {
-        fun build(): AwsInterface = MockAwsInterface
+        fun build(): AwsClient = MockAwsClient
             .Builder()
             .build(Defaults.s3Config, Defaults.dynamoConfig)
     }
@@ -72,15 +72,15 @@ object Builders {
     data class EventStreamBuilder(val builders: Builders) {
         var dispatchers: DispatcherProvider? = null
         var eventStreamService: EventStreamService? = null
-        var tendermintService: TendermintService? = null
-        var dynamoInterface: AwsDynamoInterface? = null
+        var tendermintServiceClient: TendermintServiceClient? = null
+        var dynamoInterface: DynamoClient? = null
         var moshi: Moshi? = null
         var options: EventStream.Options.Builder = EventStream.Options.builder()
         var includeLiveBlocks: Boolean = true
 
         fun <T : EventStreamService> eventStreamService(value: T) = apply { eventStreamService = value }
-        fun <T : TendermintService> tendermintService(value: T) = apply { tendermintService = value }
-        fun <T : AwsDynamoInterface> dynamoInterface(value: T) = apply { dynamoInterface = value }
+        fun <T : TendermintServiceClient> tendermintService(value: T) = apply { tendermintServiceClient = value }
+        fun <T : DynamoClient> dynamoInterface(value: T) = apply { dynamoInterface = value }
         fun moshi(value: Moshi) = apply { moshi = value }
         fun dispatchers(value: DispatcherProvider) = apply { dispatchers = value }
         fun options(value: EventStream.Options.Builder) = apply { options = value }
@@ -103,8 +103,8 @@ object Builders {
                         .eventStreamService(includeLiveBlocks = includeLiveBlocks)
                         .dispatchers(dispatchers)
                         .build(),
-                tendermintService = tendermintService
-                    ?: builders.tendermintService().build(MockTendermintService::class.java),
+                tendermintServiceClient = tendermintServiceClient
+                    ?: builders.tendermintService().build(MockTendermintServiceClient::class.java),
                 dynamo = dynamoInterface ?: defaultAws().build().dynamo(),
                 moshi = moshi ?: Defaults.moshi,
                 dispatchers = dispatchers,

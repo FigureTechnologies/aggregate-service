@@ -1,9 +1,9 @@
 package io.provenance.aggregate.service.test.mocks
 
-import io.provenance.aggregate.service.stream.TendermintService
+import io.provenance.aggregate.service.stream.TendermintServiceClient
 import io.provenance.aggregate.service.stream.models.*
 
-class MockTendermintService(mocker: ServiceMock) : TendermintService, ServiceMock by mocker {
+class MockTendermintServiceClient(mocker: ServiceMock) : TendermintServiceClient, ServiceMock by mocker {
 
     override suspend fun abciInfo() =
         respondWith<ABCIInfoResponse>("abciInfo")

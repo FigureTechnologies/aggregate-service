@@ -6,19 +6,26 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbImmut
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey
 
 /**
+ * A mapping to the Dynamo table defined in [src/main/resources/application.yml] as `aws.dynamo.block-metadata-table`
+ *
  * Documentation for the enhanced DynamoDB "enhanced" async client:
  * @see https://github.com/aws/aws-sdk-java-v2/tree/master/services-custom/dynamodb-enhanced
  *
  * Resources for Working with immutable data:
  * @see https://github.com/aws/aws-sdk-java-v2/issues/2096#issuecomment-752667521
  *
- * Unfortuntely, data classes are not supported. Attempting to use a data class will result in the error:
+ * Unfortunately, data classes are not supported. Attempting to use a data class will result in the error:
  *
- *   Exception in thread "main" java.lang.IllegalArgumentException: A method was found on the immutable class that does
- *   not appear to have a matching setter on the builder class. Use the @DynamoDbIgnore annotation on the method if you
- *   do not want it to be included in the TableSchema introspection.
+ * ```
+ * Exception in thread "main" java.lang.IllegalArgumentException: A method was found on the immutable class that does
+ * not appear to have a matching setter on the builder class. Use the @DynamoDbIgnore annotation on the method if you
+ * do not want it to be included in the TableSchema introspection.
  *
- *   [Method = "public final long io.provenance.aggregate.service.aws.dynamodb.BlockStorageMetadata.component1()"]
+ * [Method = "public final long io.provenance.aggregate.service.aws.dynamodb.BlockStorageMetadata.component1()"]
+ * ```
+ *
+ * @constructor Invoked by the AWS SDK, instantiating the inner builder class [BlockStorageMetadata.Builder] as part of
+ * construction.
  */
 @DynamoDbImmutable(builder = BlockStorageMetadata.Builder::class)
 class BlockStorageMetadata(

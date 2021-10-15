@@ -1,7 +1,7 @@
 package io.provenance.aggregate.service.writer
 
 /**
- * A sister interface to `RecordWriter`, intended to be implemenented by types that are able to have their state
+ * A sister interface to `RecordWriter`, intended to be implemented by types that are able to have their state
  * written out as a single, unified "record".
  */
 interface Record {

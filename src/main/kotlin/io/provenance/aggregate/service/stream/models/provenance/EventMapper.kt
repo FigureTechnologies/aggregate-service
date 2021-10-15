@@ -14,21 +14,21 @@ import kotlin.reflect.full.primaryConstructor
  * For all child classes `C` annotated with `@MappedProvenanceEvent("event")` inheriting from a sealed class `T`, this
  * function will produce a map such that entries of the map will consist of a key specifying the event type string
  * as provided by the `@MappedProvenanceEvent` annotation, and the value will be the constructor of the mapped
- * class C.
+ * class `C`.
  */
 class EventMapper<T> private constructor(val mapping: Map<String, KFunction<T>>) {
 
     private val log: Logger = logger()
 
     /**
-     * Given an event type like "provenance.marker.v1.EventMarkerTransfer" or "provenance.attribute.v1.EventAttributeAdd",
+     * Given an event type like `provenance.marker.v1.EventMarkerTransfer` or `provenance.attribute.v1.EventAttributeAdd`,
      * look up and potentially create a new instance of the class mapped to that event with the `@MappedProvenanceEvent`
      * annotation.
      */
     fun fromEvent(event: EncodedBlockchainEvent): T? = fromEvent(event.eventType, event.toDecodedMap())
 
     /**
-     * Given an event type like "provenance.marker.v1.EventMarkerTransfer" or "provenance.attribute.v1.EventAttributeAdd",
+     * Given an event type like `provenance.marker.v1.EventMarkerTransfer` or `provenance.attribute.v1.EventAttributeAdd`,
      * look up and potentially create a new instance of the class mapped to that event with the `@MappedProvenanceEvent`
      * annotation.
      */

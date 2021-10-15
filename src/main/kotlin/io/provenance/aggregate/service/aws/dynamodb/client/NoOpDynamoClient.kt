@@ -1,10 +1,16 @@
-package io.provenance.aggregate.service.aws.dynamodb
+package io.provenance.aggregate.service.aws.dynamodb.client
 
+import io.provenance.aggregate.service.aws.dynamodb.BlockBatch
+import io.provenance.aggregate.service.aws.dynamodb.BlockStorageMetadata
+import io.provenance.aggregate.service.aws.dynamodb.WriteResult
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
-class NoOpDynamo : AwsDynamoInterface {
+/**
+ * A DynamoDB client that does nothing. All methods return null or an empty result.
+ */
+class NoOpDynamoClient : DynamoClient {
 
     override suspend fun getBlockMetadata(blockHeight: Long): BlockStorageMetadata? = null
 

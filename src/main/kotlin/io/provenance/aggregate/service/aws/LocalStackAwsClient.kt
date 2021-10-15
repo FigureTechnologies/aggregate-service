@@ -6,8 +6,14 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import java.net.URI
 
-open class LocalStackAwsInterface(s3Config: S3Config, dynamoConfig: DynamoConfig) :
-    AwsInterface(s3Config, dynamoConfig) {
+/**
+ * The client provider to use when interacting with the LocalStack emulation of AWS.
+ *
+ * @property s3Client The AWS SDK S3 async client to use.
+ * @property bucket The S3 bucket to write results to.
+ */
+open class LocalStackAwsClient(s3Config: S3Config, dynamoConfig: DynamoConfig) :
+    AwsClient(s3Config, dynamoConfig) {
 
     companion object {
         const val LOCALSTACK_ACCESS_TOKEN = "test"

@@ -6,11 +6,16 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbImmut
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey
 
 /**
+ * A mapping to the Dynamo table defined in [src/main/resources/application.yml] as `aws.dynamo.service-metadata-table`
+ *
  * Documentation for the enhanced DynamoDB "enhanced" async client:
  * @see https://github.com/aws/aws-sdk-java-v2/tree/master/services-custom/dynamodb-enhanced
  *
  * Resources for Working with immutable data:
  * @see https://github.com/aws/aws-sdk-java-v2/issues/2096#issuecomment-752667521
+ *
+ * @constructor Invoked by the AWS SDK, instantiating the inner builder class [BlockBatch.Builder] as part of
+ * construction.
  */
 @DynamoDbImmutable(builder = ServiceMetadata.Builder::class)
 class ServiceMetadata(
@@ -21,7 +26,9 @@ class ServiceMetadata(
 ) {
     sealed class Properties(val key: String) {
         /**
-         * Create a new `ServiceMetadata` for the Property (using the given key value)
+         * Create a new [ServiceMetadata] instance for the Property (using the given key value)
+         *
+         * @property value The value of the [ServiceMetadata] instance.
          */
         fun newEntry(value: String): ServiceMetadata =
             ServiceMetadata(property = key, value = value, updatedAt = timestamp())

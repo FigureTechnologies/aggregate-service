@@ -12,7 +12,11 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
 /**
- * Batch process blocks.
+ * A batch of blocks to process.
+ *
+ * @property id An ID assigned to the batch to uniquely identify it.
+ * @property extractors A list of extractors to run when processing the blocks contained in this batch.
+ * @property dispatchers A collection of Kotlin coroutine dispatchers to use for running asynchronous tasks for this batch.
  */
 data class Batch internal constructor(
     val id: BatchId,
