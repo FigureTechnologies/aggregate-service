@@ -9,7 +9,7 @@ import com.tinder.scarlet.lifecycle.LifecycleRegistry
 import io.provenance.aggregate.service.Config
 import io.provenance.aggregate.service.DefaultDispatcherProvider
 import io.provenance.aggregate.service.DispatcherProvider
-import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
+import io.provenance.aggregate.service.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.service.aws.dynamodb.BlockStorageMetadata
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.models.*
@@ -23,6 +23,7 @@ import io.provenance.aggregate.service.stream.models.rpc.response.MessageType
 import io.provenance.aggregate.service.utils.backoff
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import java.io.EOFException
 import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
@@ -32,17 +33,18 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.time.ExperimentalTime
 
+typealias HeightGetter = suspend () -> Long?
+
 @OptIn(FlowPreview::class, ExperimentalTime::class)
 @ExperimentalCoroutinesApi
 class EventStream(
     private val eventStreamService: EventStreamService,
-    private val tendermintService: TendermintService,
-    private val dynamo: AwsDynamoInterface,
+    private val tendermintServiceClient: TendermintServiceClient,
+    private val dynamo: DynamoClient,
     private val moshi: Moshi,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
     private val options: Options = Options.DEFAULT
 ) {
-
     companion object {
         const val DEFAULT_BATCH_SIZE = 8
         const val TENDERMINT_MAX_QUERY_RANGE = 20
@@ -52,7 +54,7 @@ class EventStream(
     data class Options(
         val concurrency: Int,
         val batchSize: Int,
-        val fromHeight: Long?,
+        val fromHeight: Either<Long, HeightGetter>?,
         val toHeight: Long?,
         val skipIfEmpty: Boolean,
         val skipIfSeen: Boolean,
@@ -67,7 +69,7 @@ class EventStream(
         class Builder {
             private var concurrency: Int = DEFAULT_CONCURRENCY
             private var batchSize: Int = DEFAULT_BATCH_SIZE
-            private var fromHeight: Long? = null
+            private var fromHeight: Either<Long, HeightGetter>? = null
             private var toHeight: Long? = null
             private var skipIfEmpty: Boolean = true
             private var skipIfSeen: Boolean = false
@@ -76,41 +78,65 @@ class EventStream(
 
             /**
              * Sets the concurrency level when merging disparate streams of block data.
+             *
+             * @property level The concurrency level.
              */
-            fun concurrency(value: Int) = apply { concurrency = value }
+            fun concurrency(level: Int) = apply { concurrency = level }
 
             /**
              * Sets the maximum number of blocks that will be fetched and processed concurrently.
+             *
+             * @property size The batch size.
              */
             fun batchSize(size: Int) = apply { batchSize = size }
 
             /**
-             * Sets the lowest height to fetch historical blocks from. If no minimum height is provided, only
-             * live blocks will be streamed.
+             * Sets the lowest height to fetch historical blocks from.
+             *
+             * If no minimum height is provided, only live blocks will be streamed.
+             *
+             * @property height The minimum height to fetch blocks from.
              */
-            fun fromHeight(height: Long?) = apply { fromHeight = height }
-            fun fromHeight(height: Long) = apply { fromHeight = height }
+            fun fromHeight(height: Long?) = apply { fromHeight = if (height != null) Either.Left(height) else null }
+            fun fromHeight(height: Long) = apply { fromHeight = Either.Left(height) }
+
+            /**
+             * Provide a function that returns the lowest height to fetch historical blocks from.
+             *
+             * If no minimum height is provided, only live blocks will be streamed.
+             *
+             * @property computeHeight A function that computes the minimum height to fetch blocks from.
+             */
+            fun fromHeight(computeHeight: HeightGetter) = apply { fromHeight = Either.Right(computeHeight) }
 
             /**
              * Sets the highest height to fetch historical blocks to. If no maximum height is provided, blocks will
              * be fetched up to the latest height, as resulted by the ABCIInfo endpoint.
+             *
+             * @property height The maximum height to fetch blocks to.
              */
             fun toHeight(height: Long?) = apply { toHeight = height }
             fun toHeight(height: Long) = apply { toHeight = height }
 
             /**
              * Toggles skipping blocks that contain no transaction data.
+             *
+             * @property value If true, blocks that contain no transaction data will not be processed.
              */
             fun skipIfEmpty(value: Boolean) = apply { skipIfEmpty = value }
 
             /**
              * Toggles skipping blocks that have been previously uploaded and subsequently tracked.
+             *
+             * @property value If true, blocks that have already been processed will not be processed again.
              */
             fun skipIfSeen(value: Boolean) = apply { skipIfSeen = value }
 
             /**
              * Filter blocks by one or more specific block events (case-insensitive).
              * Only blocks possessing the specified block event(s) will be streamed.
+             *
+             * @property predicate If evaluates to true will include the given block for processing.
              */
             fun matchBlockEvent(predicate: (event: String) -> Boolean) =
                 apply { blockEventPredicate = predicate }
@@ -118,9 +144,14 @@ class EventStream(
             /**
              * Filter blocks by one or more specific transaction events (case-insensitive).
              * Only blocks possessing the specified transaction event(s) will be streamed.
+             *
+             * @property predicate If evaluated to true will include the given block for processing.
              */
             fun matchTxEvent(predicate: (event: String) -> Boolean) = apply { txEventPredicate = predicate }
 
+            /**
+             * @return An Options instance used to construct an event stream
+             */
             fun build(): Options = Options(
                 concurrency = concurrency,
                 batchSize = batchSize,
@@ -138,8 +169,8 @@ class EventStream(
         private val config: Config,
         private val moshi: Moshi,
         private val eventStreamBuilder: Scarlet.Builder,
-        private val tendermintService: TendermintService,
-        private val dynamoClient: AwsDynamoInterface,
+        private val tendermintServiceClient: TendermintServiceClient,
+        private val dynamoClient: DynamoClient,
         private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
     ) {
         private fun noop(_options: Options.Builder) {}
@@ -160,7 +191,7 @@ class EventStream(
 
             return EventStream(
                 eventStreamService,
-                tendermintService,
+                tendermintServiceClient,
                 dynamoClient,
                 moshi,
                 options = options,
@@ -174,10 +205,40 @@ class EventStream(
     private val responseMessageDecoder = MessageType.Decoder(moshi)
 
     /**
-     * Serialize data of a given class type
+     * A serializer function that converts a [StreamBlock] instance to a JSON string.
+     *
+     * @return (StreamBlock) -> String
      */
-    fun <T> serialize(clazz: Class<T>, data: T) = moshi.adapter<T>(clazz).toJson(data)
+    val serializer: (StreamBlock) -> String =
+        { block: StreamBlock -> moshi.adapter(StreamBlock::class.java).toJson(block) }
 
+    /**
+     * Computes and returns the starting height (if it can be determined) to be used when streaming historical blocks.
+     *
+     * @return Long? The starting block height to use, if it exists.
+     */
+    private suspend fun getStartingHeight(): Long? =
+        options.fromHeight
+            ?.let {
+                when (it) {
+                    is Either.Left -> it.value     // Constant value
+                    is Either.Right -> it.value()  // Computed value
+                    else -> null
+                }
+            }
+
+    /**
+     * Computes and returns the ending height (if it can be determined) tobe used when streaming historical blocks.
+     *
+     * @return Long? The ending block height to use, if it exists.
+     */
+    private suspend fun getEndingHeight(): Long? =
+        options.toHeight
+            ?: tendermintServiceClient.abciInfo().result?.response?.lastBlockHeight
+
+    /**
+     * Returns a sequence of block height pairs [[low, high]], representing a range to query when searching for blocks.
+     */
     private fun getBlockHeightQueryRanges(minHeight: Long, maxHeight: Long): Sequence<Pair<Long, Long>> {
         if (minHeight > maxHeight) {
             return emptySequence()
@@ -198,7 +259,14 @@ class EventStream(
         }
     }
 
-    private suspend fun fetchBlockHeightsInRange(minHeight: Long, maxHeight: Long): List<Long> {
+    /**
+     * Returns the heights of all existing blocks in a height range [[low, high]], subject to certain conditions.
+     *
+     * - If [Options.skipIfEmpty] is true, only blocks which contain 1 or more transactions will be returned.
+     *
+     * @return A list of block heights
+     */
+    private suspend fun getBlockHeightsInRange(minHeight: Long, maxHeight: Long): List<Long> {
         if (minHeight > maxHeight) {
             return emptyList()
         }
@@ -208,7 +276,7 @@ class EventStream(
             "Difference between (minHeight, maxHeight) can be at maximum $TENDERMINT_MAX_QUERY_RANGE"
         }
 
-        return (tendermintService.blockchain(minHeight, maxHeight)
+        return (tendermintServiceClient.blockchain(minHeight, maxHeight)
             .result
             ?.blockMetas
             .let {
@@ -224,12 +292,18 @@ class EventStream(
 
     /**
      * Test if any block events match the supplied predicate.
+     *
+     * @return True or false if [Options.blockEventPredicate] matches a block-level event associated with a block.
+     * If the return value is null, then [Options.blockEventPredicate] was never set.
      */
     private fun <T : EncodedBlockchainEvent> matchesBlockEvent(blockEvents: Iterable<T>): Boolean? =
         options.blockEventPredicate?.let { p -> blockEvents.any { p(it.eventType) } }
 
     /**
      * Test if any transaction events match the supplied predicate.
+     *
+     * @return True or false if [Options.txEventPredicate] matches a transaction-level event associated with a block.
+     * If the return value is null, then [Options.txEventPredicate] was never set.
      */
     private fun <T : EncodedBlockchainEvent> matchesTxEvent(txEvents: Iterable<T>): Boolean? =
         options.txEventPredicate?.let { p -> txEvents.any { p(it.eventType) } }
@@ -238,7 +312,7 @@ class EventStream(
      * Query a block by height, returning any events associated with the block.
      *
      *  @param heightOrBlock Fetch a block, plus its events, by its height or the `Block` model itself.
-     *  @param skipIfNoTxs If `skipIfNoTxs` is true, if the block at the given height has no transactions, null will
+     *  @param skipIfNoTxs If [skipIfNoTxs] is true, if the block at the given height has no transactions, null will
      *  be returned in its place.
      */
     private suspend fun queryBlock(
@@ -246,7 +320,7 @@ class EventStream(
         skipIfNoTxs: Boolean = true
     ): StreamBlock? {
         val block: Block? = when (heightOrBlock) {
-            is Either.Left<Long> -> tendermintService.block(heightOrBlock.value).result?.block
+            is Either.Left<Long> -> tendermintServiceClient.block(heightOrBlock.value).result?.block
             is Either.Right<Block> -> heightOrBlock.value
         }
 
@@ -256,7 +330,7 @@ class EventStream(
 
         return block?.run {
             val blockDatetime = header?.dateTime()
-            val blockResponse = tendermintService.blockResults(header?.height).result
+            val blockResponse = tendermintServiceClient.blockResults(header?.height).result
             val blockEvents: List<BlockEvent> = blockResponse.blockEvents(blockDatetime)
             val txEvents: List<TxEvent> = blockResponse.txEvents(blockDatetime) { index: Int -> txHash(index) ?: "" }
             val streamBlock = StreamBlock(this, blockEvents, txEvents)
@@ -284,7 +358,7 @@ class EventStream(
      *
      * Note: it is assumed the specified blocks already exists. No check will be performed to verify existence!
      *
-     * @param blockHeights The heights of the blocks to query, along with optional metadata to attach to the fetched\
+     * @param blockHeights The heights of the blocks to query, along with optional metadata to attach to the fetched
      *  block data.
      * @return A Flow of found historical blocks along with events associated with each block, if any.
      */
@@ -330,20 +404,29 @@ class EventStream(
     }
 
     /**
-     * Constructs a Flow of historical blocks and associated events based on a starting height. Blocks will be streamed
-     * from the given starting height up to the latest block height, as determined by the start of the Flow.
+     * Constructs a Flow of historical blocks and associated events based on a starting height.
      *
-     * @param fromHeight Stream blocks from the given starting height.
-     * @param concurrency The concurrency limit for the Flow's `flatMapMerge` operation. See
-     * https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.Flow/flat-map-merge.html
-     * @return A Flow of historical blocks and associated events
+     * Blocks will be streamed from the given starting height up to the latest block height,
+     * as determined by the start of the Flow.
+     *
+     * If no ending height could be found, an exception will be raised.
+     *
+     * @return A flow of historical blocks
      */
-    fun streamHistoricalBlocks(): Flow<StreamBlock> =
-        flow {
-            val startingHeight: Long = options.fromHeight ?: error("No starting height set")
-            val lastBlockHeight: Long = tendermintService.abciInfo().result?.response?.lastBlockHeight ?: 0
+    fun streamHistoricalBlocks(): Flow<StreamBlock> = flow {
+        val startHeight: Long = getStartingHeight() ?: 0
+        val endHeight: Long = getEndingHeight() ?: error("Couldn't determine ending height")
+        emitAll(streamHistoricalBlocks(startHeight, endHeight))
+    }
 
-            log.info("historical::streaming blocks: $startingHeight to $lastBlockHeight")
+    private fun streamHistoricalBlocks(startHeight: Long): Flow<StreamBlock> = flow {
+        val endHeight: Long = getEndingHeight() ?: error("Couldn't determine ending height")
+        emitAll(streamHistoricalBlocks(startHeight, endHeight))
+    }
+
+    private fun streamHistoricalBlocks(startHeight: Long, endHeight: Long): Flow<StreamBlock> =
+        flow {
+            log.info("historical::streaming blocks from $startHeight to $endHeight")
             log.info("historical::batch size = ${options.batchSize}")
 
             // Since each pair will be TENDERMINT_MAX_QUERY_RANGE apart, and we want the cumulative number of heights
@@ -355,7 +438,7 @@ class EventStream(
             val numChunks: Int = floor(max(xValue, yValue) / min(xValue, yValue)).toInt()
 
             emitAll(
-                getBlockHeightQueryRanges(startingHeight, lastBlockHeight)
+                getBlockHeightQueryRanges(startHeight, endHeight)
                     .chunked(numChunks)
                     .asFlow()
             )
@@ -386,7 +469,7 @@ class EventStream(
                         .filter { (minHeight, maxHeight) -> !((minHeight..maxHeight).all { it in seenBlockMap }) }
                         // Fetch the blocks in range chunk [minHeight, maxHeight]:
                         .map { (minHeight, maxHeight) ->
-                            async { fetchBlockHeightsInRange(minHeight, maxHeight) }
+                            async { getBlockHeightsInRange(minHeight, maxHeight) }
                         }.awaitAll()
                         // Flatten all the existing block height lists:
                         .flatten()
@@ -497,31 +580,34 @@ class EventStream(
      *
      * @return A Flow of live and historical blocks, plus associated event data.
      */
-
-    fun streamBlocks(): Flow<StreamBlock> {
-        return if (options.fromHeight != null) {
-            log.info("Listening for live and historical blocks from height ${options.fromHeight}")
-            merge(streamHistoricalBlocks(), streamLiveBlocks())
-        } else {
-            log.info("Listening for live blocks only")
-            streamLiveBlocks()
-        }
-            .cancellable()
-            .retryWhen { cause: Throwable, attempt: Long ->
-                log.warn("streamBlocks::error; recovering Flow (attempt ${attempt + 1})")
-                when (cause) {
-                    is CompletionException,
-                    is ConnectException,
-                    is SocketTimeoutException,
-                    is SocketException -> {
-                        val duration = backoff(attempt, jitter = false)
-                        log.error("Reconnect attempt #$attempt; waiting ${duration.inWholeSeconds}s before trying again: $cause")
-                        delay(duration)
-                        true
-                    }
-                    else -> false
-                }
+    fun streamBlocks(): Flow<StreamBlock> = flow {
+        val startingHeight: Long? = getStartingHeight()
+        emitAll(
+            if (startingHeight != null) {
+                log.info("Listening for live and historical blocks from height $startingHeight")
+                merge(streamHistoricalBlocks(startingHeight), streamLiveBlocks())
+            } else {
+                log.info("Listening for live blocks only")
+                streamLiveBlocks()
             }
+        )
     }
+        .cancellable()
+        .retryWhen { cause: Throwable, attempt: Long ->
+            log.warn("streamBlocks::error; recovering Flow (attempt ${attempt + 1})")
+            when (cause) {
+                is EOFException,
+                is CompletionException,
+                is ConnectException,
+                is SocketTimeoutException,
+                is SocketException -> {
+                    val duration = backoff(attempt, jitter = false)
+                    log.error("Reconnect attempt #$attempt; waiting ${duration.inWholeSeconds}s before trying again: $cause")
+                    delay(duration)
+                    true
+                }
+                else -> false
+            }
+        }
 }
 

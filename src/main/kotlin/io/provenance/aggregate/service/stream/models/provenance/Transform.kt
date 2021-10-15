@@ -6,7 +6,7 @@ import io.provenance.aggregate.service.extensions.repeatDecodeBase64
  * Used to transform a delegate value in the context of map-backed delegate by repeatedly base64-decoding the
  * value until a stopping point is reached.
  *
- * @see repeatDecodeBase64
+ * @see [repeatDecodeBase64]
  * @example
  *
  *     class EventAttributeAdd(height: Long, val attributes: Map<String, Any?>) : ProvenanceEventAttribute(height) {

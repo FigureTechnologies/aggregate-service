@@ -1,5 +1,6 @@
-package io.provenance.aggregate.service.aws.dynamodb
+package io.provenance.aggregate.service.aws.dynamodb.client
 
+import io.provenance.aggregate.service.aws.dynamodb.*
 import io.provenance.aggregate.service.aws.dynamodb.extensions.toBlockStorageMetadata
 import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.batch.BatchId
@@ -24,18 +25,27 @@ import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetResultPage
 import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.ExperimentalTime
 
-// See https://aws.amazon.com/blogs/developer/introducing-enhanced-dynamodb-client-in-the-aws-sdk-for-java-v2 for usage
-
-open class AwsDynamo(
+/**
+ * The default implementation of AWS Dynamo client
+ *
+ * @property dynamoClient An AWS SDK async client instance
+ * @property blockBatchTable A [DynamoTable] representing the table which tracks block batching information
+ * @property blockMetadataTable A [DynamoTable] representing the table which tracks metadata about blocks
+ * @property serviceMetadataTable A [DynamoTable] representing the table which stores data about the service itself
+ *
+ * @see https://aws.amazon.com/blogs/developer/introducing-enhanced-dynamodb-client-in-the-aws-sdk-for-java-v2
+ */
+open class DefaultDynamoClient(
     private val dynamoClient: DynamoDbAsyncClient,
     private val blockBatchTable: DynamoTable,
     private val blockMetadataTable: DynamoTable,
     private val serviceMetadataTable: DynamoTable
-) : AwsDynamoInterface, DelayShim {
+) : DynamoClient, DelayShim {
 
     companion object {
         const val DYNAMODB_MAX_TRANSACTION_RETRIES: Int = 5
@@ -103,18 +113,21 @@ open class AwsDynamo(
      */
     @OptIn(ExperimentalTime::class)
     private suspend fun <T> retryTx(upTo: Int, context: String, f: suspend () -> T): T {
-        var ex: TransactionCanceledException? = null
+        var ex: DynamoDbException? = null
         for (attempt in 0..upTo) {
             try {
                 return f()
-            } catch (txCancelledEx: TransactionCanceledException) {
-                ex = txCancelledEx
-                log.info("TransactionCanceledException: Retry attempt: $attempt")
+            } catch (dynamoEx: DynamoDbException) {
+                log.info("DynamoDbException: Retry attempt: $attempt")
                 log.info("  context: $context")
-                for (reason in txCancelledEx.cancellationReasons()) {
-                    log.info("  ${reason.code()}:${reason.message()} => ${reason.item()}")
+                log.info("  message: ${dynamoEx.message}")
+                if (dynamoEx is TransactionCanceledException) {
+                    log.info("  TransactionCanceledException reasons")
+                    for (reason in dynamoEx.cancellationReasons()) {
+                        log.info("    - ${reason.code()}:${reason.message()} => ${reason.item()}")
+                    }
                 }
-                // Wait before retrying again:
+                ex = dynamoEx
                 // TODO: Replace with delay. See `DelayShim` interface notes
                 doDelay(backoff(attempt, base = 100.0))
             }
@@ -195,6 +208,8 @@ open class AwsDynamo(
 
     /**
      * Returns the maximum historical block height seen, if any.
+     *
+     * @return The maximum historical block height, if any.
      */
     override suspend fun getMaxHistoricalBlockHeight(): Long? =
         runCatching {
@@ -213,6 +228,9 @@ open class AwsDynamo(
      * Unconditionally overwrite the entry where the partition key "Property" is equal to the name value of
      * `ServiceMetadata.Properties.MAX_HISTORICAL_BLOCK_HEIGHT` * with attribute "Value" set to the string-ified
      * version of `blockHeight`.
+     *
+     * @property blockHeight The height to record
+     * @return The result of storing [blockHeight]
      */
     override suspend fun writeMaxHistoricalBlockHeight(blockHeight: Long): WriteResult {
         SERVICE_METADATA_TABLE.putItem { request ->

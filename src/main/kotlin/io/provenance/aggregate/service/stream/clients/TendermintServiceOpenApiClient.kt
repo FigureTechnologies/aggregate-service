@@ -1,5 +1,6 @@
-package io.provenance.aggregate.service.stream
+package io.provenance.aggregate.service.stream.clients
 
+import io.provenance.aggregate.service.stream.TendermintServiceClient
 import io.provenance.aggregate.service.stream.apis.ABCIApi
 import io.provenance.aggregate.service.stream.apis.InfoApi
 import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
@@ -7,14 +8,14 @@ import io.provenance.aggregate.service.stream.models.BlockResponse
 import io.provenance.aggregate.service.stream.models.BlockResultsResponse
 import io.provenance.aggregate.service.stream.models.BlockchainResponse
 
-interface TendermintService {
-    suspend fun abciInfo(): ABCIInfoResponse
-    suspend fun block(height: Long?): BlockResponse
-    suspend fun blockResults(height: Long?): BlockResultsResponse
-    suspend fun blockchain(minHeight: Long?, maxHeight: Long?): BlockchainResponse
-}
-
-class TendermintServiceClient(rpcUrlBase: String) : TendermintService {
+/**
+ * An OpenAPI generated client designed to interact with the Tendermint RPC API.
+ *
+ * All requests and responses are HTTP+JSON.
+ *
+ * @property rpcUrlBase The base URL of the Tendermint RPC API to use when making requests.
+ */
+class TendermintServiceOpenApiClient(rpcUrlBase: String) : TendermintServiceClient {
     private val abciApi = ABCIApi(rpcUrlBase)
     private val infoApi = InfoApi(rpcUrlBase)
 

@@ -5,7 +5,7 @@ import java.time.OffsetDateTime
 
 /**
  * Used to represent transaction-level events like "transfer", "message", metadata events
- * (provenance.metadata.v1.EventScopeCreated, etc.), etc.
+ * (`provenance.metadata.v1.EventScopeCreated`), etc.
  */
 @JsonClass(generateAdapter = true)
 data class TxEvent(

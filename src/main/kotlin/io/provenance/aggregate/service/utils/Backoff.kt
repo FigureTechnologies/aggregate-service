@@ -5,7 +5,10 @@ import kotlin.math.pow
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
-const val BASE_WAIT_MILLISECONDS: Double = 1000.0
+/**
+ * The base wait time, in milliseconds: 1 second.
+ */
+const val BASE_WAIT_MILLISECONDS: Double = 1_000.0
 
 /**
  * Generates a Duration for implementing a backoff wait scheme.
@@ -19,7 +22,9 @@ const val BASE_WAIT_MILLISECONDS: Double = 1000.0
  *
  * The calculation is basically
  *
- *   max(0, base * (2 ^ attempt) +/- (0 to 25% original amount))
+ * ```
+ * max(0, base * (2 ^ attempt) +/- (0 to 25% original amount))
+ * ```
  */
 fun backoffMillis(attempt: Long, base: Double = BASE_WAIT_MILLISECONDS, jitter: Boolean = true): Double {
     var ms = base * 2.0.pow(attempt.toDouble())

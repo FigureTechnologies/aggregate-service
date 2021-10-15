@@ -4,6 +4,18 @@ import com.squareup.moshi.*
 import okio.Buffer
 import org.json.JSONObject
 
+/**
+ * An adapter for [Moshi] to deserialize JSON into [JSONObject] as a target
+ *
+ * Usage:
+ *
+ * ```
+ * val moshi: Moshi = Moshi.Builder()
+ *   .add(KotlinJsonAdapterFactory())
+ *   .add(JSONObjectAdapter())
+*    .build()
+ * ```
+ */
 class JSONObjectAdapter : JsonAdapter<JSONObject>() {
 
     @FromJson

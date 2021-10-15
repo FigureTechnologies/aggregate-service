@@ -13,15 +13,15 @@ import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
 import io.provenance.aggregate.service.adapter.json.JSONObjectAdapter
-import io.provenance.aggregate.service.aws.AwsInterface
-import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
+import io.provenance.aggregate.service.aws.AwsClient
+import io.provenance.aggregate.service.aws.dynamodb.client.NoOpDynamoClient
 import io.provenance.aggregate.service.extensions.recordMaxBlockHeight
 import io.provenance.aggregate.service.extensions.repeatDecodeBase64
 import io.provenance.aggregate.service.flow.extensions.cancelOnSignal
 import io.provenance.aggregate.service.stream.EventStream
-import io.provenance.aggregate.service.stream.EventStreamUploader
-import io.provenance.aggregate.service.stream.EventStreamViewer
-import io.provenance.aggregate.service.stream.TendermintServiceClient
+import io.provenance.aggregate.service.stream.clients.TendermintServiceOpenApiClient
+import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
+import io.provenance.aggregate.service.stream.consumers.EventStreamViewer
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.UploadResult
 import io.provenance.aggregate.service.stream.models.extensions.dateTime
@@ -36,7 +36,7 @@ import org.slf4j.Logger
 import java.net.URI
 import java.util.concurrent.TimeUnit
 
-fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
+private fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
     val node = URI(websocketUri)
     return Scarlet.Builder()
         .webSocketFactory(
@@ -54,7 +54,7 @@ fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
  * Installs a shutdown a handler to clean up resources when the returned Channel receives its one (and only) element.
  * This is primary intended to be used to clean up resources allocated by Flows.
  */
-fun installShutdownHook(log: Logger): Channel<Unit> {
+private fun installShutdownHook(log: Logger): Channel<Unit> {
     val signal = Channel<Unit>(1)
     Runtime.getRuntime().addShutdownHook(object : Thread() {
         override fun run() = runBlocking {
@@ -154,8 +154,8 @@ fun main(args: Array<String>) {
         .add(JSONObjectAdapter())
         .build()
     val wsStreamBuilder = configureEventStreamBuilder(config.eventStream.websocket.uri)
-    val tendermintService = TendermintServiceClient(config.eventStream.rpc.uri)
-    val aws: AwsInterface = AwsInterface.create(environment, config.aws.s3, config.aws.dynamodb)
+    val tendermintService = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
+    val aws: AwsClient = AwsClient.create(environment, config.aws.s3, config.aws.dynamodb)
     val dynamo = aws.dynamo()
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
@@ -200,32 +200,39 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Try to figure out if there's a maximum historical block height that's been seen already.
-        // * If `--restart` is provided, try to start from there.
-        // * If no height exists, `--restart` implies that the caller is interested in historical blocks,
-        //   so issue a warning and start at 0.
+        // This function will be used by the event stream to determine the current maximum historical block height.
+        // It will be called at the start of the event stream, as well as any time the event stream has to be restarted.
+        // In the event of restart, if progress was made on the maximum block height since the stream was initialized,
+        // we need to compute the updated max starting height on demand to know where to start again, rather than in the
+        // past.
+        //
+        // Regarding how this is computed:
+        //   Figure out if there's a maximum historical block height that's been seen already.
+        //   - If `--restart` is provided and a max height was found, try to start from there.
+        //   - If no height exists, `--restart` implies that the caller is interested in historical blocks,
+        //     so issue a warning and start at 0.
         //
         // Note: `--restart` can be combined with `--from=HEIGHT`. If both are given, the maximum value
         // will be chosen as the starting height
 
-        val maxHistoricalHeight: Long? = dynamo.getMaxHistoricalBlockHeight()
-
-        log.info("Start :: historical max block height = $maxHistoricalHeight")
-
-        val startFromHeight: Long? = if (restart) {
-            if (maxHistoricalHeight == null) {
-                log.warn("No historical max block height found; defaulting to 0")
+        val fromHeightGetter: suspend () -> Long? = {
+            val maxHistoricalHeight: Long? = dynamo.getMaxHistoricalBlockHeight()
+            log.info("Start :: historical max block height = $maxHistoricalHeight")
+            if (restart) {
+                if (maxHistoricalHeight == null) {
+                    log.warn("No historical max block height found; defaulting to 0")
+                } else {
+                    log.info("Restarting from historical max block height: $maxHistoricalHeight")
+                }
+                maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)
             } else {
-                log.info("Restarting from historical max block height: $maxHistoricalHeight")
+                fromHeight?.toLong()
             }
-            maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)
-        } else {
-            fromHeight?.toLong()
         }
 
         val options = EventStream.Options
             .builder()
-            .fromHeight(startFromHeight)
+            .fromHeight(fromHeightGetter)
             .toHeight(toHeight?.toLong())
             .skipIfEmpty(skipIfEmpty)
             .skipIfSeen(skipIfSeen)
@@ -257,9 +264,8 @@ fun main(args: Array<String>) {
 
         if (observe) {
             log.info("*** Observing blocks and events. No action will be taken. ***")
-
             EventStreamViewer(
-                EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, NoOpDynamo()),
+                EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, NoOpDynamoClient()),
                 options
             )
                 .consume { b: StreamBlock ->

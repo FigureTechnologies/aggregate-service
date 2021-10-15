@@ -1,6 +1,7 @@
-package io.provenance.aggregate.service.stream
+package io.provenance.aggregate.service.stream.consumers
 
 import io.provenance.aggregate.service.logger
+import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -8,6 +9,12 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 
+/**
+ * An event stream consumer that displays blocks from the provided event stream.
+ *
+ * @property eventStream The event stream which provides blocks to this consumer.
+ * @property options Options used to configure this consumer.
+ */
 @OptIn(FlowPreview::class)
 @ExperimentalCoroutinesApi
 class EventStreamViewer(
@@ -33,18 +40,9 @@ class EventStreamViewer(
         error: (Throwable) -> Unit = ::onError,
         ok: (block: StreamBlock, serialize: (StreamBlock) -> String) -> Unit
     ) {
-        if (options.fromHeight != null) {
-            if (options.fromHeight < 0) {
-                throw IllegalArgumentException("lastHeight must be greater than 0")
-            }
-            log.info("Starting event stream at height ${options.fromHeight}")
-        }
-
-        val serializer = { b: StreamBlock -> eventStream.serialize(StreamBlock::class.java, b) }
-
         eventStream.streamBlocks()
             .buffer()
             .catch { error(it) }
-            .collect { ok(it, serializer) }
+            .collect { ok(it, eventStream.serializer) }
     }
 }

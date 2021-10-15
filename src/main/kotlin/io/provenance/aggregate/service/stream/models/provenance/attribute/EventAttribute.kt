@@ -5,26 +5,38 @@ import io.provenance.aggregate.service.stream.models.provenance.MappedProvenance
 import io.provenance.aggregate.service.stream.models.provenance.EventMapper
 import io.provenance.aggregate.service.stream.models.provenance.FromAttributeMap
 import io.provenance.aggregate.service.stream.models.provenance.debase64
+import io.provenance.aggregate.service.stream.models.provenance.marker.EventMarker
 
 private fun toEventTypeEnum(t: String): EventAttributeType = EventAttributeType.valueOf(t)
 
+/**
+ * A sealed classes enumeration which models the Provenance event attributes:
+ *
+ * - `provenance.attribute.v1.EventAttributeAdd`
+ * - `provenance.attribute.v1.EventAttributeUpdate`
+ * - `provenance.attribute.v1.EventAttributeDelete`
+ * - `provenance.attribute.v1.EventAttributeDeleteDistinct`
+ */
 sealed class EventAttribute() : FromAttributeMap {
 
     companion object {
         /**
-         * Maps Provenance events like "provenance.attribute.v1.EventAttributeAdd" to constructors for the
-         * `ProvenanceTxEvent` sealed class family.
+         * Maps Provenance events like `provenance.attribute.v1.EventAttributeAdd` to constructors for the
+         * `EventAttribute` sealed class family.
          */
         val mapper = EventMapper(EventAttribute::class)
     }
 
+    /**
+     * Convert an attribute instance to a consolidated attribute event.
+     */
     abstract fun toEventRecord(): ConsolidatedEvent
 
     override fun toString() = toEventRecord().toString()
 
     /**
-     * A container class that is capable of representing the consolidated union of data contained int the
-     * `EventAttributeAdd`, `EventAttributeUpdate`, `EventAttributeDelete`, and `EventAttributeDeleteDistinct` classes.
+     * A container class that is capable of representing the consolidated union of data contained in child classes
+     * of [EventAttribute].
      */
     data class ConsolidatedEvent(
         val name: String,

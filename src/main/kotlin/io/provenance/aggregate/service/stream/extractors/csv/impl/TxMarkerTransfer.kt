@@ -1,6 +1,5 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
-import io.provenance.aggregate.service.aws.s3.AwsS3Interface
 import io.provenance.aggregate.service.extensions.toISOString
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.service.stream.models.StreamBlock
@@ -9,7 +8,7 @@ import io.provenance.aggregate.service.stream.models.provenance.marker.EventMark
 /**
  * Extract data related to the transfer of a marker between parties.
  */
-class TxMarkerTransfer(val s3: AwsS3Interface) : CSVFileExtractor(
+class TxMarkerTransfer : CSVFileExtractor(
     name = "tx_marker_transfer",
     headers = listOf(
         "hash",

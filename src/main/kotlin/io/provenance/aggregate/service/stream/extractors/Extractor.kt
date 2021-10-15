@@ -15,7 +15,7 @@ interface Extractor {
     /**
      * The output type of the extractor.
      *
-     * @see OutputType
+     * @see [OutputType]
      * @returns The type of output written by extractor implementation.
      */
     fun output(): OutputType
@@ -28,7 +28,7 @@ interface Extractor {
     /**
      * Performs extraction of a subset of data from a stream block.
      *
-     * @param block The stream block to process.
+     * @property block The stream block to process.
      */
     suspend fun extract(block: StreamBlock)
 

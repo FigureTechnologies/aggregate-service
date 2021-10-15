@@ -1,12 +1,12 @@
 package io.provenance.aggregate.service.test.mocks
 
-import io.provenance.aggregate.service.aws.s3.AwsS3
+import io.provenance.aggregate.service.aws.s3.client.DefaultS3Client
 import io.provenance.aggregate.service.aws.s3.S3Bucket
 import kotlinx.coroutines.future.await
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.model.*
 
-class LocalStackS3(s3Client: S3AsyncClient, bucket: S3Bucket) : AwsS3(s3Client, bucket) {
+class LocalStackS3(s3Client: S3AsyncClient, bucket: S3Bucket) : DefaultS3Client(s3Client, bucket) {
 
     suspend fun createBucket(): CreateBucketResponse =
         s3Client.createBucket(

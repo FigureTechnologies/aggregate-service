@@ -1,17 +1,18 @@
-package io.provenance.aggregate.service.stream
+package io.provenance.aggregate.service.stream.consumers
 
 import com.squareup.moshi.Moshi
 import io.provenance.aggregate.service.DefaultDispatcherProvider
 import io.provenance.aggregate.service.DispatcherProvider
-import io.provenance.aggregate.service.aws.AwsInterface
-import io.provenance.aggregate.service.aws.dynamodb.AwsDynamoInterface
+import io.provenance.aggregate.service.aws.AwsClient
+import io.provenance.aggregate.service.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.service.aws.dynamodb.BlockBatch
 import io.provenance.aggregate.service.aws.dynamodb.WriteResult
-import io.provenance.aggregate.service.aws.s3.AwsS3Interface
+import io.provenance.aggregate.service.aws.s3.client.S3Client
 import io.provenance.aggregate.service.aws.s3.S3Key
 import io.provenance.aggregate.service.aws.s3.StreamableObject
 import io.provenance.aggregate.service.flow.extensions.chunked
 import io.provenance.aggregate.service.logger
+import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.batch.Batch
 import io.provenance.aggregate.service.stream.batch.BatchId
 import io.provenance.aggregate.service.stream.extractors.Extractor
@@ -27,18 +28,27 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import java.time.OffsetDateTime
 import kotlin.reflect.KClass
 
+/**
+ * An event stream consumer responsible for uploading streamed blocks to S3.
+ *
+ * @property eventStream The event stream which provides blocks to this consumer.
+ * @property aws The client used to interact with AWS.
+ * @property moshi The JSON serializer/deserializer used by this consumer.
+ * @property options Options used to configure this consumer.
+ * @property dispatchers The coroutine dispatchers used to run asynchronous tasks in this consumer.
+ */
 @OptIn(FlowPreview::class)
 @ExperimentalCoroutinesApi
 class EventStreamUploader(
     private val eventStream: EventStream,
-    private val aws: AwsInterface,
+    private val aws: AwsClient,
     private val moshi: Moshi,
     private val options: EventStream.Options = EventStream.Options.DEFAULT,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider()
 ) {
     constructor(
         eventStreamFactory: EventStream.Factory,
-        aws: AwsInterface,
+        aws: AwsClient,
         moshi: Moshi,
         options: EventStream.Options
     ) : this(eventStreamFactory.create(options), aws, moshi, options)
@@ -90,8 +100,8 @@ class EventStreamUploader(
      *      Example: "io.provenance.aggregate.service.stream.extractors.csv.impl.TxEventAttributes"
      *  - Implement the `Extractor` interface.
      *
-     *  @see Extractor
-     *  @see Batch.Builder.withExtractor
+     *  @see [Extractor]
+     *  @see [Batch.Builder.withExtractor]
      */
     fun addExtractor(vararg fqClassName: String): EventStreamUploader = apply {
         extractorClassNames.addAll(fqClassName)
@@ -126,20 +136,21 @@ class EventStreamUploader(
      *
      *     "${YEAR}/${MONTH}/${DAY}/${HOUR}"
      *
-     *  @param onEachBlock An optional callback that will be run for each block as it is received from the stream.
+     *  @property onEachBlock An optional callback that will be run for each block as it is received from the stream.
      *    This is useful for inspecting blocks prior to the block being processed.
+     *  @return A flow yielding the results of uploading blocks to S3.
      */
     suspend fun upload(onEachBlock: (StreamBlock) -> Unit = {}): Flow<UploadResult> {
 
-        val s3: AwsS3Interface = aws.s3()
-        val dynamo: AwsDynamoInterface = aws.dynamo()
+        val s3: S3Client = aws.s3()
+        val dynamo: DynamoClient = aws.dynamo()
 
         val batchBlueprint: Batch.Builder = Batch.Builder()
             .dispatchers(dispatchers)
             // Extractors are specified via their Kotlin class, along with any arguments to pass to the constructor:
             .apply {
                 for (cls in loadExtractorClasses(extractorClassNames)) {
-                    withExtractor(cls, s3)
+                    withExtractor(cls)
                 }
             }
 

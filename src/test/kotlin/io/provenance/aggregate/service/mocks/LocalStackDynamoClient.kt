@@ -1,17 +1,17 @@
 package io.provenance.aggregate.service.test.mocks
 
-import io.provenance.aggregate.service.aws.dynamodb.AwsDynamo
+import io.provenance.aggregate.service.aws.dynamodb.client.DefaultDynamoClient
 import io.provenance.aggregate.service.aws.dynamodb.DynamoTable
 import kotlinx.coroutines.future.await
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
-class LocalStackDynamo(
+class LocalStackDynamoClient(
     dynamoClient: DynamoDbAsyncClient,
     blockBatchTable: DynamoTable,
     blockMetadataTable: DynamoTable,
     serviceMetadataTable: DynamoTable
 ) :
-    AwsDynamo(dynamoClient, blockBatchTable, blockMetadataTable, serviceMetadataTable) {
+    DefaultDynamoClient(dynamoClient, blockBatchTable, blockMetadataTable, serviceMetadataTable) {
 
     suspend fun createTables() {
         SERVICE_METADATA_TABLE.createTable().await()
