@@ -1,18 +1,22 @@
-package io.provenance.aggregate.service
+package io.provenance.aggregate.service.test
 
 import cloud.localstack.ServiceName
 import cloud.localstack.docker.LocalstackDockerExtension
 import cloud.localstack.docker.annotation.LocalstackDockerProperties
-import io.provenance.aggregate.service.base.TestBase
-import io.provenance.aggregate.service.mocks.*
+import io.provenance.aggregate.service.aws.dynamodb.client.DefaultDynamoClient
+import io.provenance.aggregate.service.aws.dynamodb.client.DynamoClient
+import io.provenance.aggregate.service.clients.FailingDynamoDbAsyncClient
+import io.provenance.aggregate.service.logger
 import io.provenance.aggregate.service.stream.EventStream
-import io.provenance.aggregate.service.stream.EventStreamUploader
+import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.UploadResult
-import io.provenance.aggregate.service.utils.Builders
-import io.provenance.aggregate.service.utils.Defaults
-import io.provenance.aggregate.service.utils.EXPECTED_NONEMPTY_BLOCKS
-import io.provenance.aggregate.service.utils.MIN_BLOCK_HEIGHT
+import io.provenance.aggregate.service.test.base.TestBase
+import io.provenance.aggregate.service.test.mocks.*
+import io.provenance.aggregate.service.test.utils.Builders
+import io.provenance.aggregate.service.test.utils.Defaults
+import io.provenance.aggregate.service.test.utils.EXPECTED_NONEMPTY_BLOCKS
+import io.provenance.aggregate.service.test.utils.MIN_BLOCK_HEIGHT
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.toList
@@ -22,6 +26,8 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junitpioneer.jupiter.SetEnvironmentVariable
 import org.junitpioneer.jupiter.SetEnvironmentVariable.SetEnvironmentVariables
+import org.slf4j.Logger
+import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
@@ -31,14 +37,21 @@ import kotlin.time.ExperimentalTime
 @LocalstackDockerProperties(services = [ServiceName.S3, ServiceName.DYNAMO])
 class AWSTests : TestBase() {
 
-    private val aws: MockAwsInterface = MockAwsInterface.builder()
+    private val log: Logger = logger()
+
+    private val aws: MockAwsClient = MockAwsClient.Builder()
         .build(Defaults.s3Config, Defaults.dynamoConfig)
+
+    private val dynamoClient = aws.dynamoClient
 
     // Get a view of the AWS S3 interface with more stuff on it needed during testing
     val s3: LocalStackS3 = aws.s3() as LocalStackS3
 
     // Get a view of the AWS S3 interface with more stuff on it needed during testing
-    val dynamo: LocalStackDynamo = aws.dynamo() as LocalStackDynamo
+    val dynamo: LocalStackDynamoClient = aws.dynamo() as LocalStackDynamoClient
+
+    val DEFAULT_EXTRACTORS: Array<String> =
+        arrayOf("io.provenance.aggregate.service.test.stream.extractors.csv.impl.EventMetdataSessionCreated")
 
     @BeforeAll
     override fun setup() {
@@ -75,25 +88,28 @@ class AWSTests : TestBase() {
     private suspend fun createSimpleEventStream(
         includeLiveBlocks: Boolean = true,
         skipIfEmpty: Boolean = true,
-        skipIfSeen: Boolean = true
-    ): EventStream {
+        skipIfSeen: Boolean = true,
+        dynamoInterface: DynamoClient = dynamo
+    ): Pair<EventStream, Long> {
         val eventStreamService: MockEventStreamService =
             Builders.eventStreamService(includeLiveBlocks = includeLiveBlocks)
                 .dispatchers(dispatcherProvider)
                 .build()
 
-        val tendermintService: MockTendermintService = Builders.tendermintService()
-            .build(MockTendermintService::class.java)
+        val tendermintService: MockTendermintServiceClient = Builders.tendermintService()
+            .build(MockTendermintServiceClient::class.java)
 
-        return Builders.eventStream()
+        val stream = Builders.eventStream()
             .eventStreamService(eventStreamService)
             .tendermintService(tendermintService)
-            .dynamoInterface(dynamo)  // use LocalStack's Dynamo instance:
+            .dynamoInterface(dynamoInterface)  // use LocalStack's Dynamo instance:
             .dispatchers(dispatcherProvider)
             .fromHeight(MIN_BLOCK_HEIGHT)
             .skipIfEmpty(skipIfEmpty)
             .skipIfSeen(skipIfSeen)
             .build()
+
+        return Pair(stream, EXPECTED_NONEMPTY_BLOCKS + eventStreamService.expectedResponseCount())
     }
 
     @OptIn(FlowPreview::class, ExperimentalTime::class, ExperimentalCoroutinesApi::class)
@@ -114,27 +130,11 @@ class AWSTests : TestBase() {
         // the AWS SDK v2 async clients
         runBlocking(dispatcherProvider.main()) {
 
-            val eventStreamService = Builders.eventStreamService(includeLiveBlocks = true)
-                .dispatchers(dispatcherProvider)
-                .build()
-
-            val tendermintService = Builders.tendermintService()
-                .build(MockTendermintService::class.java)
-
-            val expectedTotal: Long = EXPECTED_NONEMPTY_BLOCKS + eventStreamService.expectedResponseCount()
-
-            val stream = Builders.eventStream()
-                .eventStreamService(eventStreamService)
-                .tendermintService(tendermintService)
-                .dynamoInterface(dynamo)
-                .dispatchers(dispatcherProvider)
-                .fromHeight(MIN_BLOCK_HEIGHT)
-                .skipIfEmpty(true)
-                .build()
-
-            val uploadResults: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
+            // There should be no results if no extractors run to actually extract data to upload:
+            val (stream0, _) = createSimpleEventStream(includeLiveBlocks = true, skipIfEmpty = true, skipIfSeen = false)
+            val uploadResults0: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
                 EventStreamUploader(
-                    stream,
+                    stream0,
                     aws,
                     Defaults.moshi,
                     EventStream.Options.DEFAULT,
@@ -144,14 +144,36 @@ class AWSTests : TestBase() {
                     .toList()
             }
 
-            assert(uploadResults != null && uploadResults.isNotEmpty())
-            assert((uploadResults?.sumOf { it.batchSize } ?: 0) == expectedTotal.toInt()) {
+            assert(uploadResults0 != null && uploadResults0.isEmpty())
+            assert(s3.listBucketObjectKeys().isEmpty())
+
+            // Re-running with an extractor for events that exist in the blocks that are streamed will cause output to
+            // be produced. There should be no results if no extractors run to actually extract data to upload:
+            val (stream1, expectedTotal1) = createSimpleEventStream(
+                includeLiveBlocks = true,
+                skipIfEmpty = true,
+                skipIfSeen = false
+            )
+            val uploadResults1: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(15)) {
+                EventStreamUploader(
+                    stream1,
+                    aws,
+                    Defaults.moshi,
+                    EventStream.Options.DEFAULT,
+                    dispatchers = dispatcherProvider
+                )
+                    .addExtractor(*DEFAULT_EXTRACTORS)
+                    .upload()
+                    .toList()
+            }
+
+            assert((uploadResults1?.sumOf { it.batchSize } ?: 0) == expectedTotal1.toInt()) {
                 "EventStreamUploader: Collection timed out (probably waiting for more live blocks that aren't coming)"
             }
 
             // check S3 and make sure there's <expectTotal> objects in the bucket:
             val keys = s3.listBucketObjectKeys()
-            assert(keys.isNotEmpty() && keys.size == (uploadResults?.size ?: 0))
+            assert(keys.isNotEmpty() && keys.size == (uploadResults1?.size ?: 0))
 
             // The max height should have been set:
             val maxHeight = dynamo.getMaxHistoricalBlockHeight()
@@ -178,13 +200,19 @@ class AWSTests : TestBase() {
             // === (CASE 1 -- Never seen) ==============================================================================
             var inspected1 = false
             val uploadResults1: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
+                val (stream1, _) = createSimpleEventStream(
+                    includeLiveBlocks = true,
+                    skipIfEmpty = true,
+                    skipIfSeen = false
+                )
                 EventStreamUploader(
-                    createSimpleEventStream(includeLiveBlocks = true, skipIfEmpty = true, skipIfSeen = false),
+                    stream1,
                     aws,
                     Defaults.moshi,
                     EventStream.Options.DEFAULT,
                     dispatchers = dispatcherProvider
                 )
+                    .addExtractor(*DEFAULT_EXTRACTORS)
                     .upload { block ->
                         // Inspect each block
                         inspected1 = true
@@ -201,14 +229,16 @@ class AWSTests : TestBase() {
 
             // Re-run on a different instance of the stream that's using the same data:
             val blocks2 = mutableListOf<StreamBlock>()
+            val (stream2, _) = createSimpleEventStream(includeLiveBlocks = true, skipIfEmpty = true, skipIfSeen = true)
             val uploadResults2: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
                 EventStreamUploader(
-                    createSimpleEventStream(includeLiveBlocks = true, skipIfEmpty = true, skipIfSeen = true),
+                    stream2,
                     aws,
                     Defaults.moshi,
                     EventStream.Options.DEFAULT,
                     dispatchers = dispatcherProvider
                 )
+                    .addExtractor(*DEFAULT_EXTRACTORS)
                     .upload { block -> blocks2.add(block) }
                     .toList()
             }
@@ -223,14 +253,16 @@ class AWSTests : TestBase() {
             // Re-run for a third time, but don't skip seen blocks. The returned stream blocks should all have a
             // `BlockStorageMetadata` value, since they've been tracked in Dynamo:
             val blocks3 = mutableListOf<StreamBlock>()
+            val (stream3, _) = createSimpleEventStream(includeLiveBlocks = true, skipIfEmpty = true, skipIfSeen = false)
             val uploadResults3: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
                 EventStreamUploader(
-                    createSimpleEventStream(includeLiveBlocks = true, skipIfEmpty = true, skipIfSeen = false),
+                    stream3,
                     aws,
                     Defaults.moshi,
                     EventStream.Options.DEFAULT,
                     dispatchers = dispatcherProvider
                 )
+                    .addExtractor(*DEFAULT_EXTRACTORS)
                     .upload { block -> blocks3.add(block) }
                     .toList()
             }
@@ -247,6 +279,134 @@ class AWSTests : TestBase() {
             // Historical blocks should have a Dynamo storage metadata entry:
             assert(historicalBlocks.all { it.metadata != null }) { "Stream (3) historical blocks should all have metadata " }
             assert(liveBlocks.all { it.metadata == null }) { "Stream (3) live blocks should not have any metadata " }
+        }
+    }
+
+    @OptIn(FlowPreview::class, ExperimentalTime::class, ExperimentalCoroutinesApi::class)
+    @Test
+    @SetEnvironmentVariables(
+        SetEnvironmentVariable(
+            key = "AWS_ACCESS_KEY_ID",
+            value = "test",
+        ),
+        SetEnvironmentVariable(
+            key = "AWS_SECRET_ACCESS_KEY",
+            value = "test"
+        )
+    )
+    fun testDynamoRecoversFromCommitFailure() {
+
+        runBlocking(dispatcherProvider.main()) {
+
+            // Fails when `transactWriteItems` is called
+            val failingDynamoClient = FailingDynamoDbAsyncClient(aws.dynamoClient) { method, callCount ->
+                // First two calls fail:
+                val shouldFail = callCount == 2 || callCount == 4 // fail for 2 calls
+                log.info("${method}:$callCount :: should fail? $shouldFail")
+                shouldFail
+            }
+
+            val failingDynamo = object : DefaultDynamoClient(
+                failingDynamoClient,
+                Defaults.dynamoConfig.blockBatchTable,
+                Defaults.dynamoConfig.blockMetadataTable,
+                Defaults.dynamoConfig.serviceMetadataTable
+            ) {
+                // TODO: Replace this when runBlockingTest is fixed:
+                // https://github.com/Kotlin/kotlinx.coroutines/pull/2978
+                override suspend fun doDelay(duration: Duration) {
+                    log.info("Faking delay for ${duration.inWholeMilliseconds} milliseconds")
+                }
+            }
+
+            val failingAws: MockAwsClient = MockAwsClient.builder()
+                .dynamoImplementation(failingDynamo)
+                .build()
+
+            val uploadResults: List<UploadResult>? =
+                withTimeoutOrNull(Duration.seconds(10)) {
+                    val (stream, _) = createSimpleEventStream(
+                        includeLiveBlocks = true,
+                        skipIfEmpty = true,
+                        skipIfSeen = false,
+                        dynamoInterface = failingDynamo
+                    )
+                    EventStreamUploader(
+                        stream,
+                        failingAws,
+                        Defaults.moshi,
+                        EventStream.Options.DEFAULT,
+                        dispatchers = dispatcherProvider
+                    )
+                        .addExtractor(*DEFAULT_EXTRACTORS)
+                        .upload()
+                        .toList()
+                }
+
+            assert(uploadResults != null && uploadResults.isNotEmpty()) { "Stream failed to collect in time" }
+        }
+    }
+
+    @OptIn(FlowPreview::class, ExperimentalTime::class, ExperimentalCoroutinesApi::class)
+    @Test
+    @SetEnvironmentVariables(
+        SetEnvironmentVariable(
+            key = "AWS_ACCESS_KEY_ID",
+            value = "test",
+        ),
+        SetEnvironmentVariable(
+            key = "AWS_SECRET_ACCESS_KEY",
+            value = "test"
+        )
+    )
+    fun testDynamoFailsForTooManyConsecutiveCommitFailures() {
+
+        assertThrows<TransactionCanceledException> {
+
+            runBlocking(dispatcherProvider.main()) {
+
+                // Fails when `transactWriteItems` is called
+                val failingDynamoClient = FailingDynamoDbAsyncClient(aws.dynamoClient) { method, callCount ->
+                    // Make all calls fail, exceeding the reattempt threshold `DYNAMODB_MAX_TRANSACTION_RETRIES`:
+                    true
+                }
+
+                val failingDynamo = object : DefaultDynamoClient(
+                    failingDynamoClient,
+                    Defaults.dynamoConfig.blockBatchTable,
+                    Defaults.dynamoConfig.blockMetadataTable,
+                    Defaults.dynamoConfig.serviceMetadataTable
+                ) {
+                    // TODO: Replace this when runBlockingTest is fixed:
+                    // https://github.com/Kotlin/kotlinx.coroutines/pull/2978
+                    override suspend fun doDelay(duration: Duration) {
+                        log.info("Faking delay for ${duration.inWholeMilliseconds} milliseconds")
+                    }
+                }
+
+                val failingAws: MockAwsClient = MockAwsClient.builder()
+                    .dynamoImplementation(failingDynamo)
+                    .build()
+
+                withTimeoutOrNull(Duration.seconds(10)) {
+                    val (stream, _) = createSimpleEventStream(
+                        includeLiveBlocks = true,
+                        skipIfEmpty = true,
+                        skipIfSeen = false,
+                        dynamoInterface = failingDynamo
+                    )
+                    EventStreamUploader(
+                        stream,
+                        failingAws,
+                        Defaults.moshi,
+                        EventStream.Options.DEFAULT,
+                        dispatchers = dispatcherProvider
+                    )
+                        .addExtractor(*DEFAULT_EXTRACTORS)
+                        .upload()
+                        .toList()
+                }
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-package io.provenance.aggregate.service.mocks
+package io.provenance.aggregate.service.test.mocks
 
 typealias Action = (Array<out Any?>) -> Any?
 
@@ -28,8 +28,7 @@ class ServiceMocker private constructor(
         fun <T> build(clazz: Class<T>): T = clazz.getDeclaredConstructor(ServiceMock::class.java).newInstance(build())
     }
 
-    fun callCount(method: String): Int = calls[method] ?: 0
-
+    @Suppress("UNCHECKED_CAST")
     override suspend fun <T> respondWith(method: String, vararg args: Any?): T {
         val action = actions[method] ?: throw IllegalArgumentException("Bad method: $method")
         val result = action(args) as T

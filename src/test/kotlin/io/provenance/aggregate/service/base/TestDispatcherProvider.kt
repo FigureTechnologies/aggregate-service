@@ -1,4 +1,4 @@
-package io.provenance.aggregate.service.base
+package io.provenance.aggregate.service.test.base
 
 import io.provenance.aggregate.service.DispatcherProvider
 import kotlinx.coroutines.CoroutineDispatcher
@@ -19,8 +19,8 @@ class TestDispatcherProvider : DispatcherProvider {
     override fun unconfined(): CoroutineDispatcher = dispatcher
 
     /**
-     * Since all the dispatchers in provider share the same `TestCoroutineDispatcher`, this is a shortcut to calling
-     * the test dispatcher's `runBlockingTest` method
+     * Since all the dispatchers in provider share the same [TestCoroutineDispatcher], this is a shortcut to calling
+     * the test dispatcher's [runBlockingTest] method
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun runBlockingTest(block: suspend TestCoroutineScope.() -> Unit): Unit {

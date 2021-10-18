@@ -11,29 +11,45 @@ import io.provenance.aggregate.service.stream.models.BlockResultsResponseResultE
 import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
 import kotlinx.coroutines.channels.ReceiveChannel
 
+/**
+ * Response wrapper data class.
+ */
 @JsonClass(generateAdapter = true)
 data class NewBlockResult(
     val query: String?,
     val data: NewBlockEventResultData
 )
 
+/**
+ * Response wrapper data class.
+ */
 @JsonClass(generateAdapter = true)
 data class NewBlockEventResultData(
     val type: String,
     val value: NewBlockEventResultValue
 )
 
+/**
+ * Response wrapper data class.
+ */
 @JsonClass(generateAdapter = true)
 data class NewBlockEventResultBeginBlock(
     val events: List<BlockResultsResponseResultEvents>
 )
 
+/**
+ * Response wrapper data class.
+ */
 @JsonClass(generateAdapter = true)
 data class NewBlockEventResultValue(
     val block: Block,
     val result_begin_block: NewBlockEventResultBeginBlock
 )
 
+/**
+ * Used by the Scarlet library to instantiate an implementation that provides access to a
+ * `ReceiveChannel<WebSocket.Event>` that can be used to listen for web socket events.
+ */
 interface TendermintRPCStream {
 
     @Receive
@@ -54,27 +70,36 @@ interface TendermintRPCStream {
 }
 
 interface EventStreamService : TendermintRPCStream {
-    // Start the stream
+    /**
+     * Starts the stream
+     */
     fun startListening()
 
-    // Stop the stream
+    /**
+     * Stops the stream
+     */
     fun stopListening()
 }
 
+/**
+ * A service that emits realtime block data from the the Tendermint RPC API websocket.
+ *
+ * @property rpcStream The Tendermint RPC API websocket stream provider (powered by Scarlet).
+ * @property lifecycle The lifecycle responsible for starting and stopping the underlying websocket event stream.
+ */
 class TendermintEventStreamService(rpcStream: TendermintRPCStream, val lifecycle: LifecycleRegistry) :
     TendermintRPCStream by rpcStream, EventStreamService {
-
     /**
-     * Allow the websocket event io.provenance.aggregate.service.flow to start receiving events.
+     * Allows the provided event stream to start receiving events.
      *
-     * Note: this must be called prior to any
+     * Note: this must be called prior to any receiving any events on the RPC stream.
      */
     override fun startListening() {
         lifecycle.onNext(Lifecycle.State.Started)
     }
 
     /**
-     * Stops the websocket event io.provenance.aggregate.service.flow from receiving events.
+     * Stops the provided event stream from receiving events.
      */
     override fun stopListening() {
         lifecycle.onNext(Lifecycle.State.Stopped.AndAborted)

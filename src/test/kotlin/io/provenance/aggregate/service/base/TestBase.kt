@@ -1,6 +1,6 @@
-package io.provenance.aggregate.service.base
+package io.provenance.aggregate.service.test.base
 
-import io.provenance.aggregate.service.utils.Defaults
+import io.provenance.aggregate.service.test.utils.Defaults
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.resetMain

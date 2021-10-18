@@ -5,6 +5,9 @@ import java.security.NoSuchAlgorithmException
 
 /**
  * Compute a hex-encoded (printable) version of a SHA-256 encoded string.
+ *
+ * @property input An array of bytes.
+ * @return An array of SHA-256 hashed bytes.
  */
 fun sha256(input: ByteArray?): ByteArray =
     try {
@@ -13,3 +16,14 @@ fun sha256(input: ByteArray?): ByteArray =
     } catch (e: NoSuchAlgorithmException) {
         throw RuntimeException("Couldn't find a SHA-256 provider", e)
     }
+
+/**
+ * Compute a hex-encoded (printable) version of a SHA-256 encoded string from a series of byte arrays.
+ *
+ * @property inputs A series of strings to concatenate and hash.
+ * @return An array of SHA-256 hashed bytes.
+ */
+fun sha256(vararg inputs: String?): ByteArray = sha256(inputs.asIterable())
+
+fun sha256(inputs: Iterable<String?>): ByteArray =
+    sha256(inputs.filterNotNull().joinToString("").toByteArray())

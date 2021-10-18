@@ -17,38 +17,45 @@ fun BlockHeader.dateTime(): OffsetDateTime? =
 
 fun BlockResponse.txHash(index: Int): String? = this.result?.block?.txHash(index)
 
-fun BlockResultsResponse.txEvents(txHash: (index: Int) -> String): List<TxEvent> = this.result.txEvents(txHash)
+fun BlockResultsResponse.txEvents(blockDate: OffsetDateTime, txHash: (index: Int) -> String): List<TxEvent> =
+    this.result.txEvents(blockDate, txHash)
 
-fun BlockResultsResponseResult.txEvents(txHash: (Int) -> String): List<TxEvent> =
-    this.let {
-        val blockHeight = it.height
-        it.txsResults?.flatMapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
+fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, txHash: (Int) -> String): List<TxEvent> =
+    run {
+        txsResults?.flatMapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
             tx.events
-                ?.map { it.toTxEvent(blockHeight, txHash(index)) }
+                ?.map { it.toTxEvent(height, blockDateTime, txHash(index)) }
                 ?: emptyList()
         }
     } ?: emptyList()
 
-fun BlockResultsResponseResult.blockEvents(): List<BlockEvent> = this.let {
-    it.beginBlockEvents?.map { e: BlockResultsResponseResultEvents ->
+fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List<BlockEvent> = run {
+    beginBlockEvents?.map { e: BlockResultsResponseResultEvents ->
         BlockEvent(
-            height = it.height,
+            blockHeight = height,
+            blockDateTime = blockDateTime,
             eventType = e.type ?: "",
             attributes = e.attributes ?: emptyList()
         )
     }
 } ?: emptyList()
 
-fun BlockResultsResponseResultEvents.toBlockEvent(height: Long): BlockEvent =
+fun BlockResultsResponseResultEvents.toBlockEvent(blockHeight: Long, blockDateTime: OffsetDateTime?): BlockEvent =
     BlockEvent(
-        height = height,
+        blockHeight = blockHeight,
+        blockDateTime = blockDateTime,
         eventType = this.type ?: "",
         attributes = this.attributes ?: emptyList()
     )
 
-fun BlockResultsResponseResultEvents.toTxEvent(height: Long, txHash: String): TxEvent =
+fun BlockResultsResponseResultEvents.toTxEvent(
+    blockHeight: Long,
+    blockDateTime: OffsetDateTime?,
+    txHash: String
+): TxEvent =
     TxEvent(
-        height = height,
+        blockHeight = blockHeight,
+        blockDateTime = blockDateTime,
         txHash = txHash,
         eventType = this.type ?: "",
         attributes = this.attributes ?: emptyList()

@@ -3,6 +3,8 @@ package io.provenance.aggregate.service
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+fun String.logger(): Logger = LoggerFactory.getLogger(this)
+
 fun <T : Any> T.logger(): Logger = LoggerFactory.getLogger(this::class.java)
 
 fun <T> withMdc(vararg items: Pair<String, Any?>, fn: () -> T): T {

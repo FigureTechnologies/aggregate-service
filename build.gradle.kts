@@ -5,14 +5,15 @@ object Version {
 
     object ApacheCommons {
         const val CSV = "1.9.0"
-        const val Text = "1.9"
         const val IO = "2.11.0"
+        const val Lang3 = "3.12.0"
+        const val Text = "1.9"
     }
 
     const val AWS = "2.17.40"
     const val DatadogStats = "2.13.0"
     const val GRPC = "1.39.0"
-    const val Hoplite = "1.4.7"
+    const val Hoplite = "1.4.9"
     const val JUnit = "5.1.0"
     const val JUnitPioneer = "1.4.2"
     const val JSON = "20210307"
@@ -67,8 +68,10 @@ dependencies {
     testImplementation("org.junit-pioneer", "junit-pioneer", Version.JUnitPioneer)
 
     implementation("io.arrow-kt", "arrow-core", Version.Arrow)
+
     implementation("org.apache.commons", "commons-csv", Version.ApacheCommons.CSV)
     implementation("commons-io", "commons-io", Version.ApacheCommons.IO)
+    implementation("org.apache.commons", "commons-lang3", Version.ApacheCommons.Lang3)
 
     implementation("com.tinder.scarlet", "scarlet", Version.Scarlet)
     implementation("com.tinder.scarlet", "stream-adapter-coroutines", Version.Scarlet)
@@ -91,6 +94,7 @@ dependencies {
     kapt("com.squareup.moshi:moshi-kotlin-codegen:${Version.Moshi}")
 
     implementation("com.sksamuel.hoplite", "hoplite-core", Version.Hoplite)
+    implementation("com.sksamuel.hoplite", "hoplite-yaml", Version.Hoplite)
 
     implementation("org.json", "json", Version.JSON)
 

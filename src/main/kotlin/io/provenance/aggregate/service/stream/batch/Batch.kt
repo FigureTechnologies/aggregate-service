@@ -7,11 +7,16 @@ import io.provenance.aggregate.service.stream.models.StreamBlock
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
+import java.io.Closeable
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
 /**
- * Batch process blocks.
+ * A batch of blocks to process.
+ *
+ * @property id An ID assigned to the batch to uniquely identify it.
+ * @property extractors A list of extractors to run when processing the blocks contained in this batch.
+ * @property dispatchers A collection of Kotlin coroutine dispatchers to use for running asynchronous tasks for this batch.
  */
 data class Batch internal constructor(
     val id: BatchId,
@@ -53,7 +58,12 @@ data class Batch internal constructor(
             extractors.map { extractor: Extractor ->
                 async {
                     runCatching { extractor.extract(block) }
-                        .onFailure { e -> log.error("processing error: $e") }
+                        .onFailure { e ->
+                            log.error("processing error: ${e.message} ::")
+                            for (frame in e.stackTrace) {
+                                log.error("  ${frame.toString()}")
+                            }
+                        }
                 }
             }
         }.awaitAll()
@@ -70,10 +80,15 @@ data class Batch internal constructor(
      */
     suspend fun <T> complete(completeAction: suspend (BatchId, Extractor) -> T): List<T> =
         withContext(dispatchers.io()) {
-            extractors.map { extractor ->
+            extractors.map { extractor: Extractor ->
                 async {
-                    extractor.use {
-                        it.beforeComplete()
+                    if (extractor is Closeable) {
+                        extractor.use {
+                            it.beforeComplete()
+                            completeAction(id, extractor)
+                        }
+                    } else {
+                        extractor.beforeComplete()
                         completeAction(id, extractor)
                     }
                 }

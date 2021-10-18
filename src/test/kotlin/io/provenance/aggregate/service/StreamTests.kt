@@ -1,21 +1,16 @@
-package io.provenance.aggregate.service
+package io.provenance.aggregate.service.test
 
 import com.squareup.moshi.JsonEncodingException
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
-import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
-import io.provenance.aggregate.service.base.TestBase
-import io.provenance.aggregate.service.mocks.MockEventStreamService
-import io.provenance.aggregate.service.mocks.MockTendermintService
-import io.provenance.aggregate.service.mocks.ServiceMocker
-import io.provenance.aggregate.service.stream.TendermintService
+import io.provenance.aggregate.service.aws.dynamodb.client.NoOpDynamoClient
+import io.provenance.aggregate.service.stream.TendermintServiceClient
 import io.provenance.aggregate.service.stream.models.*
 import io.provenance.aggregate.service.stream.models.extensions.toDecodedMap
 import io.provenance.aggregate.service.stream.models.rpc.response.MessageType
-import io.provenance.aggregate.service.utils.Builders
-import io.provenance.aggregate.service.utils.EXPECTED_NONEMPTY_BLOCKS
-import io.provenance.aggregate.service.utils.EXPECTED_TOTAL_BLOCKS
-import io.provenance.aggregate.service.utils.MIN_BLOCK_HEIGHT
+import io.provenance.aggregate.service.test.base.TestBase
+import io.provenance.aggregate.service.test.mocks.*
+import io.provenance.aggregate.service.test.utils.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.count
@@ -27,7 +22,7 @@ class StreamTests : TestBase() {
 
     // Fake Dynamo usage for these tests. This implementation stores nothing and returns nothing when fetching
     // block metadata by block height:
-    val noopDynamo = NoOpDynamo()
+    val noopDynamoClient = NoOpDynamoClient()
 
     val decoder = MessageType.Decoder(moshi)
 
@@ -60,7 +55,7 @@ class StreamTests : TestBase() {
         @Test
         fun testTryDecodeMalformedMessage() {
             assertThrows<JsonEncodingException> {
-                val response: MessageType = decoder.decode(templates.read("rpc/responses/malformed.json"))
+                decoder.decode(templates.read("rpc/responses/malformed.json"))
             }
         }
 
@@ -75,7 +70,7 @@ class StreamTests : TestBase() {
             val response: MessageType = decoder.decode(templates.read("rpc/responses/error_unwrapped.json"))
             assert(response is MessageType.Error)
             assert((response as MessageType.Error).error.code == -1000)
-            assert((response as MessageType.Error).error.text()?.contains("something bad happened") ?: false)
+            assert(response.error.text()?.contains("something bad happened") ?: false)
         }
 
         @Test
@@ -83,7 +78,7 @@ class StreamTests : TestBase() {
             val response: MessageType = decoder.decode(templates.read("rpc/responses/error_wrapped.json"))
             assert(response is MessageType.Error)
             assert((response as MessageType.Error).error.code == -1000)
-            assert((response as MessageType.Error).error.text()?.contains("something bad happened") ?: false)
+            assert(response.error.text()?.contains("something bad happened") ?: false)
         }
 
         @Test
@@ -139,7 +134,7 @@ class StreamTests : TestBase() {
                         mapOf("last_block_height" to expectBlockHeight)
                     )
                 }
-                .build(MockTendermintService::class.java)
+                .build(MockTendermintServiceClient::class.java)
 
             dispatcherProvider.runBlockingTest {
                 assert(tm.abciInfo().result?.response?.lastBlockHeight == expectBlockHeight)
@@ -150,9 +145,9 @@ class StreamTests : TestBase() {
         @Test
         fun testBlockResponse() {
 
-            val tendermint: TendermintService = ServiceMocker.Builder()
+            val tendermint: TendermintServiceClient = ServiceMocker.Builder()
                 .doFor("block") { templates.readAs(BlockResponse::class.java, "block/${it[0]}.json") }
-                .build(MockTendermintService::class.java)
+                .build(MockTendermintServiceClient::class.java)
 
             val expectedHeight = MIN_BLOCK_HEIGHT
 
@@ -180,14 +175,14 @@ class StreamTests : TestBase() {
         @Test
         fun testBlockResultsResponse() {
 
-            val tendermint: TendermintService = ServiceMocker.Builder()
+            val tendermint: TendermintServiceClient = ServiceMocker.Builder()
                 .doFor("blockResults") {
                     templates.readAs(
                         BlockResultsResponse::class.java,
                         "block_results/${it[0]}.json"
                     )
                 }
-                .build(MockTendermintService::class.java)
+                .build(MockTendermintServiceClient::class.java)
 
             val expectedHeight = MIN_BLOCK_HEIGHT
 
@@ -215,14 +210,14 @@ class StreamTests : TestBase() {
         @Test
         fun testBlockchainResponse() {
 
-            val tendermint: TendermintService = ServiceMocker.Builder()
+            val tendermint: TendermintServiceClient = ServiceMocker.Builder()
                 .doFor("blockchain") {
                     templates.readAs(
                         BlockchainResponse::class.java,
                         "blockchain/${it[0]}-${it[1]}.json"
                     )
                 }
-                .build(MockTendermintService::class.java)
+                .build(MockTendermintServiceClient::class.java)
 
             val expectedMinHeight: Long = MIN_BLOCK_HEIGHT
             val expectedMaxHeight: Long = expectedMinHeight + 20 - 1
@@ -295,7 +290,7 @@ class StreamTests : TestBase() {
                 // If not skipping empty blocks, we should get 100:
                 val collectedNoSkip = Builders.eventStream()
                     .dispatchers(dispatcherProvider)
-                    .dynamoInterface(noopDynamo)
+                    .dynamoInterface(noopDynamoClient)
                     .fromHeight(MIN_BLOCK_HEIGHT)
                     .skipIfEmpty(false)
                     .build()
@@ -308,7 +303,7 @@ class StreamTests : TestBase() {
                 // If skipping empty blocks, we should get EXPECTED_NONEMPTY_BLOCKS:
                 val collectedSkip = Builders.eventStream()
                     .dispatchers(dispatcherProvider)
-                    .dynamoInterface(noopDynamo)
+                    .dynamoInterface(noopDynamoClient)
                     .fromHeight(MIN_BLOCK_HEIGHT)
                     .build()
                     .streamHistoricalBlocks().toList()
@@ -330,13 +325,13 @@ class StreamTests : TestBase() {
                     .build()
 
                 val tendermintService = Builders.tendermintService()
-                    .build(MockTendermintService::class.java)
+                    .build(MockTendermintServiceClient::class.java)
 
                 val eventStream = Builders.eventStream()
                     .dispatchers(dispatcherProvider)
                     .eventStreamService(eventStreamService)
                     .tendermintService(tendermintService)
-                    .dynamoInterface(noopDynamo)
+                    .dynamoInterface(noopDynamoClient)
                     .skipIfEmpty(false)
                     .build()
 
@@ -363,13 +358,13 @@ class StreamTests : TestBase() {
                     .build()
 
                 val tendermintService = Builders.tendermintService()
-                    .build(MockTendermintService::class.java)
+                    .build(MockTendermintServiceClient::class.java)
 
                 val eventStream = Builders.eventStream()
                     .dispatchers(dispatcherProvider)
                     .eventStreamService(eventStreamService)
                     .tendermintService(tendermintService)
-                    .dynamoInterface(noopDynamo)
+                    .dynamoInterface(noopDynamoClient)
                     .fromHeight(MIN_BLOCK_HEIGHT)
                     .skipIfEmpty(true)
                     .build()
@@ -399,13 +394,13 @@ class StreamTests : TestBase() {
                         .build()
 
                     val tendermintService = Builders.tendermintService()
-                        .build(MockTendermintService::class.java)
+                        .build(MockTendermintServiceClient::class.java)
 
                     val eventStream = Builders.eventStream()
                         .dispatchers(dispatcherProvider)
                         .eventStreamService(eventStreamService)
                         .tendermintService(tendermintService)
-                        .dynamoInterface(noopDynamo)
+                        .dynamoInterface(noopDynamoClient)
                         .fromHeight(MIN_BLOCK_HEIGHT)
                         .skipIfEmpty(true)
                         .build()
@@ -429,7 +424,7 @@ class StreamTests : TestBase() {
                     .build()
 
                 val tendermintService = Builders.tendermintService()
-                    .build(MockTendermintService::class.java)
+                    .build(MockTendermintServiceClient::class.java)
 
                 val requireTxEvent = "DOES-NOT-EXIST"
 
@@ -437,7 +432,7 @@ class StreamTests : TestBase() {
                     .dispatchers(dispatcherProvider)
                     .eventStreamService(eventStreamService)
                     .tendermintService(tendermintService)
-                    .dynamoInterface(noopDynamo)
+                    .dynamoInterface(noopDynamoClient)
                     .fromHeight(MIN_BLOCK_HEIGHT)
                     .skipIfEmpty(true)
                     .matchTxEvent { it == requireTxEvent }
@@ -457,7 +452,7 @@ class StreamTests : TestBase() {
                     .build()
 
                 val tendermintService = Builders.tendermintService()
-                    .build(MockTendermintService::class.java)
+                    .build(MockTendermintServiceClient::class.java)
 
                 val requireTxEvent = "provenance.metadata.v1.EventRecordCreated"
 
@@ -465,7 +460,7 @@ class StreamTests : TestBase() {
                     .dispatchers(dispatcherProvider)
                     .eventStreamService(eventStreamService)
                     .tendermintService(tendermintService)
-                    .dynamoInterface(noopDynamo)
+                    .dynamoInterface(noopDynamoClient)
                     .fromHeight(MIN_BLOCK_HEIGHT)
                     .skipIfEmpty(true)
                     .matchTxEvent { it == requireTxEvent }

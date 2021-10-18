@@ -38,3 +38,5 @@ out/
 
 ### macOs stuff
 .DS_Store
+
+augment.env

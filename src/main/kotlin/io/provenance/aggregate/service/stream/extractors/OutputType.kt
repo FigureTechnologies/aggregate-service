@@ -12,7 +12,10 @@ sealed interface OutputType {
     object None : OutputType
 
     /**
-     * File output, with optional metadata attached to it
+     * File output, with optional metadata attached to it.
+     *
+     * @property path The path the file was written to.
+     * @property metadata Optional metadata to associate with the file.
      */
     data class FilePath(val path: Path, val metadata: Map<String, String>? = null) : OutputType
 }

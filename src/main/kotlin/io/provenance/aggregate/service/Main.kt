@@ -13,15 +13,15 @@ import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
 import io.provenance.aggregate.service.adapter.json.JSONObjectAdapter
-import io.provenance.aggregate.service.aws.AwsInterface
-import io.provenance.aggregate.service.aws.dynamodb.NoOpDynamo
-import io.provenance.aggregate.service.extensions.decodeBase64
+import io.provenance.aggregate.service.aws.AwsClient
+import io.provenance.aggregate.service.aws.dynamodb.client.NoOpDynamoClient
 import io.provenance.aggregate.service.extensions.recordMaxBlockHeight
+import io.provenance.aggregate.service.extensions.repeatDecodeBase64
 import io.provenance.aggregate.service.flow.extensions.cancelOnSignal
 import io.provenance.aggregate.service.stream.EventStream
-import io.provenance.aggregate.service.stream.EventStreamUploader
-import io.provenance.aggregate.service.stream.EventStreamViewer
-import io.provenance.aggregate.service.stream.TendermintServiceClient
+import io.provenance.aggregate.service.stream.clients.TendermintServiceOpenApiClient
+import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
+import io.provenance.aggregate.service.stream.consumers.EventStreamViewer
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.UploadResult
 import io.provenance.aggregate.service.stream.models.extensions.dateTime
@@ -36,7 +36,7 @@ import org.slf4j.Logger
 import java.net.URI
 import java.util.concurrent.TimeUnit
 
-fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
+private fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
     val node = URI(websocketUri)
     return Scarlet.Builder()
         .webSocketFactory(
@@ -54,7 +54,7 @@ fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
  * Installs a shutdown a handler to clean up resources when the returned Channel receives its one (and only) element.
  * This is primary intended to be used to clean up resources allocated by Flows.
  */
-fun installShutdownHook(log: Logger): Channel<Unit> {
+private fun installShutdownHook(log: Logger): Channel<Unit> {
     val signal = Channel<Unit>(1)
     Runtime.getRuntime().addShutdownHook(object : Thread() {
         override fun run() = runBlocking {
@@ -70,15 +70,15 @@ fun installShutdownHook(log: Logger): Channel<Unit> {
 @OptIn(FlowPreview::class)
 @ExperimentalCoroutinesApi
 fun main(args: Array<String>) {
-
-    // All configuration options can be overridden via environment variables:
-    //
-    // - To override nested configuration options separated with a dot ("."), use double underscores ("__")
-    //  in the environment variable:
-    //    event.stream.rpc_uri=http://localhost:26657 is overridden by "event__stream_rpc_uri=foo"
-    //
-    // See https://github.com/sksamuel/hoplite#environmentvariablespropertysource
-
+    /**
+     * All configuration options can be overridden via environment variables:
+     *
+     * - To override nested configuration options separated with a dot ("."), use double underscores ("__")
+     *   in the environment variable:
+     *     event.stream.rpc_uri=http://localhost:26657 is overridden by "event__stream_rpc_uri=foo"
+     *
+     * @see https://github.com/sksamuel/hoplite#environmentvariablespropertysource
+     */
     val parser = ArgParser("aggregate-service")
     val envFlag by parser.option(
         ArgType.Choice<Environment>(),
@@ -87,13 +87,20 @@ fun main(args: Array<String>) {
         description = "Specify the application environment. If not present, fall back to the `\$ENVIRONMENT` envvar",
     )
     val fromHeight by parser.option(
-        ArgType.Int, fullName = "from", description = "Fetch blocks starting from height, inclusive"
+        ArgType.Int,
+        fullName = "from",
+        description = "Fetch blocks starting from height, inclusive."
     )
     val toHeight by parser.option(
         ArgType.Int, fullName = "to", description = "Fetch blocks up to height, inclusive"
     )
-    val viewOnly by parser.option(
-        ArgType.Boolean, fullName = "view", description = "View blocks instead of upload"
+    val observe by parser.option(
+        ArgType.Boolean, fullName = "observe", description = "Observe blocks instead of upload"
+    ).default(false)
+    val restart by parser.option(
+        ArgType.Boolean,
+        fullName = "restart",
+        description = "Restart processing blocks from the last maximum historical block height recorded"
     ).default(false)
     val verbose by parser.option(
         ArgType.Boolean, shortName = "v", fullName = "verbose", description = "Enables verbose output"
@@ -136,19 +143,19 @@ fun main(args: Array<String>) {
                 addPreprocessor(PropsPreprocessor("/local.env.properties"))
             }
         }
-        .addSource(PropertySource.resource("/application.properties"))
+        .addSource(PropertySource.resource("/application.yml"))
         .build()
         .loadConfigOrThrow()
 
-    val log = object {}.logger()
+    val log = "main".logger()
 
     val moshi: Moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
         .add(JSONObjectAdapter())
         .build()
-    val wsStreamBuilder = configureEventStreamBuilder(config.event.stream.websocketUri)
-    val tendermintService = TendermintServiceClient(config.event.stream.rpcUri)
-    val aws: AwsInterface = AwsInterface.create(environment, config.s3, config.dynamodb)
+    val wsStreamBuilder = configureEventStreamBuilder(config.eventStream.websocket.uri)
+    val tendermintService = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
+    val aws: AwsClient = AwsClient.create(environment, config.aws.s3, config.aws.dynamodb)
     val dynamo = aws.dynamo()
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
@@ -171,6 +178,7 @@ fun main(args: Array<String>) {
         log.info(
             """
             |run options => {
+            |    restart = $restart
             |    from-height = $fromHeight 
             |    to-height = $toHeight
             |    skip-if-empty = $skipIfEmpty
@@ -188,41 +196,80 @@ fun main(args: Array<String>) {
                     .also { log.info("Maximum block height: ${it ?: "--"}") }
                     ?.let(dogStatsClient::recordMaxBlockHeight)
                     ?.getOrElse { log.error("DD metric failure", it) }
-
                 delay(60_000)
             }
         }
 
-        // https://github.com/provenance-io/provenance/blob/v1.7.1/docs/proto-docs.md#provenance.attribute.v1.AttributeType
-        val checkForEvents = setOf(
-            "provenance.attribute.v1.EventAttributeAdd",
-            "provenance.attribute.v1.EventAttributeUpdate",
-            "provenance.attribute.v1.EventAttributeDelete",
-            "provenance.attribute.v1.EventAttributeDistinctDelete"
-        )
+        // This function will be used by the event stream to determine the current maximum historical block height.
+        // It will be called at the start of the event stream, as well as any time the event stream has to be restarted.
+        // In the event of restart, if progress was made on the maximum block height since the stream was initialized,
+        // we need to compute the updated max starting height on demand to know where to start again, rather than in the
+        // past.
+        //
+        // Regarding how this is computed:
+        //   Figure out if there's a maximum historical block height that's been seen already.
+        //   - If `--restart` is provided and a max height was found, try to start from there.
+        //   - If no height exists, `--restart` implies that the caller is interested in historical blocks,
+        //     so issue a warning and start at 0.
+        //
+        // Note: `--restart` can be combined with `--from=HEIGHT`. If both are given, the maximum value
+        // will be chosen as the starting height
+
+        val fromHeightGetter: suspend () -> Long? = {
+            val maxHistoricalHeight: Long? = dynamo.getMaxHistoricalBlockHeight()
+            log.info("Start :: historical max block height = $maxHistoricalHeight")
+            if (restart) {
+                if (maxHistoricalHeight == null) {
+                    log.warn("No historical max block height found; defaulting to 0")
+                } else {
+                    log.info("Restarting from historical max block height: $maxHistoricalHeight")
+                }
+                maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)
+            } else {
+                fromHeight?.toLong()
+            }
+        }
 
         val options = EventStream.Options
             .builder()
-            .fromHeight(fromHeight?.let { it.toLong() })
-            .toHeight(toHeight?.let { it.toLong() })
+            .fromHeight(fromHeightGetter)
+            .toHeight(toHeight?.toLong())
             .skipIfEmpty(skipIfEmpty)
             .skipIfSeen(skipIfSeen)
-            .matchTxEvent { it in checkForEvents }
+            .apply {
+                if (config.eventStream.filter.txEvents.isNotEmpty()) {
+                    matchTxEvent { it in config.eventStream.filter.txEvents }
+                }
+            }
+            .apply {
+                if (config.eventStream.filter.blockEvents.isNotEmpty()) {
+                    matchBlockEvent { it in config.eventStream.filter.blockEvents }
+                }
+            }
+            .also {
+                if (config.eventStream.filter.txEvents.isNotEmpty()) {
+                    log.info("Listening for tx events:")
+                    for (event in config.eventStream.filter.txEvents) {
+                        log.info(" - $event")
+                    }
+                }
+                if (config.eventStream.filter.blockEvents.isNotEmpty()) {
+                    log.info("Listening for block events:")
+                    for (event in config.eventStream.filter.blockEvents) {
+                        log.info(" - $event")
+                    }
+                }
+            }
             .build()
 
-        if (viewOnly) {
-            log.info("*** viewing blocks & events only ***")
-            val factory = EventStream.Factory(
-                config,
-                moshi,
-                wsStreamBuilder,
-                tendermintService,
-                NoOpDynamo() // Don't record blocks that have been seen before in Dynamo
+        if (observe) {
+            log.info("*** Observing blocks and events. No action will be taken. ***")
+            EventStreamViewer(
+                EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, NoOpDynamoClient()),
+                options
             )
-            EventStreamViewer(factory, options)
                 .consume { b: StreamBlock ->
-                    val text =
-                        "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
+                    val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
                     println(
                         if (b.historical) {
                             text
@@ -234,27 +281,33 @@ fun main(args: Array<String>) {
                         for (event in b.blockEvents) {
                             println("  Block-Event: ${event.eventType}")
                             for (attr in event.attributes) {
-                                println("    ${attr.key?.decodeBase64()}: ${attr.value?.decodeBase64()}")
+                                println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
                             }
                         }
-                        for (event in b.txEvents.filter { it.eventType in checkForEvents }) {
+                        for (event in b.txEvents) {
                             println("  Tx-Event: ${event.eventType}")
                             for (attr in event.attributes) {
-                                println("    ${attr.key?.decodeBase64()}: ${attr.value?.decodeBase64()}")
+                                println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
                             }
                         }
                     }
                     println()
                 }
         } else {
-            val factory = EventStream.Factory(
-                config,
+            if (config.upload.extractors.isNotEmpty()) {
+                log.info("upload: adding extractors")
+                for (event in config.upload.extractors) {
+                    log.info(" - $event")
+                }
+            }
+
+            EventStreamUploader(
+                EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, dynamo),
+                aws,
                 moshi,
-                wsStreamBuilder,
-                tendermintService,
-                dynamo
+                options
             )
-            EventStreamUploader(factory, aws, moshi, options)
+                .addExtractor(config.upload.extractors)
                 .upload()
                 .cancelOnSignal(signal)
                 .collect { result: UploadResult ->
