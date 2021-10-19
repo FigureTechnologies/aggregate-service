@@ -129,14 +129,14 @@ abstract class AwsClient(val s3Config: S3Config, val dynamoConfig: DynamoConfig,
     }
 
     /**
-     *
+     * Returns a client for interacting with AWS S3.
      */
     open fun s3(): S3Client {
         return DefaultS3Client(s3Client, s3Config.bucket)
     }
 
     /**
-     *
+     * Returns a client for interacting with AWS DynamoDB.
      */
     open fun dynamo(): DynamoClient {
         return DefaultDynamoClient(

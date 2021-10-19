@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelIterator
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runBlockingTest
 import java.util.concurrent.atomic.AtomicLong
 
@@ -32,17 +33,41 @@ class MockEventStreamService private constructor(
         private var moshi: Moshi = Defaults.moshi
         private val payloads = mutableListOf<String>()
 
-        // setters:
-
+        /**
+         * Sets the dispatchers used by this event stream.
+         *
+         * @property value The dispatcher provider to use.
+         * @return this
+         */
         fun dispatchers(value: DispatcherProvider) = apply { dispatchers = value }
+
+        /**
+         * Sets the JSON serializer used by this event stream.
+         *
+         * @property value The Moshi serializer instance to use.
+         * @return this
+         */
         fun moshi(value: Moshi) = apply { moshi = value }
 
+        /**
+         * Add a response to be emitted by the event stream.
+         *
+         * @property jsonData A JSON formatted string response for the stream to produce upon collection.
+         * @return this
+         */
         fun response(vararg jsonData: String): Builder = apply {
             for (json in jsonData) {
                 payloads.add(json)
             }
         }
 
+        /**
+         * Add a response to be emitted by the event stream.
+         *
+         * @property clazz The Class defining the type emitted by the event stream.
+         * @property eventData The actual data to emit.
+         * @return this
+         */
         fun <T> response(clazz: Class<T>, vararg eventData: T): Builder = apply {
             val response: JsonAdapter<T> = moshi.adapter(clazz)
             for (datum in eventData) {
@@ -50,8 +75,11 @@ class MockEventStreamService private constructor(
             }
         }
 
-        // build:
-
+        /**
+         * Creates a new instance of the event stream.
+         *
+         * @return A mock event stream.
+         */
         suspend fun build(): MockEventStreamService {
             val channel = Channel<WebSocket.Event>(payloads.size)
             for (payload in payloads) {
@@ -68,13 +96,20 @@ class MockEventStreamService private constructor(
 
     private val log = logger()
 
+    /**
+     * Returns the number of expected responses this event stream is supposed to produce.
+     *
+     * @return The number of expected responses.
+     */
     fun expectedResponseCount(): Long = responseCount
 
-    // Stubbed out channel that will stop the iterator and subsequent blocking when all the items in the channel
-    // have been added via the `response()` builder method have been consumed.
+    /**
+     * A stubbed out channel that will stop the iterator and subsequent blocking when all the items in the channel
+     * have been added via the `response()` builder method have been consumed.
+     */
     override fun observeWebSocketEvent(): ReceiveChannel<WebSocket.Event> {
         val iterator = channel.iterator()
-        var unconsumedMessageCount: AtomicLong = AtomicLong(responseCount)
+        var unconsumedMessageCount = AtomicLong(responseCount)
 
         return object : ReceiveChannel<WebSocket.Event> by channel {
 
@@ -89,7 +124,9 @@ class MockEventStreamService private constructor(
 
                     override suspend fun hasNext(): Boolean {
                         if (unconsumedMessageCount.get() <= 0) {
+                            // All messages have been read. We're done:
                             channel.close()
+                            stopListening()
                             return false
                         }
                         return iterator.hasNext()
@@ -101,7 +138,7 @@ class MockEventStreamService private constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun subscribe(subscribe: Subscribe) {
-        runBlockingTest(dispatchers.main()) {
+        runBlocking(dispatchers.io()) {
             channel.send(WebSocket.Event.OnConnectionOpened(Unit))
         }
     }

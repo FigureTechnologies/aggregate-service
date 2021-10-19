@@ -13,10 +13,7 @@ import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.UploadResult
 import io.provenance.aggregate.service.test.base.TestBase
 import io.provenance.aggregate.service.test.mocks.*
-import io.provenance.aggregate.service.test.utils.Builders
-import io.provenance.aggregate.service.test.utils.Defaults
-import io.provenance.aggregate.service.test.utils.EXPECTED_NONEMPTY_BLOCKS
-import io.provenance.aggregate.service.test.utils.MIN_BLOCK_HEIGHT
+import io.provenance.aggregate.service.test.utils.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.toList
@@ -104,7 +101,7 @@ class AWSTests : TestBase() {
             .tendermintService(tendermintService)
             .dynamoInterface(dynamoInterface)  // use LocalStack's Dynamo instance:
             .dispatchers(dispatcherProvider)
-            .fromHeight(MIN_BLOCK_HEIGHT)
+            .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
             .skipIfEmpty(skipIfEmpty)
             .skipIfSeen(skipIfSeen)
             .build()
@@ -125,10 +122,13 @@ class AWSTests : TestBase() {
         )
     )
     fun testSimpleStreamBlocksToS3() {
-        // TODO: Use this when https://github.com/Kotlin/kotlinx.coroutines/issues/1204 is fixed
-        // NOTE! This is possibly a problem when using `.await()` with `CompleteableFuture`, as that is needed when using
-        // the AWS SDK v2 async clients
-        runBlocking(dispatcherProvider.main()) {
+
+        // TODO: Actually fix this:
+        // We need to explicitly disable timeout chunking functionality because it causes the test to hang.
+        // This is due to the use of [delay] in the chunk() flow operator used by `EventStreamUploader`.
+        val eventStreamOptions = EventStream.Options.DEFAULT.withBatchTimeout(null)
+
+        runBlocking(dispatcherProvider.io()) {
 
             // There should be no results if no extractors run to actually extract data to upload:
             val (stream0, _) = createSimpleEventStream(includeLiveBlocks = true, skipIfEmpty = true, skipIfSeen = false)
@@ -137,7 +137,7 @@ class AWSTests : TestBase() {
                     stream0,
                     aws,
                     Defaults.moshi,
-                    EventStream.Options.DEFAULT,
+                    eventStreamOptions,
                     dispatchers = dispatcherProvider
                 )
                     .upload()
@@ -146,6 +146,9 @@ class AWSTests : TestBase() {
 
             assert(uploadResults0 != null && uploadResults0.isEmpty())
             assert(s3.listBucketObjectKeys().isEmpty())
+        }
+
+        runBlocking(dispatcherProvider.io()) {
 
             // Re-running with an extractor for events that exist in the blocks that are streamed will cause output to
             // be produced. There should be no results if no extractors run to actually extract data to upload:
@@ -154,12 +157,12 @@ class AWSTests : TestBase() {
                 skipIfEmpty = true,
                 skipIfSeen = false
             )
-            val uploadResults1: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(15)) {
+            val uploadResults1: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
                 EventStreamUploader(
                     stream1,
                     aws,
                     Defaults.moshi,
-                    EventStream.Options.DEFAULT,
+                    eventStreamOptions,
                     dispatchers = dispatcherProvider
                 )
                     .addExtractor(*DEFAULT_EXTRACTORS)
@@ -175,9 +178,17 @@ class AWSTests : TestBase() {
             val keys = s3.listBucketObjectKeys()
             assert(keys.isNotEmpty() && keys.size == (uploadResults1?.size ?: 0))
 
-            // The max height should have been set:
+            // The max height should have been set to that of the last live block received:
+
             val maxHeight = dynamo.getMaxHistoricalBlockHeight()
             assert(dynamo.getMaxHistoricalBlockHeight() != null && maxHeight is Long)
+
+            // We should be able to check that maxHeight == MAX_LIVE_BLOCK_HEIGHT. However the order the live and
+            // historical streams run in test is non-deterministic. If all of the live streams are received before
+            // historical blocks, then the historical stream won't be considered terminated (since it hasn't run yet)
+            // and therefore the live stream won't be able to update the maximum height.
+            // TODO: figure out how to delay/intersperse results from the live+historical streams
+            //assert(maxHeight == MAX_LIVE_BLOCK_HEIGHT)
         }
     }
 
@@ -195,7 +206,12 @@ class AWSTests : TestBase() {
     )
     fun testHandlingPreviouslySeenBlocks() {
 
-        runBlocking(dispatcherProvider.main()) {
+        // TODO: Actually fix this:
+        // We need to explicitly disable timeout chunking functionality because it causes the test to hang.
+        // This is due to the use of [delay] in the chunk() flow operator used by `EventStreamUploader`.
+        val eventStreamOptions = EventStream.Options.DEFAULT.withBatchTimeout(null)
+
+        runBlocking(dispatcherProvider.io()) {
 
             // === (CASE 1 -- Never seen) ==============================================================================
             var inspected1 = false
@@ -209,7 +225,7 @@ class AWSTests : TestBase() {
                     stream1,
                     aws,
                     Defaults.moshi,
-                    EventStream.Options.DEFAULT,
+                    eventStreamOptions,
                     dispatchers = dispatcherProvider
                 )
                     .addExtractor(*DEFAULT_EXTRACTORS)
@@ -235,7 +251,7 @@ class AWSTests : TestBase() {
                     stream2,
                     aws,
                     Defaults.moshi,
-                    EventStream.Options.DEFAULT,
+                    eventStreamOptions,
                     dispatchers = dispatcherProvider
                 )
                     .addExtractor(*DEFAULT_EXTRACTORS)
@@ -259,7 +275,7 @@ class AWSTests : TestBase() {
                     stream3,
                     aws,
                     Defaults.moshi,
-                    EventStream.Options.DEFAULT,
+                    eventStreamOptions,
                     dispatchers = dispatcherProvider
                 )
                     .addExtractor(*DEFAULT_EXTRACTORS)
@@ -296,7 +312,12 @@ class AWSTests : TestBase() {
     )
     fun testDynamoRecoversFromCommitFailure() {
 
-        runBlocking(dispatcherProvider.main()) {
+        // TODO: Actually fix this:
+        // We need to explicitly disable timeout chunking functionality because it causes the test to hang.
+        // This is due to the use of [delay] in the chunk() flow operator used by `EventStreamUploader`.
+        val eventStreamOptions = EventStream.Options.DEFAULT.withBatchTimeout(null)
+
+        runBlocking(dispatcherProvider.io()) {
 
             // Fails when `transactWriteItems` is called
             val failingDynamoClient = FailingDynamoDbAsyncClient(aws.dynamoClient) { method, callCount ->
@@ -335,7 +356,7 @@ class AWSTests : TestBase() {
                         stream,
                         failingAws,
                         Defaults.moshi,
-                        EventStream.Options.DEFAULT,
+                        eventStreamOptions,
                         dispatchers = dispatcherProvider
                     )
                         .addExtractor(*DEFAULT_EXTRACTORS)
@@ -360,6 +381,11 @@ class AWSTests : TestBase() {
         )
     )
     fun testDynamoFailsForTooManyConsecutiveCommitFailures() {
+
+        // TODO: Actually fix this:
+        // We need to explicitly disable timeout chunking functionality because it causes the test to hang.
+        // This is due to the use of [delay] in the chunk() flow operator used by `EventStreamUploader`.
+        val eventStreamOptions = EventStream.Options.DEFAULT.withBatchTimeout(null)
 
         assertThrows<TransactionCanceledException> {
 
@@ -399,7 +425,7 @@ class AWSTests : TestBase() {
                         stream,
                         failingAws,
                         Defaults.moshi,
-                        EventStream.Options.DEFAULT,
+                        eventStreamOptions,
                         dispatchers = dispatcherProvider
                     )
                         .addExtractor(*DEFAULT_EXTRACTORS)

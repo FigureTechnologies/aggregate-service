@@ -35,6 +35,7 @@ import okhttp3.OkHttpClient
 import org.slf4j.Logger
 import java.net.URI
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 
 private fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
     val node = URI(websocketUri)
@@ -67,7 +68,7 @@ private fun installShutdownHook(log: Logger): Channel<Unit> {
     return signal
 }
 
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, kotlin.time.ExperimentalTime::class)
 @ExperimentalCoroutinesApi
 fun main(args: Array<String>) {
     /**
@@ -171,7 +172,7 @@ fun main(args: Array<String>) {
         NoOpStatsDClient()
     }
 
-    val signal: Channel<Unit> = installShutdownHook(log)
+    val shutDownSignal: Channel<Unit> = installShutdownHook(log)
 
     runBlocking(Dispatchers.IO) {
 
@@ -190,13 +191,14 @@ fun main(args: Array<String>) {
             """.trimMargin("|")
         )
 
+        // Update DataDog with the latest historical block height every minute:
         launch {
             while (true) {
                 dynamo.getMaxHistoricalBlockHeight()
                     .also { log.info("Maximum block height: ${it ?: "--"}") }
                     ?.let(dogStatsClient::recordMaxBlockHeight)
                     ?.getOrElse { log.error("DD metric failure", it) }
-                delay(60_000)
+                delay(Duration.minutes(1))
             }
         }
 
@@ -309,7 +311,7 @@ fun main(args: Array<String>) {
             )
                 .addExtractor(config.upload.extractors)
                 .upload()
-                .cancelOnSignal(signal)
+                .cancelOnSignal(shutDownSignal)
                 .collect { result: UploadResult ->
                     println("uploaded #${result.batchId} => S3 ETag: ${result.eTag}")
                 }

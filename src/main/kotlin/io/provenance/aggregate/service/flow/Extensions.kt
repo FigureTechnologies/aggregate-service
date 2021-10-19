@@ -4,9 +4,14 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 /**
  * Cancels the flow upon receipt of a signal from
@@ -14,11 +19,11 @@ import kotlin.math.min
  * Adapted from https://stackoverflow.com/a/59109105
  *
  * @see https://stackoverflow.com/a/59109105
+ *
+ * @property signal When an item is received on the channel, the underlying flow will be cancelled.
  */
 @OptIn(ExperimentalStdlibApi::class, InternalCoroutinesApi::class, FlowPreview::class)
-fun <T> Flow<T>.cancelOnSignal(
-    signal: Channel<Unit>
-): Flow<T> = flow {
+fun <T> Flow<T>.cancelOnSignal(signal: Channel<Unit>): Flow<T> = flow {
     val outer = this
     try {
         coroutineScope {
@@ -44,10 +49,13 @@ fun <T> Flow<T>.cancelOnSignal(
  * Returns a flow of lists each not exceeding the given [size].
  * The last list in the resulting flow may have less elements than the given [size].
  *
- * @param size the number of elements to take in each list, must be positive and can be greater than the number of elements in this flow.
+ * @property size the number of elements to take in each list, must be positive and can be greater than the number of elements in this flow.
+ * @property timeout If an element is not emitted in the specified duration, the buffer will be emitted downstream if
+ *  it is non-empty.
  */
-@OptIn(FlowPreview::class)
-fun <T> Flow<T>.chunked(size: Int): Flow<List<T>> = chunked(size) { it.toList() }
+@OptIn(FlowPreview::class, ExperimentalTime::class)
+fun <T> Flow<T>.chunked(size: Int, timeout: Duration? = null): Flow<List<T>> =
+    chunked(size = size, timeout = timeout) { it.toList() }
 
 /**
  * Chunks a flow of elements into flow of lists, each not exceeding the given [size]
@@ -59,12 +67,14 @@ fun <T> Flow<T>.chunked(size: Int): Flow<List<T>> = chunked(size) { it.toList() 
  *
  * This is more efficient, than using flow.chunked(n).map { ... }
  *
- * @param size the number of elements to take in each list, must be positive and can be greater than the number of elements in this flow.
+ * @property size the number of elements to take in each list, must be positive and can be greater than the number of elements in this flow.
+ * @property timeout If an element is not emitted in the specified duration, the buffer will be emitted downstream if
+ *  it is non-empty.
  */
-@OptIn(FlowPreview::class)
-fun <T, R> Flow<T>.chunked(size: Int, transform: suspend (List<T>) -> R): Flow<R> {
+@OptIn(FlowPreview::class, ExperimentalTime::class)
+fun <T, R> Flow<T>.chunked(size: Int, timeout: Duration? = null, transform: suspend (List<T>) -> R): Flow<R> {
     require(size > 0) { "Size should be greater than 0, but was $size" }
-    return windowed(size, size, true, transform)
+    return windowed(size = size, step = size, partialWindows = true, timeout = timeout, transform = transform)
 }
 
 /**
@@ -75,13 +85,15 @@ fun <T, R> Flow<T>.chunked(size: Int, transform: suspend (List<T>) -> R): Flow<R
  * Several last lists may have less elements than the given [size].
  *
  * Both [size] and [step] must be positive and can be greater than the number of elements in this flow.
- * @param size the number of elements to take in each window
- * @param step the number of elements to move the window forward by on an each step
- * @param partialWindows controls whether or not to keep partial windows in the end if any.
+ * @property size the number of elements to take in each window
+ * @property step the number of elements to move the window forward by on an each step
+ * @property partialWindows controls whether or not to keep partial windows in the end if any.
+ * @property timeout If an element is not emitted in the specified duration, the buffer will be emitted downstream if
+ *  it is non-empty.
  */
-@OptIn(FlowPreview::class)
-fun <T> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean): Flow<List<T>> =
-    windowed(size, step, partialWindows) { it.toList() }
+@OptIn(FlowPreview::class, ExperimentalTime::class)
+fun <T> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean, timeout: Duration? = null): Flow<List<T>> =
+    windowed(size = size, step = step, partialWindows = partialWindows, timeout = timeout) { it.toList() }
 
 /**
  * Returns a flow of results of applying the given [transform] function to
@@ -95,41 +107,93 @@ fun <T> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean): Flow<Li
  * This is more efficient, than using flow.windowed(...).map { ... }
  *
  * Both [size] and [step] must be positive and can be greater than the number of elements in this collection.
- * @param size the number of elements to take in each window
- * @param step the number of elements to move the window forward by on an each step.
- * @param partialWindows controls whether or not to keep partial windows in the end if any.
+ * @property size the number of elements to take in each window
+ * @property step the number of elements to move the window forward by on an each step.
+ * @property partialWindows controls whether or not to keep partial windows in the end if any.
+ * @property timeout If an element is not emitted in the specified duration, the buffer will be emitted downstream if
+ *  it is non-empty.
  */
-@OptIn(ExperimentalStdlibApi::class, InternalCoroutinesApi::class, FlowPreview::class)
+@OptIn(
+    InternalCoroutinesApi::class,
+    ExperimentalCoroutinesApi::class,
+    ExperimentalTime::class,
+    ExperimentalStdlibApi::class,
+    FlowPreview::class,
+)
 fun <T, R> Flow<T>.windowed(
     size: Int,
     step: Int,
     partialWindows: Boolean,
+    timeout: Duration? = null,
     transform: suspend (List<T>) -> R
 ): Flow<R> {
     require(size > 0 && step > 0) { "Size and step should be greater than 0, but was size: $size, step: $step" }
 
-    return flow {
-        val buffer = ArrayDeque<T>(size)
-        val toDrop = min(step, size)
-        val toSkip = max(step - size, 0)
-        var skipped = toSkip
+    // Using a channelFlow as opposed to a flow allows for up to emit elements from a different coroutine context
+    // and is necessary to allow for the use of `launch { ... }` below as a watcher for emission activity.
+    return channelFlow {
+
+        val buffer: ArrayDeque<T> = ArrayDeque<T>(size)
+        val toDrop: Int = min(step, size)
+        val toSkip: Int = max(step - size, 0)
+        var skipped: Int = toSkip
+        var lastEmittedAt: Instant? = null
+        val pollInterval = Duration.seconds(2)
+
+        fun updateEmissionTime() {
+            lastEmittedAt = Clock.System.now()
+        }
+
+        fun elapsedEmissionTime(): Duration? {
+            return lastEmittedAt?.let { Clock.System.now() - it }
+        }
+
+        // Launch a coroutine that will check the last time an element was emitted. If the elapsed time since an
+        // element was collected from the parent flow exceeds `timeout`, the buffer will forcibly be emitted if the
+        // buffer is non-empty.
+        if (timeout != null) {
+            launch {
+                while (true) {
+                    elapsedEmissionTime()
+                        ?.also { elapsed: Duration ->
+                            if (elapsed >= timeout && buffer.isNotEmpty()) {
+                                send(transform(buffer))
+                                updateEmissionTime()
+                                repeat(min(toDrop, buffer.size)) {
+                                    buffer.removeFirst()
+                                }
+                            }
+                        }
+                    delay(pollInterval)
+                }
+            }
+        }
 
         collect(object : FlowCollector<T> {
             override suspend fun emit(value: T) {
-                if (toSkip == skipped) buffer.addLast(value)
-                else skipped++
+                if (toSkip == skipped) {
+                    buffer.addLast(value)
+                } else {
+                    skipped++
+                }
 
                 if (buffer.size == size) {
-                    emit(transform(buffer))
-                    repeat(toDrop) { buffer.removeFirst() }
+                    send(transform(buffer))
+                    updateEmissionTime()
+                    repeat(toDrop) {
+                        buffer.removeFirst()
+                    }
                     skipped = 0
                 }
             }
         })
 
         while (partialWindows && buffer.isNotEmpty()) {
-            emit(transform(buffer))
-            repeat(min(toDrop, buffer.size)) { buffer.removeFirst() }
+            send(transform(buffer))
+            updateEmissionTime()
+            repeat(min(toDrop, buffer.size)) {
+                buffer.removeFirst()
+            }
         }
     }
 }

@@ -22,10 +22,15 @@ data class StreamEventsFilterConfig(
     }
 }
 
+data class BatchConfig(
+    val size: Int,
+    @ConfigAlias("timeout_ms") val timeoutMillis: Long?,
+)
+
 data class EventStreamConfig(
     val websocket: WebsocketStreamConfig,
     val rpc: RpcStreamConfig,
-    @ConfigAlias("batch_size") val batchSize: Int,
+    val batch: BatchConfig,
     val filter: StreamEventsFilterConfig = StreamEventsFilterConfig.empty()
 )
 

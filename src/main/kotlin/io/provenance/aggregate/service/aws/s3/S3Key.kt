@@ -15,4 +15,6 @@ value class S3Key(val value: String) {
          */
         fun createPrefix(d: OffsetDateTime) = "${d.year}/${d.month.value}/${d.dayOfMonth}/${d.hour}"
     }
+
+    override fun toString(): String = value
 }

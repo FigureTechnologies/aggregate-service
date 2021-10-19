@@ -36,7 +36,7 @@ class BlockBatch(
         operator fun invoke(batchId: BatchId, s3Bucket: S3Bucket, s3Keys: Iterable<S3Key>): BlockBatch {
             return BlockBatch(
                 batchId.value,
-                s3Bucket.name,
+                s3Bucket.value,
                 s3Keys.map { it.value },
                 timestamp()
             )
