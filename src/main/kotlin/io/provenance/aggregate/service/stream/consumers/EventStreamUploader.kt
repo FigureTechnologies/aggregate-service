@@ -27,6 +27,8 @@ import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import java.time.OffsetDateTime
 import kotlin.reflect.KClass
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 /**
  * An event stream consumer responsible for uploading streamed blocks to S3.
@@ -36,15 +38,16 @@ import kotlin.reflect.KClass
  * @property moshi The JSON serializer/deserializer used by this consumer.
  * @property options Options used to configure this consumer.
  * @property dispatchers The coroutine dispatchers used to run asynchronous tasks in this consumer.
+ * @p
  */
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalTime::class)
 @ExperimentalCoroutinesApi
 class EventStreamUploader(
     private val eventStream: EventStream,
     private val aws: AwsClient,
     private val moshi: Moshi,
     private val options: EventStream.Options = EventStream.Options.DEFAULT,
-    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider()
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
     constructor(
         eventStreamFactory: EventStream.Factory,
@@ -84,7 +87,7 @@ class EventStreamUploader(
                 if (throwOnError) {
                     throw e
                 } else {
-                    log.error("Failed to load extractor class: $className; skipping")
+                    log.error("failed to load extractor class: $className; skipping")
                 }
             }
         }
@@ -154,15 +157,17 @@ class EventStreamUploader(
                 }
             }
 
-        return eventStream.streamBlocks()
+        return eventStream
+            .streamBlocks()
             .onEach {
-                log.info("buffering block #${it.block.header?.height} (live=${!it.historical}) for upload")
+                log.info("buffering ${if (it.historical) "historical" else "live"} block #${it.block.header?.height} for upload")
             }
             .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = BufferOverflow.SUSPEND)
-            .chunked(options.batchSize)
+            .flowOn(dispatchers.io())
+            .chunked(size = options.batchSize, timeout = options.batchTimeout)
             .transform { streamBlocks: List<StreamBlock> ->
 
-                log.info("collected block chunk(size=${streamBlocks.size}; preparing for upload")
+                log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")
 
                 val batch: Batch = batchBlueprint.build()
 
@@ -191,7 +196,7 @@ class EventStreamUploader(
                                             override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(out.path)
                                             override val metadata: Map<String, String>? get() = out.metadata
                                         })
-                                        log.info("${batchId}/${extractor.name} => put.eTag = ${putResponse.eTag()}")
+                                        log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
                                         UploadResult(
                                             batchId = batch.id,
                                             batchSize = streamBlocks.size,
@@ -214,7 +219,7 @@ class EventStreamUploader(
                 val blockBatch: BlockBatch = BlockBatch(batch.id, aws.s3Config.bucket, s3Keys)
 
                 val writeResult: WriteResult = dynamo.trackBlocks(blockBatch, streamBlocks)
-                log.info("Dynamo write result: $writeResult")
+                log.info("dynamo write result: $writeResult")
 
                 //  At this point, signal success by emitting results:
                 emitAll(uploaded.asFlow())

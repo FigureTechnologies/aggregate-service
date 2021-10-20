@@ -21,6 +21,7 @@ object Version {
     object Kotlinx {
         const val Core = "1.5.2"
         const val CLI = "0.3.3"
+        const val DateTime = "0.3.0"
     }
 
     const val Logback = "0.1.5"
@@ -58,6 +59,7 @@ dependencies {
     implementation("org.jetbrains.kotlin", "kotlin-reflect")
 
     implementation("org.jetbrains.kotlinx", "kotlinx-cli-jvm", Version.Kotlinx.CLI)
+    implementation("org.jetbrains.kotlinx", "kotlinx-datetime", Version.Kotlinx.DateTime)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.Kotlinx.Core)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.Kotlinx.Core)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-reactive", Version.Kotlinx.Core)
@@ -171,7 +173,6 @@ tasks.register<org.openapitools.generator.gradle.plugin.tasks.GenerateTask>("gen
     packageName.set("io.provenance.aggregate.service.stream")
     modelPackage.set("io.provenance.aggregate.service.stream.models")
     library.set("jvm-okhttp4")
-//library.set("jvm-retrofit2")
     configOptions.set(
         mapOf(
             "artifactId" to "tendermint-api",

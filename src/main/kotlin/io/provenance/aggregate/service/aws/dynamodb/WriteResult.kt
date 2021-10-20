@@ -12,4 +12,10 @@ data class WriteResult(val processed: Int, val unprocessed: List<Long>) {
         fun ok(n: Int) = WriteResult(processed = n, unprocessed = emptyList())
         fun empty() = WriteResult(processed = 0, unprocessed = emptyList())
     }
+
+    operator fun plus(other: WriteResult) =
+        WriteResult(
+            processed = this.processed + other.processed,
+            unprocessed = this.unprocessed + other.unprocessed
+        )
 }

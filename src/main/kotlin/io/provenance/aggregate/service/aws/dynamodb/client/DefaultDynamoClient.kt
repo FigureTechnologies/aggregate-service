@@ -7,6 +7,7 @@ import io.provenance.aggregate.service.stream.batch.BatchId
 import io.provenance.aggregate.service.stream.models.StreamBlock
 import io.provenance.aggregate.service.utils.DelayShim
 import io.provenance.aggregate.service.utils.backoff
+import io.provenance.aggregate.service.utils.timestamp
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
@@ -15,18 +16,11 @@ import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient
-import software.amazon.awssdk.enhanced.dynamodb.Key
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema
+import software.amazon.awssdk.enhanced.dynamodb.*
 import software.amazon.awssdk.enhanced.dynamodb.mapper.ImmutableTableSchema
-import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest
-import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetResultPage
-import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch
-import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest
+import software.amazon.awssdk.enhanced.dynamodb.model.*
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException
-import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException
+import software.amazon.awssdk.services.dynamodb.model.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.ExperimentalTime
 
@@ -52,22 +46,22 @@ open class DefaultDynamoClient(
         const val DYNAMODB_MAX_TRANSACTION_ITEMS: Int = 25
     }
 
+    object ServiceMetadata {
+        object Props {
+            const val MAX_HISTORICAL_BLOCK_HEIGHT = "MaxHistoricalBlockHeight"
+        }
+    }
+
     private val log = logger()
 
     private val enhancedClient: DynamoDbEnhancedAsyncClient =
         DynamoDbEnhancedAsyncClient.builder().dynamoDbClient(dynamoClient).build()
-
-    private val serviceMetadataTableSchema: ImmutableTableSchema<ServiceMetadata> =
-        TableSchema.fromImmutableClass(ServiceMetadata::class.java)
 
     private val blockBatchTableSchema: ImmutableTableSchema<BlockBatch> =
         TableSchema.fromImmutableClass(BlockBatch::class.java)
 
     private val blockMetadataTableSchema: ImmutableTableSchema<BlockStorageMetadata> =
         TableSchema.fromImmutableClass(BlockStorageMetadata::class.java)
-
-    internal val SERVICE_METADATA_TABLE: DynamoDbAsyncTable<ServiceMetadata> =
-        enhancedClient.table(serviceMetadataTable.name, serviceMetadataTableSchema)
 
     internal val BLOCK_BATCH_TABLE: DynamoDbAsyncTable<BlockBatch> =
         enhancedClient.table(blockBatchTable.name, blockBatchTableSchema)
@@ -138,8 +132,6 @@ open class DefaultDynamoClient(
     @OptIn(ExperimentalTime::class, kotlin.ExperimentalStdlibApi::class)
     override suspend fun trackBlocks(batch: BlockBatch, blocks: Iterable<StreamBlock>): WriteResult {
 
-        val storedMaxHistoricalHeight: Long? = getMaxHistoricalBlockHeight()
-
         // Find the historical max block height in the bunch:
         val foundMaxHistoricalHeight: Long? =
             blocks.filter { it.historical }
@@ -162,23 +154,6 @@ open class DefaultDynamoClient(
                                 .build()
                         )
                         totalProcessed.incrementAndGet()
-                        // Put/Update the maximum historical block height seen:
-                        if (foundMaxHistoricalHeight != null) {
-                            log.info("Found historical block height -> $foundMaxHistoricalHeight; stored = $storedMaxHistoricalHeight")
-                            val prop =
-                                ServiceMetadata.Properties.MaxHistoricalBlockHeight.newEntry(
-                                    foundMaxHistoricalHeight.toString()
-                                )
-                            if (storedMaxHistoricalHeight == null || foundMaxHistoricalHeight > storedMaxHistoricalHeight) {
-                                request.addPutItem(
-                                    SERVICE_METADATA_TABLE,
-                                    TransactPutItemEnhancedRequest.builder(ServiceMetadata::class.java)
-                                        .item(prop)
-                                        .build()
-                                )
-                                totalProcessed.incrementAndGet()
-                            }
-                        }
                     }
                         .asDeferred()
                 }
@@ -203,7 +178,11 @@ open class DefaultDynamoClient(
         }
             .awaitAll()
 
-        return WriteResult.ok(totalProcessed.getAcquire())
+        // Update the max block height as well:
+        val updateHeightResult =
+            foundMaxHistoricalHeight?.let { writeMaxHistoricalBlockHeight(it) } ?: WriteResult.empty()
+
+        return WriteResult.ok(totalProcessed.getAcquire()) + updateHeightResult
     }
 
     /**
@@ -213,16 +192,56 @@ open class DefaultDynamoClient(
      */
     override suspend fun getMaxHistoricalBlockHeight(): Long? =
         runCatching {
-            SERVICE_METADATA_TABLE.getItem(
-                Key.builder()
-                    .partitionValue(ServiceMetadata.Properties.MaxHistoricalBlockHeight.key)
+            dynamoClient.getItem(
+                GetItemRequest
+                    .builder()
+                    .tableName(serviceMetadataTable.name)
+                    .key(
+                        mapOf(
+                            "Property" to AttributeValue.builder().s(ServiceMetadata.Props.MAX_HISTORICAL_BLOCK_HEIGHT)
+                                .build()
+                        )
+                    )
                     .build()
             )
                 .await()
+                .item()["Value"]
+                ?.let { it.n() }
         }
+            .onFailure { e -> log.error("$e") }
             .getOrNull()
-            ?.value
             ?.toLongOrNull()
+
+    private fun updateMaxHistoricalBlockHeight(
+        blockHeight: Long,
+        request: UpdateItemRequest.Builder
+    ): UpdateItemRequest.Builder {
+        val propertyAttr =
+            AttributeValue.builder().s(ServiceMetadata.Props.MAX_HISTORICAL_BLOCK_HEIGHT).build()
+        val blockHeightAttr = AttributeValue.builder().n(blockHeight.toString()).build()
+        val updatedAtAttr = AttributeValue.builder().s(timestamp()).build()
+        return request
+            .tableName(serviceMetadataTable.name)
+            .key(mapOf("Property" to propertyAttr))
+            .updateExpression("SET #Value = :update_value, #UpdatedAt = :updated_at")
+            .conditionExpression("attribute_not_exists(#Property) OR (attribute_exists(#Property) AND #Property = :prop_name AND #Value < :cond_value)")
+            .expressionAttributeNames(
+                mapOf(
+                    "#Property" to "Property",
+                    "#Value" to "Value",
+                    "#UpdatedAt" to "UpdatedAt"
+                )
+            )
+            .expressionAttributeValues(
+                mapOf(
+                    ":prop_name" to propertyAttr,
+                    ":update_value" to blockHeightAttr,
+                    ":updated_at" to updatedAtAttr,
+                    ":cond_value" to blockHeightAttr,
+                )
+            )
+            .returnValues("UPDATED_NEW")
+    }
 
     /**
      * Unconditionally overwrite the entry where the partition key "Property" is equal to the name value of
@@ -233,11 +252,14 @@ open class DefaultDynamoClient(
      * @return The result of storing [blockHeight]
      */
     override suspend fun writeMaxHistoricalBlockHeight(blockHeight: Long): WriteResult {
-        SERVICE_METADATA_TABLE.putItem { request ->
-            request.item(ServiceMetadata.Properties.MaxHistoricalBlockHeight.newEntry(blockHeight.toString()))
+        return try {
+            val response: UpdateItemResponse = dynamoClient.updateItem { request: UpdateItemRequest.Builder ->
+                updateMaxHistoricalBlockHeight(blockHeight, request)
+            }
+                .await()
+            WriteResult.ok(if (response.hasAttributes()) 1 else 0)
+        } catch (e: ConditionalCheckFailedException) {
+            WriteResult.empty()
         }
-            .await()
-
-        return WriteResult.ok()
     }
 }

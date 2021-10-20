@@ -35,6 +35,10 @@ class FailingDynamoDbAsyncClient(
         }
     }
 
+    override fun updateItem(updateItemRequest: UpdateItemRequest): CompletableFuture<UpdateItemResponse>? {
+        return client.updateItem(updateItemRequest)
+    }
+
     override fun batchGetItemPaginator(batchGetItemRequest: BatchGetItemRequest?): BatchGetItemPublisher? {
         return client.batchGetItemPaginator(batchGetItemRequest)
     }
