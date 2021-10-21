@@ -29,6 +29,8 @@ sealed class EventAttribute() : FromAttributeMap {
 
     /**
      * Convert an attribute instance to a consolidated attribute event.
+     *
+     * @return A consolidated event.
      */
     abstract fun toEventRecord(): ConsolidatedEvent
 

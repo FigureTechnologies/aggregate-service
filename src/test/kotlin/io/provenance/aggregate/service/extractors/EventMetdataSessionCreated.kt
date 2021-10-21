@@ -20,7 +20,8 @@ class EventMetdataSessionCreated() : CSVFileExtractor(
                     event.blockHeight,
                     event.blockDateTime?.toISOString(),
                     eventMap["session_addr"],
-                    eventMap["scope_addr"]
+                    eventMap["scope_addr"],
+                    includeHash = true
                 )
             }
         }

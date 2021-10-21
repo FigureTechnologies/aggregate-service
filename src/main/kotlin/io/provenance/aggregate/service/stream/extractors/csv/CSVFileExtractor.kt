@@ -54,7 +54,7 @@ abstract class CSVFileExtractor(
      *
      * If `includeHash` is true, the computed hash value will be the first entry of the written record.
      */
-    fun syncWriteRecord(vararg values: Any?, includeHash: Boolean = true) {
+    fun syncWriteRecord(vararg values: Any?, includeHash: Boolean) {
         synchronized(this) {
             flagWriteOutput = true
             if (includeHash) {
