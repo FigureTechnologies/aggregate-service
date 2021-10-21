@@ -52,6 +52,7 @@ class TxMarkerSupply : CSVFileExtractor(
                             record.metadataDenomUnits,
                             record.metadataName,
                             record.metadataSymbol,
+                            includeHash = true
                         )
                     }
                 }

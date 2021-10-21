@@ -234,6 +234,7 @@ fun main(args: Array<String>) {
 
         val options = EventStream.Options
             .builder()
+            .batchSize(config.eventStream.batch.size)
             .fromHeight(fromHeightGetter)
             .toHeight(toHeight?.toLong())
             .skipIfEmpty(skipIfEmpty)

@@ -29,7 +29,7 @@ class EventMapper<T> private constructor(val mapping: Map<String, KFunction<T>>)
 
     /**
      * Given an event type like `provenance.marker.v1.EventMarkerTransfer` or `provenance.attribute.v1.EventAttributeAdd`,
-     * look up and potentially create a new instance of the class mapped to that event with the `@MappedProvenanceEvent`
+     * look up and potentially create a new instance of the class mapped to that event with the [MappedProvenanceEvent]
      * annotation.
      */
     fun fromEvent(event: String, attributes: AttributeMap): T? {
@@ -42,7 +42,40 @@ class EventMapper<T> private constructor(val mapping: Map<String, KFunction<T>>)
     }
 
     companion object {
-        fun <T : Any> eventToClass(rootClass: KClass<T>): Map<String, KFunction<T>> {
+        /**
+         * A utility function that builds a map out of a sealed class family, where the inheriting child classes are
+         * annotated with [MappedProvenanceEvent].
+         *
+         * Example:
+         *
+         * Assume we have a sealed class `Family` and some inheriting classes:
+         *
+         * ```
+         * sealed interface Family {}
+         *
+         *   @MappedProvenanceEvent("some.event.Foo")
+         *   data class Foo : Family
+         *
+         *   @MappedProvenanceEvent("some.event.Bar")
+         *   data class Bar : Family
+         *
+         *   @MappedProvenanceEvent("some.event.Baz")
+         *   data class Baz : Family
+         * ```
+         *
+         * Using [eventToClass] with `Family` produces a mapping of event names to constructors for classes mapped
+         * to said event strings.
+         *
+         * ```
+         * val map = eventToClass(Family::class)
+         * // map = {
+         *   "some.event.Foo" to KFunction<Foo>,
+         *   "some.event.Bar" to KFunction<Bar>,
+         *   "some.event.Baz" to KFunction<Baz>
+         * }
+         * ```
+         */
+        private fun <T : Any> eventToClass(rootClass: KClass<T>): Map<String, KFunction<T>> {
             return rootClass
                 .sealedSubclasses
                 .mapNotNull { kclass ->
@@ -54,6 +87,21 @@ class EventMapper<T> private constructor(val mapping: Map<String, KFunction<T>>)
                 .associate { (ctor, annotation) -> annotation.name to ctor }
         }
 
+        /**
+         * Create a new event mapper for a given class.
+         *
+         * Example usage:
+         *
+         * ```
+         * val event: TxEvent = ...
+         * val mapper = EventMapper(EventAttribute::class)
+         * val attribute: EventAttribute? = mapper.fromEvent(event)
+         * ```
+         *
+         * @param T The target type to map the tx event to.
+         * @property forClass The target class the event will be translated to.
+         * @return An instance of the mapped type.
+         */
         operator fun <T : Any> invoke(forClass: KClass<T>): EventMapper<T> {
             return EventMapper(eventToClass(forClass))
         }
