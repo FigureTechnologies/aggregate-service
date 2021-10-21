@@ -197,12 +197,13 @@ class LoggingOutput(val columns: List<String>) : Output() {
         }
     }
 }
-class S3Output(val columns: List<String>) : Output() {
+@Serializable
+class S3Output(val bucket: String, val tableName: String, val columns: List<String>) : Output() {
     override fun equals(other: Any?): Boolean {
         return if (other?.javaClass == javaClass) {
             val o = (other as S3Output)
 
-            return columns.all { o.columns.contains(it) } && columns.size == o.columns.size
+            return bucket == o.bucket && tableName == o.tableName && columns.all { o.columns.contains(it) } && columns.size == o.columns.size
         } else {
             false
         }
@@ -220,13 +221,15 @@ class LoggingOutputBuilder {
 }
 
 class S3OutputBuilder {
+    var bucket: String = ""
+    var tableName: String = ""
     private val columns = mutableListOf<String>()
 
     fun column(block: () -> String) {
         columns.add(block())
     }
 
-    fun build(): S3Output = S3Output(columns)
+    fun build(): S3Output = S3Output(bucket, tableName, columns)
 }
 
 typealias Row = Map<String, String>

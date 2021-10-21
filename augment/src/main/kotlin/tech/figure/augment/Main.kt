@@ -1,6 +1,7 @@
 package tech.figure.augment
 
 import io.grpc.ManagedChannelBuilder
+import io.provenance.aggregate.common.Environment
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -17,39 +18,19 @@ import tech.figure.augment.provenance.ProvenanceClient
 import tech.figure.augment.provenance.query
 import java.net.URI
 import java.sql.DriverManager
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.Properties
 
 fun main(args: Array<String>) {
     val log = LoggerFactory.getLogger("main")
     val job = Json.decodeFromString(Job.serializer(), System.getenv("JOB_JSON"))
-    // val job = job {
-    //     name = "test-1"
-    //     cron = "cron text"
-    //     query {
-    //         dbSource {
-    //             table = "attributes"
-    //             column { "account" }
-    //             filter {
-    //                 left = "name"
-    //                 right = "funds.passport.pb"
-    //                 operator = "="
-    //             }
-    //         }
-    //         rpcSource {
-    //             module = "bank"
-    //             filter {
-    //                 setter = "denom"
-    //                 value = "nhash"
-    //             }
-    //         }
-    //         loggingOutput {
-    //             column { "account" }
-    //             column { "balance" }
-    //             column { "timestamp" }
-    //             column { "height" }
-    //         }
-    //     }
-    // }
+    val environment: Environment = runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
+        .getOrElse {
+            error("Not a valid environment: ${System.getenv("ENVIRONMENT")}")
+        }
 
     log.info("Running job - ${job.name}")
     log.info("Job config - ${Json.encodeToString(Job.serializer(), job)}")
@@ -76,15 +57,17 @@ fun main(args: Array<String>) {
             }
         }
         .build()
-    val semaphore = Semaphore(System.getenv("GRPC_CONCURRENCY")?.toInt() ?: 20)
+    val semaphore = Semaphore(System.getenv("GRPC_CONCURRENCY")?.toInt() ?: 10)
     val provenanceClient = ProvenanceClient(channel, semaphore)
 
     runBlocking {
         val latestBlock = provenanceClient.getLatestBlock()
+        val latestBlockTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(latestBlock.block.header.time.seconds), ZoneOffset.UTC)
 
         // Set default fields present on every row. These may not be used in all queries.
         val defaultData = mapOf(
-            "timestamp" to latestBlock.block.header.time.seconds.toString(),
+            "timestamp" to latestBlockTime.format(DateTimeFormatter.ISO_DATE_TIME).toString(),
+            "date" to latestBlockTime.toLocalDate().format(DateTimeFormatter.ISO_DATE).toString(),
             "height" to latestBlock.block.header.height.toString(),
         )
 
@@ -104,7 +87,6 @@ fun main(args: Array<String>) {
                     // TODO acc is useless here based on the TODO above
                     acc + result.map { row ->
                         source.columns.mapIndexed { index, column ->
-                            log.info("$index $column ${row[index]}")
                             column to row[index].toString()
                         }.toMap() + defaultData
                     }
@@ -121,6 +103,6 @@ fun main(args: Array<String>) {
 
         sourceStepResult
             .filterColumns(job.query.output)
-            .output(job.query.output, log)
+            .output(environment, job.name, job.query.output, log)
     }
 }

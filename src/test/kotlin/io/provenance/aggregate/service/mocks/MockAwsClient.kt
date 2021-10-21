@@ -1,10 +1,10 @@
 package io.provenance.aggregate.service.test.mocks
 
-import io.provenance.aggregate.service.DynamoConfig
-import io.provenance.aggregate.service.S3Config
-import io.provenance.aggregate.service.aws.LocalStackAwsClient
-import io.provenance.aggregate.service.aws.dynamodb.client.DynamoClient
-import io.provenance.aggregate.service.aws.s3.client.S3Client
+import io.provenance.aggregate.common.DynamoConfig
+import io.provenance.aggregate.common.S3Config
+import io.provenance.aggregate.common.aws.LocalStackAwsClient
+import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
+import io.provenance.aggregate.common.aws.s3.client.S3Client
 import io.provenance.aggregate.service.test.utils.Defaults
 
 open class MockAwsClient protected constructor(s3Config: S3Config, dynamoConfig: DynamoConfig) :

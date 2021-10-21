@@ -1,9 +1,9 @@
 package io.provenance.aggregate.service.stream
 
-import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
-import io.provenance.aggregate.service.stream.models.BlockResponse
-import io.provenance.aggregate.service.stream.models.BlockResultsResponse
-import io.provenance.aggregate.service.stream.models.BlockchainResponse
+import io.provenance.aggregate.common.models.ABCIInfoResponse
+import io.provenance.aggregate.common.models.BlockResponse
+import io.provenance.aggregate.common.models.BlockResultsResponse
+import io.provenance.aggregate.common.models.BlockchainResponse
 
 /**
  * A client designed to interact with the Tendermint RPC API.

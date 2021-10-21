@@ -1,7 +1,7 @@
 package io.provenance.aggregate.service.test.mocks
 
-import io.provenance.aggregate.service.aws.dynamodb.client.DefaultDynamoClient
-import io.provenance.aggregate.service.aws.dynamodb.DynamoTable
+import io.provenance.aggregate.common.aws.dynamodb.client.DefaultDynamoClient
+import io.provenance.aggregate.common.aws.dynamodb.DynamoTable
 import kotlinx.coroutines.future.await
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 

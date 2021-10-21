@@ -1,6 +1,6 @@
 package io.provenance.aggregate.service.stream.extractors
 
-import io.provenance.aggregate.service.stream.models.StreamBlock
+import io.provenance.aggregate.common.models.StreamBlock
 
 /**
  * An extractor, as the name implies, is responsible for extracting a subset of data from a stream block, formatting it,

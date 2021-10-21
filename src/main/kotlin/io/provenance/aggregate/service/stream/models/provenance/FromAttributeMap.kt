@@ -1,6 +1,6 @@
 package io.provenance.aggregate.service.stream.models.provenance
 
-import io.provenance.aggregate.service.stream.models.EncodedBlockchainEvent
+import io.provenance.aggregate.common.models.EncodedBlockchainEvent
 
 /**
  * Shorthand for a map of event attributes derived from a list of key/value objects.

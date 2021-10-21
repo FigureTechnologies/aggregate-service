@@ -3,10 +3,10 @@ package io.provenance.aggregate.service.test
 import com.squareup.moshi.JsonEncodingException
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
-import io.provenance.aggregate.service.aws.dynamodb.client.NoOpDynamoClient
+import io.provenance.aggregate.common.aws.dynamodb.client.NoOpDynamoClient
 import io.provenance.aggregate.service.stream.TendermintServiceClient
-import io.provenance.aggregate.service.stream.models.*
-import io.provenance.aggregate.service.stream.models.extensions.toDecodedMap
+import io.provenance.aggregate.common.models.*
+import io.provenance.aggregate.common.models.extensions.toDecodedMap
 import io.provenance.aggregate.service.stream.models.rpc.response.MessageType
 import io.provenance.aggregate.service.test.base.TestBase
 import io.provenance.aggregate.service.test.mocks.*

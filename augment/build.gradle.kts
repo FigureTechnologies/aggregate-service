@@ -17,21 +17,30 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":common"))
+
+    implementation("org.apache.commons", "commons-csv", Version.ApacheCommons.CSV)
+    implementation("commons-io", "commons-io", Version.ApacheCommons.IO)
+    implementation("org.apache.commons", "commons-lang3", Version.ApacheCommons.Lang3)
+
     implementation("io.provenance.protobuf:pb-proto-java:1.7.0")
-    implementation("io.grpc:grpc-protobuf:1.39.0")
-    implementation("io.grpc:grpc-stub:1.39.0")
+    implementation("io.grpc:grpc-protobuf:${Version.GRPC}")
+    implementation("io.grpc:grpc-stub:${Version.GRPC}")
     implementation("ch.qos.logback:logback-classic:1.0.13")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.5.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Version.Kotlinx.Core}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:${Version.Kotlinx.Core}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${Version.Kotlinx.Core}")
 
     // implementation("com.github.jasync-sql:jasync-postgresql:2.0.2")
     implementation("net.snowflake:snowflake-jdbc:3.13.8")
     implementation("commons-dbutils:commons-dbutils:1.7")
 
-    runtimeOnly("io.grpc:grpc-netty-shaded:1.39.0")
+    implementation(platform("software.amazon.awssdk:bom:${Version.AWS}"))
+    implementation("software.amazon.awssdk:s3")
+
+    runtimeOnly("io.grpc:grpc-netty-shaded:${Version.GRPC}")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }

@@ -1,12 +1,12 @@
 package io.provenance.aggregate.service.stream.clients
 
 import io.provenance.aggregate.service.stream.TendermintServiceClient
-import io.provenance.aggregate.service.stream.apis.ABCIApi
-import io.provenance.aggregate.service.stream.apis.InfoApi
-import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
-import io.provenance.aggregate.service.stream.models.BlockResponse
-import io.provenance.aggregate.service.stream.models.BlockResultsResponse
-import io.provenance.aggregate.service.stream.models.BlockchainResponse
+import io.provenance.aggregate.common.apis.ABCIApi
+import io.provenance.aggregate.common.apis.InfoApi
+import io.provenance.aggregate.common.models.ABCIInfoResponse
+import io.provenance.aggregate.common.models.BlockResponse
+import io.provenance.aggregate.common.models.BlockResultsResponse
+import io.provenance.aggregate.common.models.BlockchainResponse
 
 /**
  * An OpenAPI generated client designed to interact with the Tendermint RPC API.
