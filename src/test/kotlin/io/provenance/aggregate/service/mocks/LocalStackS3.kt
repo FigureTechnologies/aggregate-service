@@ -12,7 +12,7 @@ class LocalStackS3(s3Client: S3AsyncClient, bucket: S3Bucket) : DefaultS3Client(
         s3Client.createBucket(
             CreateBucketRequest
                 .builder()
-                .bucket(bucket.name)
+                .bucket(bucket.value)
                 .build()
         )
             .await()
@@ -21,7 +21,7 @@ class LocalStackS3(s3Client: S3AsyncClient, bucket: S3Bucket) : DefaultS3Client(
         s3Client.listObjectsV2(
             ListObjectsV2Request
                 .builder()
-                .bucket(bucket.name)
+                .bucket(bucket.value)
                 .build()
         ).await()
             .contents()
@@ -35,7 +35,7 @@ class LocalStackS3(s3Client: S3AsyncClient, bucket: S3Bucket) : DefaultS3Client(
         return if (identifiers.isNotEmpty()) {
             s3Client.deleteObjects(
                 DeleteObjectsRequest.builder()
-                    .bucket(bucket.name)
+                    .bucket(bucket.value)
                     .delete(Delete.builder().objects(identifiers).build())
                     .build()
             )
@@ -48,7 +48,7 @@ class LocalStackS3(s3Client: S3AsyncClient, bucket: S3Bucket) : DefaultS3Client(
     suspend fun deleteBucket() {
         s3Client.deleteBucket(
             DeleteBucketRequest.builder()
-                .bucket(bucket.name)
+                .bucket(bucket.value)
                 .build()
         )
             .await()

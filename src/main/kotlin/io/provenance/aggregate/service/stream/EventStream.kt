@@ -1,7 +1,8 @@
 package io.provenance.aggregate.service.stream
 
 import arrow.core.Either
-import com.squareup.moshi.*
+import com.squareup.moshi.JsonDataException
+import com.squareup.moshi.Moshi
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.Scarlet
 import com.tinder.scarlet.WebSocket
@@ -23,15 +24,20 @@ import io.provenance.aggregate.service.stream.models.rpc.response.MessageType
 import io.provenance.aggregate.common.utils.backoff
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.EOFException
 import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.util.concurrent.CompletionException
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
+import kotlinx.coroutines.channels.Channel as KChannel
 
 typealias HeightGetter = suspend () -> Long?
 
@@ -46,14 +52,34 @@ class EventStream(
     private val options: Options = Options.DEFAULT
 ) {
     companion object {
+        /**
+         * The default number of blocks that will be contained in a batch.
+         */
         const val DEFAULT_BATCH_SIZE = 8
+
+        /**
+         * The default timeout limit to wait when batching items for emitting the batch.
+         */
+        val DEFAULT_BATCH_TIMEOUT: Duration = Duration.seconds(10)
+
+        /**
+         * The maximum size of the query range for block heights allowed by the Tendermint API.
+         * This means, for a given block height `H`, we can ask for blocks in the range [`H`, `H` + `TENDERMINT_MAX_QUERY_RANGE`].
+         * Requesting a larger range will result in the API emitting an error.
+         */
         const val TENDERMINT_MAX_QUERY_RANGE = 20
+
+        /**
+         * The maximum number of items that can be included in a batch write operation to DynamoDB, as imposed by
+         * AWS.
+         */
         const val DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS = 100
     }
 
     data class Options(
         val concurrency: Int,
         val batchSize: Int,
+        val batchTimeout: Duration?,
         val fromHeight: Either<Long, HeightGetter>?,
         val toHeight: Long?,
         val skipIfEmpty: Boolean,
@@ -66,9 +92,29 @@ class EventStream(
             fun builder() = Builder()
         }
 
+        fun withConcurrency(concurrency: Int) = this.copy(concurrency = concurrency)
+
+        fun withBatchSize(size: Int) = this.copy(batchSize = size)
+
+        fun withBatchTimeout(timeout: Duration?) = this.copy(batchTimeout = timeout)
+
+        fun withFromHeight(height: Either<Long, HeightGetter>?) = this.copy(fromHeight = height)
+
+        fun withToHeight(height: Long?) = this.copy(toHeight = height)
+
+        fun withSkipIfEmpty(value: Boolean) = this.copy(skipIfEmpty = value)
+
+        fun withSkipIfSeen(value: Boolean) = this.copy(skipIfSeen = value)
+
+        fun withBlockEventPredicate(predicate: ((event: String) -> Boolean)?) =
+            this.copy(blockEventPredicate = predicate)
+
+        fun withTxEventPredicate(predicate: ((event: String) -> Boolean)?) = this.copy(txEventPredicate = predicate)
+
         class Builder {
             private var concurrency: Int = DEFAULT_CONCURRENCY
             private var batchSize: Int = DEFAULT_BATCH_SIZE
+            private var batchTimeout: Duration? = DEFAULT_BATCH_TIMEOUT
             private var fromHeight: Either<Long, HeightGetter>? = null
             private var toHeight: Long? = null
             private var skipIfEmpty: Boolean = true
@@ -89,6 +135,13 @@ class EventStream(
              * @property size The batch size.
              */
             fun batchSize(size: Int) = apply { batchSize = size }
+
+            /**
+             * Sets the default batch timeout limit to wait when batching items for emitting the batch.
+             *
+             * @property timeout The batch timeout duration.
+             */
+            fun batchTimeout(timeout: Duration?) = apply { batchTimeout = timeout }
 
             /**
              * Sets the lowest height to fetch historical blocks from.
@@ -155,6 +208,7 @@ class EventStream(
             fun build(): Options = Options(
                 concurrency = concurrency,
                 batchSize = batchSize,
+                batchTimeout = batchTimeout,
                 fromHeight = fromHeight,
                 toHeight = toHeight,
                 skipIfEmpty = skipIfEmpty,
@@ -177,7 +231,7 @@ class EventStream(
 
         fun create(setOptions: (options: Options.Builder) -> Unit = ::noop): EventStream {
             val optionsBuilder = Options.Builder()
-                .batchSize(config.eventStream.batchSize)
+                .batchSize(config.eventStream.batch.size)
                 .skipIfEmpty(true)
             setOptions(optionsBuilder)
             return create(optionsBuilder.build())
@@ -200,9 +254,39 @@ class EventStream(
         }
     }
 
+    /**
+     * Internal events used for communication between the event historic and live streams:
+     */
+    private sealed interface InternalStreamEvent {
+        /**
+         * Historical stream ran to completion successfully.
+         */
+        object HistoricStreamCompleted : InternalStreamEvent
+    }
+
+    /**
+     * Logger.
+     */
     private val log = logger()
 
-    private val responseMessageDecoder = MessageType.Decoder(moshi)
+    /**
+     * A decoder for Tendermint RPC API messages.
+     */
+    private val responseMessageDecoder: MessageType.Decoder = MessageType.Decoder(moshi)
+
+    /**
+     * A conflated channel to hold the last block seen in the stream.
+     *
+     * From the Kotlin docs:
+     *
+     *  > When capacity is [KChannel.CONFLATED] — it creates a conflated channel This channel buffers at most one element
+     *  and conflates all subsequent [KChannel.send] and [KChannel.trySend] invocations, so that the receiver always
+     *  gets the last element sent. Back-to-back sent elements are conflated — only the last sent element is received,
+     *  while previously sent elements are lost. Sending to this channel never suspends, and trySend always succeeds.
+     *
+     * @see [KChannel]]
+     */
+    //private val lastHistoricBlock: KChannel<StreamBlock> = KChannel<StreamBlock>(KChannel.CONFLATED)
 
     /**
      * A serializer function that converts a [StreamBlock] instance to a JSON string.
@@ -416,16 +500,44 @@ class EventStream(
     fun streamHistoricalBlocks(): Flow<StreamBlock> = flow {
         val startHeight: Long = getStartingHeight() ?: 0
         val endHeight: Long = getEndingHeight() ?: error("Couldn't determine ending height")
-        emitAll(streamHistoricalBlocks(startHeight, endHeight))
+        emitAll(streamHistoricalBlocks(startHeight = startHeight, endHeight = endHeight, internalEvents = null))
     }
 
-    private fun streamHistoricalBlocks(startHeight: Long): Flow<StreamBlock> = flow {
+    private fun streamHistoricalBlocks(
+        startHeight: Long,
+        internalEvents: KChannel<InternalStreamEvent>
+    ): Flow<StreamBlock> = flow {
         val endHeight: Long = getEndingHeight() ?: error("Couldn't determine ending height")
-        emitAll(streamHistoricalBlocks(startHeight, endHeight))
+        emitAll(
+            streamHistoricalBlocks(
+                startHeight = startHeight,
+                endHeight = endHeight,
+                internalEvents = internalEvents
+            )
+        )
     }
 
-    private fun streamHistoricalBlocks(startHeight: Long, endHeight: Long): Flow<StreamBlock> =
-        flow {
+    private fun streamHistoricalBlocks(
+        startHeight: Long,
+        endHeight: Long,
+        internalEvents: KChannel<InternalStreamEvent>?
+    ): Flow<StreamBlock> {
+
+        val lastHistoricBlock = object {
+            private var lastBlock: StreamBlock? = null
+            private val mutex = Mutex()
+
+            suspend fun store(block: StreamBlock): StreamBlock {
+                mutex.withLock {
+                    lastBlock = block
+                }
+                return block
+            }
+
+            fun get(): StreamBlock? = lastBlock
+        }
+
+        return flow {
             log.info("historical::streaming blocks from $startHeight to $endHeight")
             log.info("historical::batch size = ${options.batchSize}")
 
@@ -443,11 +555,25 @@ class EventStream(
                     .asFlow()
             )
         }
-            .map { heightPairChunk: List<Pair<Long, Long>> -> // each pair will be `TENDERMINT_MAX_QUERY_RANGE` units apart
+            .withIndex()
+            .map { indexed ->
+                val index: Int = indexed.index
+                val heightPairChunk: List<Pair<Long, Long>> =
+                    indexed.value // each pair will be `TENDERMINT_MAX_QUERY_RANGE` units apart
 
                 val lowest = heightPairChunk.minOf { it.first }
                 val highest = heightPairChunk.maxOf { it.second }
                 val fullBlockHeights: Set<Long> = (lowest..highest).toSet()
+
+                // Update every 2000 blocks:
+                if ((index % 20) == 0) {
+                    dynamo.writeMaxHistoricalBlockHeight(highest)
+                        .also {
+                            if (it.processed > 0) {
+                                log.info("historical::updating max historical block height to $highest")
+                            }
+                        }
+                }
 
                 // invariant:
                 assert(fullBlockHeights.size <= DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS)
@@ -470,7 +596,8 @@ class EventStream(
                         // Fetch the blocks in range chunk [minHeight, maxHeight]:
                         .map { (minHeight, maxHeight) ->
                             async { getBlockHeightsInRange(minHeight, maxHeight) }
-                        }.awaitAll()
+                        }
+                        .awaitAll()
                         // Flatten all the existing block height lists:
                         .flatten()
                         // Remove any that have already been recorded in Dynamo:
@@ -482,7 +609,7 @@ class EventStream(
                             }
                         }
 
-                    log.info("${availableBlocks.size} block(s) in [$lowest..$highest]")
+                    log.info("historical::${availableBlocks.size} block(s) in [$lowest..$highest]")
 
                     Pair(seenBlockMap, availableBlocks)
                 }
@@ -492,19 +619,72 @@ class EventStream(
             .flowOn(dispatchers.io())
             .flatMapMerge(options.concurrency) { queryBlocks(it) }
             .flowOn(dispatchers.io())
-            .map { it.copy(historical = true) }
+            .map {
+                // Mark the block as historical and update the last block seen:
+                val block = it.copy(historical = true)
+                lastHistoricBlock.store(block)
+            }
+            .onCompletion { cause: Throwable? ->
+                if (cause == null) {
+                    log.info("historical::exhausted historical block stream ok")
+
+                    // signal that the historical stream has terminated to the live stream if necessary:
+                    internalEvents
+                        ?.trySend(InternalStreamEvent.HistoricStreamCompleted)
+                        ?.also { result ->
+                            if (result.isSuccess) {
+                                log.info("historical::signaled that stream has finished ok")
+                            } else if (result.isFailure) {
+                                log.warn("historical::failed to signal that stream has finished")
+                            }
+                        }
+
+                    // Update the max block height if applicable:
+                    lastHistoricBlock
+                        .get()
+                        ?.let { block ->
+                            log.info("historical::last block seen: ${block.height}")
+                            block.height
+                        }
+                        ?.let { height ->
+                            dynamo.writeMaxHistoricalBlockHeight(height)
+                                .also { result ->
+                                    if (result.processed > 0) {
+                                        log.info("historical::updated final block height to $height")
+                                    }
+                                }
+                        }
+                } else {
+                    log.error("historical::exhausted block stream with error: ${cause.message}")
+                }
+            }
+    }
 
     /**
-     * Constructs a Flow of newly minted blocks and associated events as the blocks are added to the chain.
-     *
-     * @return A Flow of newly minted blocks and associated events
+     * Internal implementation of `streamLiveBlocks()`.
      */
-    fun streamLiveBlocks(): Flow<StreamBlock> {
+    private fun streamLiveBlocks(internalEvents: KChannel<InternalStreamEvent>?): Flow<StreamBlock> {
 
-        // Toggle the Lifecycle register start state :
+        // Toggle the Lifecycle register start state:
         eventStreamService.startListening()
 
-        return flow {
+        val historicalStreamFinished: AtomicBoolean = AtomicBoolean(false)
+
+        return channelFlow {
+
+            // Listen and update based on received messages from the historical block stream:
+            val eventWatcher: Job? =
+                internalEvents?.let { channel ->
+                    launch {
+                        while (true) {
+                            // this will suspend the coroutine until a message is received:
+                            when (channel.receive()) {
+                                InternalStreamEvent.HistoricStreamCompleted -> historicalStreamFinished.set(true)
+                            }
+                        }
+                    }
+                }
+
             for (event in eventStreamService.observeWebSocketEvent()) {
                 when (event) {
                     is WebSocket.Event.OnConnectionOpened<*> -> {
@@ -520,25 +700,18 @@ class EventStream(
                                     is MessageType.Empty ->
                                         log.info("received empty ACK message => ${message.value}")
                                     is MessageType.NewBlock -> {
-                                        val streamBlock: StreamBlock? =
-                                            type.block.data.value.block.let {
-                                                log.info("live::received NewBlock message: #${it.header?.height}")
-                                                queryBlock(Either.Right(it), skipIfNoTxs = false)
-                                            }
-                                        if (streamBlock != null) {
-                                            emit(streamBlock)
-                                        }
+                                        val block = type.block.data.value.block
+                                        log.info("live::received NewBlock message: #${block.header?.height}")
+                                        send(block)
                                     }
-                                    is MessageType.Error -> {
-
-                                    }
+                                    is MessageType.Error ->
+                                        log.error("upstream error from RPC endpoint: ${type.error}")
                                     is MessageType.Panic -> {
-                                        log.error("Upstream panic from RPC endpoint: ${type.error}")
+                                        log.error("upstream panic from RPC endpoint: ${type.error}")
                                         throw CancellationException("RPC endpoint panic: ${type.error}")
                                     }
                                     is MessageType.Unknown ->
                                         log.info("unknown message type; skipping message => ${message.value}")
-
                                 }
                             }
                             is Message.Bytes -> {
@@ -550,14 +723,41 @@ class EventStream(
                     else -> throw Throwable("live::unexpected event type: $event")
                 }
             }
+
+            eventWatcher?.let {
+                log.info("live::event watcher closed")
+                it.cancel()
+            }
         }
+            .flowOn(dispatchers.io())
             .onStart {
                 log.info("live::starting")
             }
-            .onEach {
-                log.info("live::got block #${it.height}")
+            .onEach { block: Block ->
+                block.header?.height?.also { height ->
+                    // Check if we're allowed to update the max block height now that the historical stream has finished:
+                    if (historicalStreamFinished.get()) {
+                        dynamo.writeMaxHistoricalBlockHeight(height)
+                            .also {
+                                if (it.processed > 0) {
+                                    log.info("live::updating max historical block height to $height")
+                                }
+                            }
+                    }
+                }
+            }
+            .mapNotNull { block: Block ->
+                val maybeBlock = queryBlock(Either.Right(block), skipIfNoTxs = false)
+                if (maybeBlock != null) {
+                    log.info("live::got block #${maybeBlock.height}")
+                    maybeBlock
+                } else {
+                    log.info("live::skipping block #${block.header?.height}")
+                    null
+                }
             }
             .onCompletion {
+                log.info("live::stopping event stream")
                 eventStreamService.stopListening()
             }
             .retryWhen { cause: Throwable, attempt: Long ->
@@ -573,6 +773,13 @@ class EventStream(
     }
 
     /**
+     * Constructs a Flow of newly minted blocks and associated events as the blocks are added to the chain.
+     *
+     * @return A Flow of newly minted blocks and associated events
+     */
+    fun streamLiveBlocks(): Flow<StreamBlock> = streamLiveBlocks(internalEvents = null)
+
+    /**
      * Constructs a Flow of live and historical blocks, plus associated event data.
      *
      * If a starting height is provided, historical blocks will be included in the Flow from the starting height, up
@@ -582,10 +789,16 @@ class EventStream(
      */
     fun streamBlocks(): Flow<StreamBlock> = flow {
         val startingHeight: Long? = getStartingHeight()
+        // A merged live and historical stream is a special case where the two streams need to communicate between
+        // each other: the live stream needs to know when the historical stream is done so it can start recording
+        // max block heights. We can use a "rendezvous" channel to allow the two to communicate (no buffer, and the
+        // live block stream must be receiving at the time the historical stream sends a message, which we can
+        // guarantee by implementation.
+        val internalEvents = KChannel<InternalStreamEvent>(KChannel.RENDEZVOUS)
         emitAll(
             if (startingHeight != null) {
                 log.info("Listening for live and historical blocks from height $startingHeight")
-                merge(streamHistoricalBlocks(startingHeight), streamLiveBlocks())
+                merge(streamHistoricalBlocks(startingHeight, internalEvents), streamLiveBlocks(internalEvents))
             } else {
                 log.info("Listening for live blocks only")
                 streamLiveBlocks()

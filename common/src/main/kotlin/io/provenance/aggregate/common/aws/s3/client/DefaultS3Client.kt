@@ -23,7 +23,7 @@ open class DefaultS3Client(protected val s3Client: S3AsyncClient, protected val 
         return s3Client.putObject(
             PutObjectRequest
                 .builder()
-                .bucket(bucket.name)
+                .bucket(bucket.value)
                 .key(key.value)
                 .apply {
                     if (metadata != null) {

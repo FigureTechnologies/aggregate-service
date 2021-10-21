@@ -28,7 +28,7 @@ object Builders {
             Defaults.templates.readAs(
                 ABCIInfoResponse::class.java,
                 "abci_info/success.json",
-                mapOf("last_block_height" to MAX_BLOCK_HEIGHT)
+                mapOf("last_block_height" to MAX_HISTORICAL_BLOCK_HEIGHT)
             )
         }
         .doFor("block") { Defaults.templates.readAs(BlockResponse::class.java, "block/${it[0]}.json") }

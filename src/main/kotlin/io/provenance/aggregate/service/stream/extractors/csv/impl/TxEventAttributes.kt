@@ -38,7 +38,8 @@ class TxEventAttributes : CSVFileExtractor(
                         record.updatedValue ?: record.value,
                         record.updatedType ?: record.type,
                         record.account,
-                        record.owner
+                        record.owner,
+                        includeHash = true
                     )
                 }
         }

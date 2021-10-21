@@ -19,6 +19,7 @@ object Version {
     object Kotlinx {
         const val Core = "1.5.2"
         const val CLI = "0.3.3"
+        const val DateTime = "0.3.0"
     }
 
     const val Logback = "0.1.5"

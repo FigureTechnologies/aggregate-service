@@ -28,6 +28,7 @@ dependencies {
     implementation("org.jetbrains.kotlin", "kotlin-reflect")
 
     implementation("org.jetbrains.kotlinx", "kotlinx-cli-jvm", Version.Kotlinx.CLI)
+    implementation("org.jetbrains.kotlinx", "kotlinx-datetime", Version.Kotlinx.DateTime)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.Kotlinx.Core)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.Kotlinx.Core)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-reactive", Version.Kotlinx.Core)

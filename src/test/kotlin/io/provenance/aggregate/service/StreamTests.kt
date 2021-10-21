@@ -149,7 +149,7 @@ class StreamTests : TestBase() {
                 .doFor("block") { templates.readAs(BlockResponse::class.java, "block/${it[0]}.json") }
                 .build(MockTendermintServiceClient::class.java)
 
-            val expectedHeight = MIN_BLOCK_HEIGHT
+            val expectedHeight = MIN_HISTORICAL_BLOCK_HEIGHT
 
             // Expect success:
             dispatcherProvider.runBlockingTest {
@@ -184,7 +184,7 @@ class StreamTests : TestBase() {
                 }
                 .build(MockTendermintServiceClient::class.java)
 
-            val expectedHeight = MIN_BLOCK_HEIGHT
+            val expectedHeight = MIN_HISTORICAL_BLOCK_HEIGHT
 
             // Expect success:
             dispatcherProvider.runBlockingTest {
@@ -219,7 +219,7 @@ class StreamTests : TestBase() {
                 }
                 .build(MockTendermintServiceClient::class.java)
 
-            val expectedMinHeight: Long = MIN_BLOCK_HEIGHT
+            val expectedMinHeight: Long = MIN_HISTORICAL_BLOCK_HEIGHT
             val expectedMaxHeight: Long = expectedMinHeight + 20 - 1
 
             dispatcherProvider.runBlockingTest {
@@ -252,9 +252,9 @@ class StreamTests : TestBase() {
 
             dispatcherProvider.runBlockingTest {
                 val heights: Set<Long> = setOf(
-                    MIN_BLOCK_HEIGHT,
-                    MIN_BLOCK_HEIGHT + 1,
-                    MIN_BLOCK_HEIGHT + 2
+                    MIN_HISTORICAL_BLOCK_HEIGHT,
+                    MIN_HISTORICAL_BLOCK_HEIGHT + 1,
+                    MIN_HISTORICAL_BLOCK_HEIGHT + 2
                 )
                 val blocks: Array<BlockResponse> =
                     heights
@@ -291,7 +291,7 @@ class StreamTests : TestBase() {
                 val collectedNoSkip = Builders.eventStream()
                     .dispatchers(dispatcherProvider)
                     .dynamoInterface(noopDynamoClient)
-                    .fromHeight(MIN_BLOCK_HEIGHT)
+                    .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
                     .skipIfEmpty(false)
                     .build()
                     .streamHistoricalBlocks()
@@ -304,7 +304,7 @@ class StreamTests : TestBase() {
                 val collectedSkip = Builders.eventStream()
                     .dispatchers(dispatcherProvider)
                     .dynamoInterface(noopDynamoClient)
-                    .fromHeight(MIN_BLOCK_HEIGHT)
+                    .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
                     .build()
                     .streamHistoricalBlocks().toList()
                     .toList()
@@ -365,7 +365,7 @@ class StreamTests : TestBase() {
                     .eventStreamService(eventStreamService)
                     .tendermintService(tendermintService)
                     .dynamoInterface(noopDynamoClient)
-                    .fromHeight(MIN_BLOCK_HEIGHT)
+                    .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
                     .skipIfEmpty(true)
                     .build()
 
@@ -401,7 +401,7 @@ class StreamTests : TestBase() {
                         .eventStreamService(eventStreamService)
                         .tendermintService(tendermintService)
                         .dynamoInterface(noopDynamoClient)
-                        .fromHeight(MIN_BLOCK_HEIGHT)
+                        .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
                         .skipIfEmpty(true)
                         .build()
 
@@ -433,7 +433,7 @@ class StreamTests : TestBase() {
                     .eventStreamService(eventStreamService)
                     .tendermintService(tendermintService)
                     .dynamoInterface(noopDynamoClient)
-                    .fromHeight(MIN_BLOCK_HEIGHT)
+                    .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
                     .skipIfEmpty(true)
                     .matchTxEvent { it == requireTxEvent }
                     .build()
@@ -461,7 +461,7 @@ class StreamTests : TestBase() {
                     .eventStreamService(eventStreamService)
                     .tendermintService(tendermintService)
                     .dynamoInterface(noopDynamoClient)
-                    .fromHeight(MIN_BLOCK_HEIGHT)
+                    .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
                     .skipIfEmpty(true)
                     .matchTxEvent { it == requireTxEvent }
                     .build()

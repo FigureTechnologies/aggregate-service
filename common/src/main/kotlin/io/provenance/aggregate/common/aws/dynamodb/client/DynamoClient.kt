@@ -51,14 +51,14 @@ interface DynamoClient {
     suspend fun trackBlocks(batch: BlockBatch, blocks: Iterable<StreamBlock>): WriteResult
 
     /**
-     * Fetch the maximum block height recorded for a historical block.
+     * Fetch the maximum block height recorded for a block.
      *
      * @return The maximum block height, if it exists.
      */
     suspend fun getMaxHistoricalBlockHeight(): Long?
 
     /**
-     * Record the highest historical block seen.
+     * Record the highest block seen.
      *
      * @property The maximum height of the block to record.
      * @return the result of the write operation
