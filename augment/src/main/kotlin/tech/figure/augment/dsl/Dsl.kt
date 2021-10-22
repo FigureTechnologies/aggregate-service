@@ -2,22 +2,6 @@ package tech.figure.augment.dsl
 
 import kotlinx.serialization.Serializable
 
-// name: nycb_account_balance
-// cron: "<cron schedule>"
-// type: grpc
-// query:
-// select: balance
-// from: bank
-// where: account.tag = "nycb.passport.pb"
-
-// source:
-//   db:
-//   table: attributes
-//   filter: value = ""
-//   rpc:
-//   module: bank
-//   denom: denom
-
 // TODO validate function on all builder classes?
 
 @Serializable
@@ -85,6 +69,13 @@ class DbSource(val columns: List<String>, val table: String, val filter: DbFilte
             false
         }
     }
+
+    override fun hashCode(): Int {
+        var result = columns.hashCode()
+        result = 31 * result + table.hashCode()
+        result = 31 * result + (filter?.hashCode() ?: 0)
+        return result
+    }
 }
 @Serializable
 class RpcSource(val module: Module, val filter: RpcFilter?) : Source() {
@@ -96,6 +87,12 @@ class RpcSource(val module: Module, val filter: RpcFilter?) : Source() {
         } else {
             false
         }
+    }
+
+    override fun hashCode(): Int {
+        var result = module.hashCode()
+        result = 31 * result + (filter?.hashCode() ?: 0)
+        return result
     }
 }
 
@@ -196,6 +193,10 @@ class LoggingOutput(val columns: List<String>) : Output() {
             false
         }
     }
+
+    override fun hashCode(): Int {
+        return columns.hashCode()
+    }
 }
 @Serializable
 class S3Output(val bucket: String, val tableName: String, val columns: List<String>) : Output() {
@@ -207,6 +208,13 @@ class S3Output(val bucket: String, val tableName: String, val columns: List<Stri
         } else {
             false
         }
+    }
+
+    override fun hashCode(): Int {
+        var result = bucket.hashCode()
+        result = 31 * result + tableName.hashCode()
+        result = 31 * result + columns.hashCode()
+        return result
     }
 }
 
