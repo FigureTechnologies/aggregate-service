@@ -3,23 +3,23 @@ package io.provenance.aggregate.service.stream.consumers
 import com.squareup.moshi.Moshi
 import io.provenance.aggregate.service.DefaultDispatcherProvider
 import io.provenance.aggregate.service.DispatcherProvider
-import io.provenance.aggregate.service.aws.AwsClient
-import io.provenance.aggregate.service.aws.dynamodb.client.DynamoClient
-import io.provenance.aggregate.service.aws.dynamodb.BlockBatch
-import io.provenance.aggregate.service.aws.dynamodb.WriteResult
-import io.provenance.aggregate.service.aws.s3.client.S3Client
-import io.provenance.aggregate.service.aws.s3.S3Key
-import io.provenance.aggregate.service.aws.s3.StreamableObject
+import io.provenance.aggregate.common.aws.AwsClient
+import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
+import io.provenance.aggregate.common.aws.dynamodb.BlockBatch
+import io.provenance.aggregate.common.aws.dynamodb.WriteResult
+import io.provenance.aggregate.common.aws.s3.client.S3Client
+import io.provenance.aggregate.common.aws.s3.S3Key
+import io.provenance.aggregate.common.aws.s3.StreamableObject
 import io.provenance.aggregate.service.flow.extensions.chunked
-import io.provenance.aggregate.service.logger
+import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.batch.Batch
-import io.provenance.aggregate.service.stream.batch.BatchId
+import io.provenance.aggregate.common.models.BatchId
 import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
-import io.provenance.aggregate.service.stream.models.StreamBlock
-import io.provenance.aggregate.service.stream.models.UploadResult
-import io.provenance.aggregate.service.stream.models.extensions.dateTime
+import io.provenance.aggregate.common.models.StreamBlock
+import io.provenance.aggregate.common.models.UploadResult
+import io.provenance.aggregate.common.models.extensions.dateTime
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -65,7 +65,7 @@ class EventStreamUploader(
     private val extractorClassNames: MutableList<String> = mutableListOf()
 
     private fun csvS3Key(id: BatchId, d: OffsetDateTime?, label: String): S3Key =
-        S3Key("${d?.run { S3Key.createPrefix(this) } ?: "undated"}/${id}/${label}.csv")
+        S3Key.create(d ?: OffsetDateTime.MIN, id.value, "$label.csv")
 
     /**
      * The fully-qualified class names of the Class instances to load.

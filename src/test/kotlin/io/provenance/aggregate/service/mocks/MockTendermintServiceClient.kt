@@ -1,7 +1,7 @@
 package io.provenance.aggregate.service.test.mocks
 
 import io.provenance.aggregate.service.stream.TendermintServiceClient
-import io.provenance.aggregate.service.stream.models.*
+import io.provenance.aggregate.common.models.*
 
 class MockTendermintServiceClient(mocker: ServiceMock) : TendermintServiceClient, ServiceMock by mocker {
 

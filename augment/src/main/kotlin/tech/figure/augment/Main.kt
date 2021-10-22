@@ -1,6 +1,8 @@
 package tech.figure.augment
 
 import io.grpc.ManagedChannelBuilder
+import io.provenance.aggregate.common.Environment
+import io.provenance.aggregate.common.models.extensions.dateTime
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -17,55 +19,37 @@ import tech.figure.augment.provenance.ProvenanceClient
 import tech.figure.augment.provenance.query
 import java.net.URI
 import java.sql.DriverManager
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.Properties
+
+fun unwrapEnvOrError(variable: String): String = requireNotNull(System.getenv(variable)) { "Missing $variable" }
 
 fun main(args: Array<String>) {
     val log = LoggerFactory.getLogger("main")
-    val job = Json.decodeFromString(Job.serializer(), System.getenv("JOB_JSON"))
-    // val job = job {
-    //     name = "test-1"
-    //     cron = "cron text"
-    //     query {
-    //         dbSource {
-    //             table = "attributes"
-    //             column { "account" }
-    //             filter {
-    //                 left = "name"
-    //                 right = "funds.passport.pb"
-    //                 operator = "="
-    //             }
-    //         }
-    //         rpcSource {
-    //             module = "bank"
-    //             filter {
-    //                 setter = "denom"
-    //                 value = "nhash"
-    //             }
-    //         }
-    //         loggingOutput {
-    //             column { "account" }
-    //             column { "balance" }
-    //             column { "timestamp" }
-    //             column { "height" }
-    //         }
-    //     }
-    // }
+    val job = Json.decodeFromString(Job.serializer(), unwrapEnvOrError("JOB_JSON"))
+    val environment: Environment = runCatching { Environment.valueOf(unwrapEnvOrError("ENVIRONMENT")) }
+        .getOrElse {
+            error("Not a valid environment: ${unwrapEnvOrError("ENVIRONMENT")}")
+        }
 
     log.info("Running job - ${job.name}")
     log.info("Job config - ${Json.encodeToString(Job.serializer(), job)}")
 
     val properties = Properties().apply {
-        put("user", System.getenv("DB_USER"))
-        put("password", System.getenv("DB_PASSWORD"))
-        put("warehouse", System.getenv("DB_WAREHOUSE"))
-        put("db", System.getenv("DB_DATABASE"))
-        put("schema", System.getenv("DB_SCHEMA"))
+        put("user", unwrapEnvOrError("DB_USER"))
+        put("password", unwrapEnvOrError("DB_PASSWORD"))
+        put("warehouse", unwrapEnvOrError("DB_WAREHOUSE"))
+        put("db", unwrapEnvOrError("DB_DATABASE"))
+        put("schema", unwrapEnvOrError("DB_SCHEMA"))
         put("networkTimeout", "30")
         put("queryTimeout", "30")
     }
-    val dbConnection = DriverManager.getConnection("jdbc:snowflake://${System.getenv("DB_HOST")}.snowflakecomputing.com", properties)
+    val dbConnection = DriverManager.getConnection("jdbc:snowflake://${unwrapEnvOrError("DB_HOST")}.snowflakecomputing.com", properties)
 
-    val provenanceUri = URI(System.getenv("PROVENANCE_GRPC_URL"))
+    val provenanceUri = URI(unwrapEnvOrError("PROVENANCE_GRPC_URL"))
     val channel = ManagedChannelBuilder
         .forAddress(provenanceUri.host, provenanceUri.port)
         .also {
@@ -76,15 +60,17 @@ fun main(args: Array<String>) {
             }
         }
         .build()
-    val semaphore = Semaphore(System.getenv("GRPC_CONCURRENCY")?.toInt() ?: 20)
+    val semaphore = Semaphore(System.getenv("GRPC_CONCURRENCY")?.toInt() ?: Const.DEFAULT_GRPC_CONCURRENCY)
     val provenanceClient = ProvenanceClient(channel, semaphore)
 
     runBlocking {
         val latestBlock = provenanceClient.getLatestBlock()
+        val latestBlockTime = requireNotNull(latestBlock.block.dateTime()) { "Block at ${latestBlock.block.header.height} has invalid block time" }
 
         // Set default fields present on every row. These may not be used in all queries.
         val defaultData = mapOf(
-            "timestamp" to latestBlock.block.header.time.seconds.toString(),
+            "timestamp" to latestBlockTime.format(DateTimeFormatter.ISO_DATE_TIME).toString(),
+            "date" to latestBlockTime.toLocalDate().format(DateTimeFormatter.ISO_DATE).toString(),
             "height" to latestBlock.block.header.height.toString(),
         )
 
@@ -104,7 +90,6 @@ fun main(args: Array<String>) {
                     // TODO acc is useless here based on the TODO above
                     acc + result.map { row ->
                         source.columns.mapIndexed { index, column ->
-                            log.info("$index $column ${row[index]}")
                             column to row[index].toString()
                         }.toMap() + defaultData
                     }
@@ -121,6 +106,6 @@ fun main(args: Array<String>) {
 
         sourceStepResult
             .filterColumns(job.query.output)
-            .output(job.query.output, log)
+            .output(environment, job.name, job.query.output, log)
     }
 }

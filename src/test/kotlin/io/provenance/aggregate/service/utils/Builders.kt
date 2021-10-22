@@ -2,15 +2,15 @@ package io.provenance.aggregate.service.test.utils
 
 import com.squareup.moshi.Moshi
 import io.provenance.aggregate.service.DispatcherProvider
-import io.provenance.aggregate.service.aws.AwsClient
-import io.provenance.aggregate.service.aws.dynamodb.client.DynamoClient
+import io.provenance.aggregate.common.aws.AwsClient
+import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.EventStreamService
 import io.provenance.aggregate.service.stream.TendermintServiceClient
-import io.provenance.aggregate.service.stream.models.ABCIInfoResponse
-import io.provenance.aggregate.service.stream.models.BlockResponse
-import io.provenance.aggregate.service.stream.models.BlockResultsResponse
-import io.provenance.aggregate.service.stream.models.BlockchainResponse
+import io.provenance.aggregate.common.models.ABCIInfoResponse
+import io.provenance.aggregate.common.models.BlockResponse
+import io.provenance.aggregate.common.models.BlockResultsResponse
+import io.provenance.aggregate.common.models.BlockchainResponse
 import io.provenance.aggregate.service.test.mocks.MockAwsClient
 import io.provenance.aggregate.service.test.mocks.MockEventStreamService
 import io.provenance.aggregate.service.test.mocks.MockTendermintServiceClient

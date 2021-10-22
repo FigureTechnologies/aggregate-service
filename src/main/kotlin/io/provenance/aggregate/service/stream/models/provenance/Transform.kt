@@ -1,6 +1,6 @@
 package io.provenance.aggregate.service.stream.models.provenance
 
-import io.provenance.aggregate.service.extensions.repeatDecodeBase64
+import io.provenance.aggregate.common.extensions.repeatDecodeBase64
 
 /**
  * Used to transform a delegate value in the context of map-backed delegate by repeatedly base64-decoding the

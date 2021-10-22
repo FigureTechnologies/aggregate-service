@@ -1,7 +1,7 @@
 package io.provenance.aggregate.service.test.mocks
 
-import io.provenance.aggregate.service.aws.s3.client.DefaultS3Client
-import io.provenance.aggregate.service.aws.s3.S3Bucket
+import io.provenance.aggregate.common.aws.s3.client.DefaultS3Client
+import io.provenance.aggregate.common.aws.s3.S3Bucket
 import kotlinx.coroutines.future.await
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.model.*

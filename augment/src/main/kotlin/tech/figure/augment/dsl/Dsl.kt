@@ -2,22 +2,6 @@ package tech.figure.augment.dsl
 
 import kotlinx.serialization.Serializable
 
-// name: nycb_account_balance
-// cron: "<cron schedule>"
-// type: grpc
-// query:
-// select: balance
-// from: bank
-// where: account.tag = "nycb.passport.pb"
-
-// source:
-//   db:
-//   table: attributes
-//   filter: value = ""
-//   rpc:
-//   module: bank
-//   denom: denom
-
 // TODO validate function on all builder classes?
 
 @Serializable
@@ -85,6 +69,13 @@ class DbSource(val columns: List<String>, val table: String, val filter: DbFilte
             false
         }
     }
+
+    override fun hashCode(): Int {
+        var result = columns.hashCode()
+        result = 31 * result + table.hashCode()
+        result = 31 * result + (filter?.hashCode() ?: 0)
+        return result
+    }
 }
 @Serializable
 class RpcSource(val module: Module, val filter: RpcFilter?) : Source() {
@@ -96,6 +87,12 @@ class RpcSource(val module: Module, val filter: RpcFilter?) : Source() {
         } else {
             false
         }
+    }
+
+    override fun hashCode(): Int {
+        var result = module.hashCode()
+        result = 31 * result + (filter?.hashCode() ?: 0)
+        return result
     }
 }
 
@@ -196,16 +193,28 @@ class LoggingOutput(val columns: List<String>) : Output() {
             false
         }
     }
+
+    override fun hashCode(): Int {
+        return columns.hashCode()
+    }
 }
-class S3Output(val columns: List<String>) : Output() {
+@Serializable
+class S3Output(val bucket: String, val tableName: String, val columns: List<String>) : Output() {
     override fun equals(other: Any?): Boolean {
         return if (other?.javaClass == javaClass) {
             val o = (other as S3Output)
 
-            return columns.all { o.columns.contains(it) } && columns.size == o.columns.size
+            return bucket == o.bucket && tableName == o.tableName && columns.all { o.columns.contains(it) } && columns.size == o.columns.size
         } else {
             false
         }
+    }
+
+    override fun hashCode(): Int {
+        var result = bucket.hashCode()
+        result = 31 * result + tableName.hashCode()
+        result = 31 * result + columns.hashCode()
+        return result
     }
 }
 
@@ -220,13 +229,15 @@ class LoggingOutputBuilder {
 }
 
 class S3OutputBuilder {
+    var bucket: String = ""
+    var tableName: String = ""
     private val columns = mutableListOf<String>()
 
     fun column(block: () -> String) {
         columns.add(block())
     }
 
-    fun build(): S3Output = S3Output(columns)
+    fun build(): S3Output = S3Output(bucket, tableName, columns)
 }
 
 typealias Row = Map<String, String>

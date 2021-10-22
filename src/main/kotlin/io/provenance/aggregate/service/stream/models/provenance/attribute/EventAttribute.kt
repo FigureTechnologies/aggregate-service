@@ -1,6 +1,6 @@
 package io.provenance.aggregate.service.stream.models.provenance.attribute
 
-import io.provenance.aggregate.service.extensions.*
+import io.provenance.aggregate.common.extensions.*
 import io.provenance.aggregate.service.stream.models.provenance.MappedProvenanceEvent
 import io.provenance.aggregate.service.stream.models.provenance.EventMapper
 import io.provenance.aggregate.service.stream.models.provenance.FromAttributeMap

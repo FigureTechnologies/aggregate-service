@@ -5,7 +5,7 @@ import com.squareup.moshi.Moshi
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
 import io.provenance.aggregate.service.DispatcherProvider
-import io.provenance.aggregate.service.logger
+import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.service.stream.EventStreamService
 import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
 import io.provenance.aggregate.service.test.utils.Defaults

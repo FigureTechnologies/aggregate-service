@@ -11,4 +11,4 @@ pluginManagement {
     }
 }
 
-include("augment")
+include("augment", "common")

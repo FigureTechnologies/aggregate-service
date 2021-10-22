@@ -1,8 +1,8 @@
 package io.provenance.aggregate.service.test.stream.extractors.csv.impl
 
-import io.provenance.aggregate.service.extensions.toISOString
+import io.provenance.aggregate.common.extensions.toISOString
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
-import io.provenance.aggregate.service.stream.models.StreamBlock
+import io.provenance.aggregate.common.models.StreamBlock
 
 /**
  * Extract transaction attributes (add, update, delete, delete distinct) to CSV.

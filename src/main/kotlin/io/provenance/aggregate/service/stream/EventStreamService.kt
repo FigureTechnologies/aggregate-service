@@ -6,8 +6,8 @@ import com.tinder.scarlet.WebSocket
 import com.tinder.scarlet.lifecycle.LifecycleRegistry
 import com.tinder.scarlet.ws.Receive
 import com.tinder.scarlet.ws.Send
-import io.provenance.aggregate.service.stream.models.Block
-import io.provenance.aggregate.service.stream.models.BlockResultsResponseResultEvents
+import io.provenance.aggregate.common.models.Block
+import io.provenance.aggregate.common.models.BlockResultsResponseResultEvents
 import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
 import kotlinx.coroutines.channels.ReceiveChannel
 

@@ -1,6 +1,6 @@
 package io.provenance.aggregate.service.stream.models.provenance.cosmos
 
-import io.provenance.aggregate.service.extensions.transform
+import io.provenance.aggregate.common.extensions.transform
 import io.provenance.aggregate.service.stream.models.provenance.EventMapper
 import io.provenance.aggregate.service.stream.models.provenance.FromAttributeMap
 import io.provenance.aggregate.service.stream.models.provenance.MappedProvenanceEvent
