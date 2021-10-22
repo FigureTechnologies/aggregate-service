@@ -12,6 +12,7 @@ import io.grpc.stub.MetadataUtils
 import kotlinx.coroutines.guava.asDeferred
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import tech.figure.augment.Const
 import java.util.concurrent.TimeUnit
 
 object ProvenanceConst {
@@ -28,7 +29,7 @@ class ProvenanceClient(
     suspend fun getLatestBlock(): GetLatestBlockResponse =
         semaphore.withPermit {
             nodeService
-                .withDeadlineAfter(10, TimeUnit.SECONDS)
+                .withDeadlineAfter(Const.DEFAULT_GRPC_DEADLINE, TimeUnit.SECONDS)
                 .getLatestBlock(
                     GetLatestBlockRequest.getDefaultInstance()
                 ).asDeferred().await()
@@ -41,7 +42,7 @@ class ProvenanceClient(
     ): BankOuterClass.QueryBalanceResponse =
         semaphore.withPermit {
             bankService
-                .withDeadlineAfter(10, TimeUnit.SECONDS)
+                .withDeadlineAfter(Const.DEFAULT_GRPC_DEADLINE, TimeUnit.SECONDS)
                 .addBlockHeight(blockHeight)
                 .balance(BankOuterClass.QueryBalanceRequest.newBuilder()
                     .setAddress(address)

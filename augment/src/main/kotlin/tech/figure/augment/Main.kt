@@ -24,29 +24,31 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Properties
 
+fun unwrapEnvOrError(variable: String): String = requireNotNull(System.getenv(variable)) { "Missing $variable" }
+
 fun main(args: Array<String>) {
     val log = LoggerFactory.getLogger("main")
-    val job = Json.decodeFromString(Job.serializer(), System.getenv("JOB_JSON"))
-    val environment: Environment = runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
+    val job = Json.decodeFromString(Job.serializer(), unwrapEnvOrError("JOB_JSON"))
+    val environment: Environment = runCatching { Environment.valueOf(unwrapEnvOrError("ENVIRONMENT")) }
         .getOrElse {
-            error("Not a valid environment: ${System.getenv("ENVIRONMENT")}")
+            error("Not a valid environment: ${unwrapEnvOrError("ENVIRONMENT")}")
         }
 
     log.info("Running job - ${job.name}")
     log.info("Job config - ${Json.encodeToString(Job.serializer(), job)}")
 
     val properties = Properties().apply {
-        put("user", System.getenv("DB_USER"))
-        put("password", System.getenv("DB_PASSWORD"))
-        put("warehouse", System.getenv("DB_WAREHOUSE"))
-        put("db", System.getenv("DB_DATABASE"))
-        put("schema", System.getenv("DB_SCHEMA"))
+        put("user", unwrapEnvOrError("DB_USER"))
+        put("password", unwrapEnvOrError("DB_PASSWORD"))
+        put("warehouse", unwrapEnvOrError("DB_WAREHOUSE"))
+        put("db", unwrapEnvOrError("DB_DATABASE"))
+        put("schema", unwrapEnvOrError("DB_SCHEMA"))
         put("networkTimeout", "30")
         put("queryTimeout", "30")
     }
-    val dbConnection = DriverManager.getConnection("jdbc:snowflake://${System.getenv("DB_HOST")}.snowflakecomputing.com", properties)
+    val dbConnection = DriverManager.getConnection("jdbc:snowflake://${unwrapEnvOrError("DB_HOST")}.snowflakecomputing.com", properties)
 
-    val provenanceUri = URI(System.getenv("PROVENANCE_GRPC_URL"))
+    val provenanceUri = URI(unwrapEnvOrError("PROVENANCE_GRPC_URL"))
     val channel = ManagedChannelBuilder
         .forAddress(provenanceUri.host, provenanceUri.port)
         .also {
@@ -57,7 +59,7 @@ fun main(args: Array<String>) {
             }
         }
         .build()
-    val semaphore = Semaphore(System.getenv("GRPC_CONCURRENCY")?.toInt() ?: 10)
+    val semaphore = Semaphore(System.getenv("GRPC_CONCURRENCY")?.toInt() ?: Const.DEFAULT_GRPC_CONCURRENCY)
     val provenanceClient = ProvenanceClient(channel, semaphore)
 
     runBlocking {
