@@ -1,57 +1,54 @@
+# Sample serverless.yml used to create and deploy the necessary s3 bucket and dynamoDB tables
+
 service: aggregate-service
 
 provider:
   name: aws
   region: us-east-1
-  stage: ${opt:stage, self:custom.defaultStage}
-
-custom:
-  defaultStage: default
-  environment: ${file(env.yml):${self:provider.stage}, file(env.yml):default}
 
 resources:
   Resources:
     S3Assets:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: ${self:custom.environment.AWS_S3_BUCKET_NAME}
+        BucketName: provenance-dw
     BlockBatchTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:custom.environment.AWS_DYNAMODB_BLOCK_BATCH_TABLE_NAME}
+        TableName: Aggregate-Service-Block-Batch
         AttributeDefinitions:
           - AttributeName: BatchId
             AttributeType: S
         KeySchema:
           - AttributeName: BatchId
             KeyType: HASH
-        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 50 reads and writes for now.
+        ProvisionedThroughput:
           ReadCapacityUnits: 50
           WriteCapacityUnits: 50
     BlockMetadataTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:custom.environment.AWS_DYNAMODB_BLOCK_METADATA_TABLE_NAME}
+        TableName: Aggregate-Service-Block-Metadata
         AttributeDefinitions:
           - AttributeName: BlockHeight
             AttributeType: N
         KeySchema:
           - AttributeName: BlockHeight
             KeyType: HASH
-        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 50 reads and writes for now.
+        ProvisionedThroughput:
           ReadCapacityUnits: 300
           WriteCapacityUnits: 50
     ServiceMetadataTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:custom.environment.AWS_DYNAMODB_SERVICE_METADATA_TABLE_NAME}
+        TableName: Aggregate-Service-Metadata
         AttributeDefinitions:
           - AttributeName: Property
             AttributeType: S
         KeySchema:
           - AttributeName: Property
             KeyType: HASH
-        ProvisionedThroughput: # Might need to turn on auto-scaling, default to 50 reads and writes for now.
+        ProvisionedThroughput:
           ReadCapacityUnits: 50
           WriteCapacityUnits: 50
 
