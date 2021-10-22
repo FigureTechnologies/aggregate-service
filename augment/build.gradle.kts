@@ -23,7 +23,7 @@ dependencies {
     implementation("commons-io", "commons-io", Version.ApacheCommons.IO)
     implementation("org.apache.commons", "commons-lang3", Version.ApacheCommons.Lang3)
 
-    implementation("io.provenance.protobuf:pb-proto-java:1.7.0")
+    implementation("io.provenance.protobuf:pb-proto-java:${Version.Provenance}")
     implementation("io.grpc:grpc-protobuf:${Version.GRPC}")
     implementation("io.grpc:grpc-stub:${Version.GRPC}")
     implementation("ch.qos.logback:logback-classic:1.0.13")

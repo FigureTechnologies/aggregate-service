@@ -65,7 +65,7 @@ class EventStreamUploader(
     private val extractorClassNames: MutableList<String> = mutableListOf()
 
     private fun csvS3Key(id: BatchId, d: OffsetDateTime?, label: String): S3Key =
-        S3Key("${d?.run { S3Key.createPrefix(this) } ?: "undated"}/${id}/${label}.csv")
+        S3Key.create(d ?: OffsetDateTime.MIN, id.value, "$label.csv")
 
     /**
      * The fully-qualified class names of the Class instances to load.

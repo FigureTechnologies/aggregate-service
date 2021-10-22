@@ -2,9 +2,9 @@ package io.provenance.aggregate.common.extensions
 
 import com.google.common.io.BaseEncoding
 import com.timgroup.statsd.StatsDClient
+import io.provenance.aggregate.common.aws.s3.S3Key
 import io.provenance.aggregate.common.utils.sha256
 import org.apache.commons.lang3.StringUtils
-import org.json.JSONArray
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.properties.ReadOnlyProperty

@@ -66,11 +66,11 @@ suspend fun Data.output(environment: Environment, jobName: String, output: Outpu
             }
         }
 
-        val key = S3Key("${S3Key.createPrefix(OffsetDateTime.now())}/cron/${jobName}_${UUID.randomUUID()}.csv")
+        val key = S3Key.create(OffsetDateTime.now(), "cron", "${jobName}_${UUID.randomUUID()}.csv")
         client.s3().streamObject(object : StreamableObject {
             override val key: S3Key get() = key
             override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(outputFile)
-            override val metadata: Map<String, String>? get() = mapOf("TableName" to output.tableName)
+            override val metadata: Map<String, String> get() = mapOf("TableName" to output.tableName)
         })
 
         log.info("$jobName output file written to ${key.value}")

@@ -3,8 +3,14 @@ package io.provenance.aggregate.common.models.extensions
 import io.provenance.aggregate.common.extensions.decodeBase64
 import io.provenance.aggregate.common.extensions.hash
 import io.provenance.aggregate.common.models.*
+import tendermint.types.Types.Header as GrpcHeader
+import java.time.Instant
+import tendermint.types.BlockOuterClass.Block as GrpcBlock
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+
+// === RPC ========================================================================================================
 
 fun Block.txHash(index: Int): String? = this.data?.txs?.get(index)?.hash()
 
@@ -92,3 +98,10 @@ fun BlockResultsResponseResultEvents.toTxEvent(
 fun List<Event>.toDecodedMap(): Map<String, String?> =
     this.mapNotNull { e -> e.key?.let { it.decodeBase64() to e.value } }
         .toMap()
+
+// === gRPC ========================================================================================================
+
+fun GrpcBlock.dateTime() = this.header.dateTime()
+
+fun GrpcHeader.dateTime(): OffsetDateTime? =
+    runCatching { OffsetDateTime.ofInstant(Instant.ofEpochSecond(this.time.seconds), ZoneOffset.UTC) }.getOrNull()

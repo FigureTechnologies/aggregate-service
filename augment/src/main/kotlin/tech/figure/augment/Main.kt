@@ -2,6 +2,7 @@ package tech.figure.augment
 
 import io.grpc.ManagedChannelBuilder
 import io.provenance.aggregate.common.Environment
+import io.provenance.aggregate.common.models.extensions.dateTime
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -64,7 +65,7 @@ fun main(args: Array<String>) {
 
     runBlocking {
         val latestBlock = provenanceClient.getLatestBlock()
-        val latestBlockTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(latestBlock.block.header.time.seconds), ZoneOffset.UTC)
+        val latestBlockTime = requireNotNull(latestBlock.block.dateTime()) { "Block at ${latestBlock.block.header.height} has invalid block time" }
 
         // Set default fields present on every row. These may not be used in all queries.
         val defaultData = mapOf(

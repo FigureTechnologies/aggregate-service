@@ -24,7 +24,7 @@ object Version {
 
     const val Logback = "0.1.5"
     const val Moshi = "1.12.0"
-    const val Provenance = "1.5.0"
+    const val Provenance = "1.7.0"
     const val Scarlet = "0.1.12"
     const val AWSSDK = "2.17.32"
     const val LocalStack = "0.2.15"
