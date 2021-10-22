@@ -275,20 +275,6 @@ class EventStream(
     private val responseMessageDecoder: MessageType.Decoder = MessageType.Decoder(moshi)
 
     /**
-     * A conflated channel to hold the last block seen in the stream.
-     *
-     * From the Kotlin docs:
-     *
-     *  > When capacity is [KChannel.CONFLATED] — it creates a conflated channel This channel buffers at most one element
-     *  and conflates all subsequent [KChannel.send] and [KChannel.trySend] invocations, so that the receiver always
-     *  gets the last element sent. Back-to-back sent elements are conflated — only the last sent element is received,
-     *  while previously sent elements are lost. Sending to this channel never suspends, and trySend always succeeds.
-     *
-     * @see [KChannel]]
-     */
-    //private val lastHistoricBlock: KChannel<StreamBlock> = KChannel<StreamBlock>(KChannel.CONFLATED)
-
-    /**
      * A serializer function that converts a [StreamBlock] instance to a JSON string.
      *
      * @return (StreamBlock) -> String
@@ -452,39 +438,20 @@ class EventStream(
         return blockHeights.chunked(options.batchSize)
             .asFlow()
             .transform { chunkOfHeights: List<Pair<Long, BlockStorageMetadata?>> ->
-                val blocks: List<StreamBlock> = coroutineScope {
-                    chunkOfHeights.map { (height: Long, metadata: BlockStorageMetadata?) ->
-                        async {
-                            //log.info("streamHistoricalBlocks::queryBlockRange::async<${Thread.currentThread().id}>")
-                            queryBlock(Either.Left(height), skipIfNoTxs = options.skipIfEmpty)
-                                ?.let { it.copy(metadata = metadata) }
+                emitAll(
+                    coroutineScope {
+                        chunkOfHeights.map { (height: Long, metadata: BlockStorageMetadata?) ->
+                            async {
+                                queryBlock(Either.Left(height), skipIfNoTxs = options.skipIfEmpty)
+                                    ?.let { it.copy(metadata = metadata) }
+                            }
                         }
-                    }
-                        .awaitAll()
-                        .filterNotNull()
-                }
-                for (block in blocks) {
-                    emit(block)
-                }
+                            .awaitAll()
+                            .filterNotNull()
+                    }.asFlow()
+                )
             }
             .flowOn(dispatchers.io())
-        // Chunk up the heights of returned blocks, then for the heights in each block,
-        // concurrently fetch the events for each block at the given height:
-//        return channelFlow {
-//            for ((height, metadata) in blockHeights) {
-//                launch {
-//                    //log.info("querying block #${height}")
-//                    val block = queryBlock(Either.Left(height), skipIfNoTxs = options.skipIfEmpty)
-//                        ?.let {
-//                            it.copy(metadata = metadata)
-//                        }
-//                    if (block != null) {
-//                        send(block)
-//                    }
-//                }
-//            }
-//        }
-//            .flowOn(dispatchers.io())
     }
 
     /**

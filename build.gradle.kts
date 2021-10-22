@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
+    id("org.jetbrains.kotlin.kapt")
     id("com.google.protobuf") version "0.8.17"
     id("org.openapi.generator") version "5.2.1"
     application
@@ -62,6 +63,7 @@ dependencies {
     implementation("ch.qos.logback.contrib", "logback-json-classic", Version.Logback)
 
     implementation("com.squareup.moshi", "moshi-kotlin-codegen", Version.Moshi)
+    kapt("com.squareup.moshi:moshi-kotlin-codegen:${Version.Moshi}")
 
     implementation("com.sksamuel.hoplite", "hoplite-core", Version.Hoplite)
     implementation("com.sksamuel.hoplite", "hoplite-yaml", Version.Hoplite)
