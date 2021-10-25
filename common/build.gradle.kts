@@ -44,10 +44,7 @@ dependencies {
 
     implementation("com.datadoghq", "java-dogstatsd-client", Version.DatadogStats)
 
-    implementation("io.grpc", "grpc-alts", Version.GRPC)
-    implementation("io.grpc", "grpc-netty", Version.GRPC)
     implementation("io.grpc", "grpc-protobuf", Version.GRPC)
-    implementation("io.grpc", "grpc-stub", Version.GRPC)
 
     implementation("io.provenance.protobuf", "pb-proto-java", Version.Provenance)
 
