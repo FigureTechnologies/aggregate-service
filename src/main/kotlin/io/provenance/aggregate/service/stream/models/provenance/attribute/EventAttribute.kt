@@ -1,11 +1,10 @@
 package io.provenance.aggregate.service.stream.models.provenance.attribute
 
 import io.provenance.aggregate.common.extensions.*
-import io.provenance.aggregate.service.stream.models.provenance.MappedProvenanceEvent
 import io.provenance.aggregate.service.stream.models.provenance.EventMapper
 import io.provenance.aggregate.service.stream.models.provenance.FromAttributeMap
+import io.provenance.aggregate.service.stream.models.provenance.MappedProvenanceEvent
 import io.provenance.aggregate.service.stream.models.provenance.debase64
-import io.provenance.aggregate.service.stream.models.provenance.marker.EventMarker
 
 private fun toEventTypeEnum(t: String): EventAttributeType = EventAttributeType.valueOf(t)
 
@@ -41,13 +40,13 @@ sealed class EventAttribute() : FromAttributeMap {
      * of [EventAttribute].
      */
     data class ConsolidatedEvent(
-        val name: String,
+        val name: String?,
         val value: String?,
         val updatedValue: String?,
         val type: String?,
         val updatedType: String?,
-        val account: String,
-        val owner: String
+        val account: String?,
+        val owner: String?
     )
 
     /**
@@ -56,19 +55,19 @@ sealed class EventAttribute() : FromAttributeMap {
      */
     @MappedProvenanceEvent("provenance.attribute.v1.EventAttributeAdd")
     class Add(override val attributes: Map<String, String?>) : EventAttribute() {
-        val name: String by attributes.transform(::debase64)
-        val value: String by attributes.transform(::debase64)
-        val type: EventAttributeType by attributes.transform { t: String ->
+        val name: String? by attributes.transform(::debase64)
+        val value: String? by attributes.transform(::debase64)
+        val type: EventAttributeType? by attributes.transform { t: String ->
             toEventTypeEnum(debase64(t))
         }
-        val account: String by attributes.transform(::debase64)
-        val owner: String by attributes.transform(::debase64)
+        val account: String? by attributes.transform(::debase64)
+        val owner: String? by attributes.transform(::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = ConsolidatedEvent(
             name = name,
             value = value,
             updatedValue = null,
-            type = type.name,
+            type = type?.name,
             updatedType = null,
             account = account,
             owner = owner
@@ -81,24 +80,24 @@ sealed class EventAttribute() : FromAttributeMap {
      */
     @MappedProvenanceEvent("provenance.attribute.v1.EventAttributeUpdate")
     class Update(override val attributes: Map<String, String?>) : EventAttribute() {
-        val name: String by attributes.transform(::debase64)
-        val originalValue: String by attributes.transform("original_value", ::debase64)
-        val originalType: EventAttributeType by attributes.transform("original_type") { t: String ->
+        val name: String? by attributes.transform(::debase64)
+        val originalValue: String? by attributes.transform("original_value", ::debase64)
+        val originalType: EventAttributeType? by attributes.transform("original_type") { t: String ->
             toEventTypeEnum(debase64(t))
         }
-        val updateValue: String by attributes.transform("update_value", ::debase64)
-        val updateType: EventAttributeType by attributes.transform("update_type") { t: String ->
+        val updateValue: String? by attributes.transform("update_value", ::debase64)
+        val updateType: EventAttributeType? by attributes.transform("update_type") { t: String ->
             toEventTypeEnum(debase64(t))
         }
-        val account: String by attributes.transform(::debase64)
-        val owner: String by attributes.transform(::debase64)
+        val account: String? by attributes.transform(::debase64)
+        val owner: String? by attributes.transform(::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = ConsolidatedEvent(
             name = name,
             value = originalValue,
             updatedValue = updateValue,
-            type = originalType.name,
-            updatedType = updateType.name,
+            type = originalType?.name,
+            updatedType = updateType?.name,
             account = account,
             owner = owner
         )
@@ -110,9 +109,9 @@ sealed class EventAttribute() : FromAttributeMap {
      */
     @MappedProvenanceEvent("provenance.attribute.v1.EventAttributeDelete")
     class Delete(override val attributes: Map<String, String?>) : EventAttribute() {
-        val name: String by attributes.transform(::debase64)
-        val account: String by attributes.transform(::debase64)
-        val owner: String by attributes.transform(::debase64)
+        val name: String? by attributes.transform(::debase64)
+        val account: String? by attributes.transform(::debase64)
+        val owner: String? by attributes.transform(::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = ConsolidatedEvent(
             name = name,
@@ -131,19 +130,19 @@ sealed class EventAttribute() : FromAttributeMap {
      */
     @MappedProvenanceEvent("provenance.attribute.v1.EventAttributeDistinctDelete")
     class DistinctDelete(override val attributes: Map<String, String?>) : EventAttribute() {
-        val name: String by attributes.transform(::debase64)
-        val value: String by attributes.transform(::debase64)
-        val attributeType: EventAttributeType by attributes.transform("attribute_type") { t: String ->
+        val name: String? by attributes.transform(::debase64)
+        val value: String? by attributes.transform(::debase64)
+        val attributeType: EventAttributeType? by attributes.transform("attribute_type") { t: String ->
             toEventTypeEnum(debase64(t))
         }
-        val account: String by attributes.transform(::debase64)
-        val owner: String by attributes.transform(::debase64)
+        val account: String? by attributes.transform(::debase64)
+        val owner: String? by attributes.transform(::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = ConsolidatedEvent(
             name = name,
             value = value,
             updatedValue = null,
-            type = attributeType.name,
+            type = attributeType?.name,
             updatedType = null,
             account = account,
             owner = owner

@@ -67,8 +67,8 @@ sealed class EventMarker() : FromAttributeMap {
 
     @MappedProvenanceEvent("provenance.marker.v1.EventMarkerActivate")
     class Activate(override val attributes: Map<String, String?>) : EventMarker() {
-        val denom: String by attributes.transform(::debase64)
-        val administrator: String by attributes.transform(::debase64)
+        val denom: String? by attributes.transform(::debase64)
+        val administrator: String? by attributes.transform(::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent {
             return object : ConsolidatedEvent(
@@ -82,9 +82,9 @@ sealed class EventMarker() : FromAttributeMap {
 
     @MappedProvenanceEvent("provenance.marker.v1.EventMarkerBurn")
     class Burn(override val attributes: Map<String, String?>) : EventMarker() {
-        val amount: String by attributes.transform(::debase64)
-        val denom: String by attributes.transform(::debase64)
-        val administrator: String by attributes.transform(::debase64)
+        val amount: String? by attributes.transform(::debase64)
+        val denom: String? by attributes.transform(::debase64)
+        val administrator: String? by attributes.transform(::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = object : ConsolidatedEvent(
             amount = amount,
@@ -97,8 +97,8 @@ sealed class EventMarker() : FromAttributeMap {
 
     @MappedProvenanceEvent("provenance.marker.v1.EventMarkerCancel")
     class Cancel(override val attributes: Map<String, String?>) : EventMarker() {
-        val denom: String by attributes.transform(::debase64)
-        val administrator: String by attributes.transform(::debase64)
+        val denom: String? by attributes.transform(::debase64)
+        val administrator: String? by attributes.transform(::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = object : ConsolidatedEvent(
             denom = denom,
@@ -110,8 +110,8 @@ sealed class EventMarker() : FromAttributeMap {
 
     @MappedProvenanceEvent("provenance.marker.v1.EventMarkerDelete")
     class Delete(override val attributes: Map<String, String?>) : EventMarker() {
-        val denom: String by attributes.transform(::debase64)
-        val administrator: String by attributes.transform(::debase64)
+        val denom: String? by attributes.transform(::debase64)
+        val administrator: String? by attributes.transform(::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = object : ConsolidatedEvent(
             denom = denom,
@@ -123,8 +123,8 @@ sealed class EventMarker() : FromAttributeMap {
 
     @MappedProvenanceEvent("provenance.marker.v1.EventMarkerFinalize")
     class Finalize(override val attributes: Map<String, String?>) : EventMarker() {
-        val denom: String by attributes.transform(::debase64)
-        val administrator: String by attributes.transform(::debase64)
+        val denom: String? by attributes.transform(::debase64)
+        val administrator: String? by attributes.transform(::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = object : ConsolidatedEvent(
             denom = denom,
@@ -136,9 +136,9 @@ sealed class EventMarker() : FromAttributeMap {
 
     @MappedProvenanceEvent("provenance.marker.v1.EventMarkerMint")
     class Mint(override val attributes: Map<String, String?>) : EventMarker() {
-        val amount: String by attributes.transform(::debase64)
-        val denom: String by attributes.transform(::debase64)
-        val administrator: String by attributes.transform(::debase64)
+        val amount: String? by attributes.transform(::debase64)
+        val denom: String? by attributes.transform(::debase64)
+        val administrator: String? by attributes.transform(::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = object : ConsolidatedEvent(
             amount = amount,
@@ -151,13 +151,13 @@ sealed class EventMarker() : FromAttributeMap {
 
     @MappedProvenanceEvent("provenance.marker.v1.EventMarkerSetDenomMetadata")
     class SetDenomMetadata(override val attributes: Map<String, String?>) : EventMarker() {
-        val metadataBase: String by attributes.transform("metadata_base", ::debase64)
-        val metadataDescription: String by attributes.transform("metadata_description", ::debase64)
-        val metadataDisplay: String by attributes.transform("metadata_display", ::debase64)
-        val metadataDenomUnits: String by attributes.transform("metadata_denom_units", ::debase64)
-        val administrator: String by attributes.transform(::debase64)
-        val metadataName: String by attributes.transform("metadata_name", ::debase64)
-        val metadataSymbol: String by attributes.transform("metadata_symbol", ::debase64)
+        val metadataBase: String? by attributes.transform("metadata_base", ::debase64)
+        val metadataDescription: String? by attributes.transform("metadata_description", ::debase64)
+        val metadataDisplay: String? by attributes.transform("metadata_display", ::debase64)
+        val metadataDenomUnits: String? by attributes.transform("metadata_denom_units", ::debase64)
+        val administrator: String? by attributes.transform(::debase64)
+        val metadataName: String? by attributes.transform("metadata_name", ::debase64)
+        val metadataSymbol: String? by attributes.transform("metadata_symbol", ::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = object : ConsolidatedEvent(
             metadataBase = metadataBase,
@@ -174,11 +174,11 @@ sealed class EventMarker() : FromAttributeMap {
 
     @MappedProvenanceEvent("provenance.marker.v1.EventMarkerTransfer")
     class Transfer(override val attributes: Map<String, String?>) : EventMarker() {
-        val amount: String by attributes.transform(::debase64)
-        val denom: String by attributes.transform(::debase64)
-        val administrator: String by attributes.transform(::debase64)
-        val toAddress: String by attributes.transform("to_address", ::debase64)
-        val fromAddress: String by attributes.transform("from_address", ::debase64)
+        val amount: String? by attributes.transform(::debase64)
+        val denom: String? by attributes.transform(::debase64)
+        val administrator: String? by attributes.transform(::debase64)
+        val toAddress: String? by attributes.transform("to_address", ::debase64)
+        val fromAddress: String? by attributes.transform("from_address", ::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = object : ConsolidatedEvent(
             amount = amount,
@@ -193,10 +193,10 @@ sealed class EventMarker() : FromAttributeMap {
 
     @MappedProvenanceEvent("provenance.marker.v1.EventMarkerWithdraw")
     class Withdraw(override val attributes: Map<String, String?>) : EventMarker() {
-        val coins: String by attributes.transform(::debase64)
-        val denom: String by attributes.transform(::debase64)
-        val administrator: String by attributes.transform(::debase64)
-        val toAddress: String by attributes.transform("to_address", ::debase64)
+        val coins: String? by attributes.transform(::debase64)
+        val denom: String? by attributes.transform(::debase64)
+        val administrator: String? by attributes.transform(::debase64)
+        val toAddress: String? by attributes.transform("to_address", ::debase64)
 
         override fun toEventRecord(): ConsolidatedEvent = object : ConsolidatedEvent(
             coins = coins,

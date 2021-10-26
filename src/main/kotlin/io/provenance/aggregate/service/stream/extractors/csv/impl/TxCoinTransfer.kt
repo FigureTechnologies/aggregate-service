@@ -48,15 +48,16 @@ class TxCoinTransfer : CSVFileExtractor(
                 ?.let { record: CosmosTx ->
                     when (record) {
                         is CosmosTx.Transfer -> {
-                            val (amount, denom) = splitAmountAndDenom(record.amountAndDenom)
+                            val amountAndDenom: Pair<String, String>? =
+                                record.amountAndDenom?.let { splitAmountAndDenom(it) }
                             syncWriteRecord(
                                 event.eventType,
                                 event.blockHeight,
                                 event.blockDateTime?.toISOString(),
                                 record.recipient,
                                 record.sender,
-                                amount,
-                                denom,
+                                amountAndDenom?.first,  // amount
+                                amountAndDenom?.second,  // denom
                                 includeHash = true
                             )
                         }
