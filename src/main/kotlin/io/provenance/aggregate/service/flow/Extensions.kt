@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlin.math.max
@@ -106,6 +108,9 @@ fun <T> Flow<T>.windowed(size: Int, step: Int, partialWindows: Boolean, timeout:
  *
  * This is more efficient, than using flow.windowed(...).map { ... }
  *
+ * If [timeout] is provided, if an element has been been received within the duration given by [timeout], the chunk
+ * will be emitted if it is non-empty.
+ *
  * Both [size] and [step] must be positive and can be greater than the number of elements in this collection.
  * @property size the number of elements to take in each window
  * @property step the number of elements to move the window forward by on an each step.
@@ -139,6 +144,9 @@ fun <T, R> Flow<T>.windowed(
         var skipped: Int = toSkip
         var lastEmittedAt: Instant? = null
         val pollInterval = Duration.seconds(2)
+        val mutex = Mutex()
+        // Are we using a chunk watcher?
+        val withChunkWatcher: Boolean = timeout != null
 
         fun updateEmissionTime() {
             lastEmittedAt = Clock.System.now()
@@ -148,6 +156,18 @@ fun <T, R> Flow<T>.windowed(
             return lastEmittedAt?.let { Clock.System.now() - it }
         }
 
+        // A mutex is only needed if we're actually using a chunk watcher, otherwise it's unnecc
+        suspend fun exclusive(block: suspend () -> Unit) {
+            if (withChunkWatcher) {
+                mutex.withLock {
+                    block()
+                }
+            } else {
+                block()
+            }
+        }
+
+        // The chunk watcher:
         // Launch a coroutine that will check the last time an element was emitted. If the elapsed time since an
         // element was collected from the parent flow exceeds `timeout`, the buffer will forcibly be emitted if the
         // buffer is non-empty.
@@ -156,11 +176,15 @@ fun <T, R> Flow<T>.windowed(
                 while (true) {
                     elapsedEmissionTime()
                         ?.also { elapsed: Duration ->
-                            if (elapsed >= timeout && buffer.isNotEmpty()) {
-                                send(transform(buffer))
-                                updateEmissionTime()
-                                repeat(min(toDrop, buffer.size)) {
-                                    buffer.removeFirst()
+                            if (elapsed >= timeout) {
+                                exclusive {
+                                    if (buffer.isNotEmpty()) {
+                                        send(transform(buffer))
+                                        updateEmissionTime()
+                                        repeat(min(toDrop, buffer.size)) {
+                                            buffer.removeFirst()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -171,28 +195,32 @@ fun <T, R> Flow<T>.windowed(
 
         collect(object : FlowCollector<T> {
             override suspend fun emit(value: T) {
-                if (toSkip == skipped) {
-                    buffer.addLast(value)
-                } else {
-                    skipped++
-                }
-
-                if (buffer.size == size) {
-                    send(transform(buffer))
-                    updateEmissionTime()
-                    repeat(toDrop) {
-                        buffer.removeFirst()
+                exclusive {
+                    if (toSkip == skipped) {
+                        buffer.addLast(value)
+                    } else {
+                        skipped++
                     }
-                    skipped = 0
+
+                    if (buffer.size == size) {
+                        send(transform(buffer))
+                        updateEmissionTime()
+                        repeat(toDrop) {
+                            buffer.removeFirst()
+                        }
+                        skipped = 0
+                    }
                 }
             }
         })
 
-        while (partialWindows && buffer.isNotEmpty()) {
-            send(transform(buffer))
-            updateEmissionTime()
-            repeat(min(toDrop, buffer.size)) {
-                buffer.removeFirst()
+        exclusive {
+            while (partialWindows && buffer.isNotEmpty()) {
+                send(transform(buffer))
+                updateEmissionTime()
+                repeat(min(toDrop, buffer.size)) {
+                    buffer.removeFirst()
+                }
             }
         }
     }
