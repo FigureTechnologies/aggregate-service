@@ -87,11 +87,14 @@ fun ByteArray.toHexString(): String = BaseEncoding.base16().encode(this)
  * Note: adapted from https://stackoverflow.com/a/36602770
  */
 @Suppress("UNCHECKED_CAST")
-fun <T, U, V> transform(properties: Map<String, Any?>, f: (U) -> V): ReadOnlyProperty<T, V> =
-    ReadOnlyProperty { _: T, property: KProperty<*> -> f(properties[property.name]!! as U) }
+fun <T, U, V> transform(properties: Map<String, Any?>, f: (U) -> V): ReadOnlyProperty<T, V?> =
+    ReadOnlyProperty { _: T, property: KProperty<*> ->
+        val v: Any? = properties[property.name]
+        v?.let { f(it as U) }
+    }
 
 @JvmName("mapDelegateOnPropertyMap")
-fun <T, U, V> Map<String, Any?>.transform(f: (U) -> V): ReadOnlyProperty<T, V> = transform(this, f)
+fun <T, U, V> Map<String, Any?>.transform(f: (U) -> V): ReadOnlyProperty<T, V?> = transform(this, f)
 
 /**
  * Use an alternative name to look up a property and apply a transformation to a delegated value.
@@ -108,11 +111,14 @@ fun <T, U, V> Map<String, Any?>.transform(f: (U) -> V): ReadOnlyProperty<T, V> =
  * Note: adapted from https://stackoverflow.com/a/36602770
  */
 @Suppress("UNCHECKED_CAST")
-fun <T, U, V> transform(properties: Map<String, Any?>, otherName: String, f: (U) -> V): ReadOnlyProperty<T, V> =
-    ReadOnlyProperty { _: T, _: KProperty<*> -> f(properties[otherName]!! as U) }
+fun <T, U, V> transform(properties: Map<String, Any?>, otherName: String, f: (U) -> V): ReadOnlyProperty<T, V?> =
+    ReadOnlyProperty { _: T, _: KProperty<*> ->
+        val v: Any? = properties[otherName]
+        v?.let { f(it as U) }
+    }
 
 @JvmName("mapAndRenameDelegateOnPropertyMap")
-fun <T, U, V> Map<String, Any?>.transform(otherName: String, f: (U) -> V): ReadOnlyProperty<T, V> =
+fun <T, U, V> Map<String, Any?>.transform(otherName: String, f: (U) -> V): ReadOnlyProperty<T, V?> =
     transform(this, otherName, f)
 
 /**
@@ -126,7 +132,7 @@ fun <T, U, V> Map<String, Any?>.transform(otherName: String, f: (U) -> V): ReadO
  *     val updateValue: String by map.alias("update_value")
  *   )
  */
-fun <T, V> Map<String, Any?>.alias(otherName: String): ReadOnlyProperty<T, V> =
+fun <T, V> Map<String, Any?>.alias(otherName: String): ReadOnlyProperty<T, V?> =
     transform<T, V, V>(this, otherName) { it }
 
 // === Data Dog ========================================================================================================

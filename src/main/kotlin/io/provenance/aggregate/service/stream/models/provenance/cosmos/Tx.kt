@@ -24,8 +24,8 @@ sealed class Tx() : FromAttributeMap {
      */
     @MappedProvenanceEvent("transfer")
     class Transfer(override val attributes: Map<String, String?>) : Tx() {
-        val recipient: String by attributes.transform(::debase64)
-        val sender: String by attributes.transform(::debase64)
-        val amountAndDenom: String by attributes.transform("amount", ::debase64)
+        val recipient: String? by attributes.transform(::debase64)
+        val sender: String? by attributes.transform(::debase64)
+        val amountAndDenom: String? by attributes.transform("amount", ::debase64)
     }
 }
