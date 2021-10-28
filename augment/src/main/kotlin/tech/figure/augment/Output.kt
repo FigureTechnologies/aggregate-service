@@ -66,7 +66,7 @@ suspend fun Data.output(environment: Environment, jobName: String, output: Outpu
             }
         }
 
-        val key = S3Key.create(OffsetDateTime.now(), "cron", "${output.tableName}_${UUID.randomUUID()}.csv")
+        val key = S3Key.create(OffsetDateTime.now(), "cron", UUID.randomUUID().toString(), "${output.tableName}.csv")
         client.s3().streamObject(object : StreamableObject {
             override val key: S3Key get() = key
             override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(outputFile)
