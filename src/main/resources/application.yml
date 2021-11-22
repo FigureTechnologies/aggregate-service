@@ -21,7 +21,7 @@ event-stream:
     uri: ${EVENT_STREAM_RPC_URI}
   batch:
     # Controls the maximum number of blocks that will be bundled into a batch for processing.
-    size: 64
+    size: ${BATCH_SIZE}
     # Controls the timeout for a batch. If a batch is incomplete and a new block has not been received within
     # `timeout` milliseconds, the batch will be emitted, despite the fact it has less the `size` blocks.
     # timeout-ms: 10000
