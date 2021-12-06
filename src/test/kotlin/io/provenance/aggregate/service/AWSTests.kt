@@ -31,7 +31,7 @@ import kotlin.time.ExperimentalTime
 @ExperimentalCoroutinesApi
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(LocalstackDockerExtension::class)
-@LocalstackDockerProperties(services = [ServiceName.S3, ServiceName.DYNAMO])
+@LocalstackDockerProperties(randomizePorts = true, services = [ServiceName.S3, ServiceName.DYNAMO])
 class AWSTests : TestBase() {
 
     private val log: Logger = logger()
