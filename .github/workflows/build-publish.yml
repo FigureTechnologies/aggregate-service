@@ -125,7 +125,7 @@ jobs:
           server-id: github
 
       - name: Build Project
-        run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION
+        run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION --stacktrace
 
       - name: Upload aggregate-service artifact
         uses: actions/upload-artifact@v2
