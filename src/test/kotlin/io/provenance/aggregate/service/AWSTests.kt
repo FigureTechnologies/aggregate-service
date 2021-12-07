@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junitpioneer.jupiter.SetEnvironmentVariable
 import org.junitpioneer.jupiter.SetEnvironmentVariable.SetEnvironmentVariables
@@ -28,6 +29,7 @@ import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledExcepti
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
+@Disabled //https://github.com/localstack/localstack/issues/4902
 @ExperimentalCoroutinesApi
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(LocalstackDockerExtension::class)

@@ -27,5 +27,5 @@ object Version {
     const val Provenance = "1.7.0"
     const val Scarlet = "0.1.12"
     const val AWSSDK = "2.17.32"
-    const val LocalStack = "0.2.15"
+    const val LocalStack = "0.2.14"
 }
