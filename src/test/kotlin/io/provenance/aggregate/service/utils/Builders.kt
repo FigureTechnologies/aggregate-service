@@ -77,6 +77,7 @@ object Builders {
         var moshi: Moshi? = null
         var options: EventStream.Options.Builder = EventStream.Options.builder()
         var includeLiveBlocks: Boolean = true
+        var gasPriceUpdate: Pair<Double, Long>? = null
 
         fun <T : EventStreamService> eventStreamService(value: T) = apply { eventStreamService = value }
         fun <T : TendermintServiceClient> tendermintService(value: T) = apply { tendermintServiceClient = value }
@@ -85,6 +86,7 @@ object Builders {
         fun dispatchers(value: DispatcherProvider) = apply { dispatchers = value }
         fun options(value: EventStream.Options.Builder) = apply { options = value }
         fun includeLiveBlocks(value: Boolean) = apply { includeLiveBlocks = value }
+        fun gasPriceUpdate(value: Pair<Double, Long>) = apply { gasPriceUpdate = value }
 
         // shortcuts for options:
         fun batchSize(value: Int) = apply { options.batchSize(value) }
@@ -108,7 +110,8 @@ object Builders {
                 dynamo = dynamoInterface ?: defaultAws().build().dynamo(),
                 moshi = moshi ?: Defaults.moshi,
                 dispatchers = dispatchers,
-                options = options.build()
+                options = options.build(),
+                gasPriceUpdate = gasPriceUpdate ?: Pair(0.025, 0)
             )
         }
     }

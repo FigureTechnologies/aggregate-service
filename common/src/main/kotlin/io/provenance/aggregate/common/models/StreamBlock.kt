@@ -12,6 +12,7 @@ data class StreamBlock(
     val block: Block,
     val blockEvents: List<BlockEvent>,
     val txEvents: List<TxEvent>,
+    val txErrors: List<TxError>,
     val historical: Boolean = false,
     val metadata: BlockStorageMetadata? = null
 ) {
