@@ -15,7 +15,7 @@ class TxMemorializeContract: CSVFileExtractor(
         "block_height",
         "block_timestamp",
         "fee",
-        "denom"
+        "fee_denom"
     )
 ) {
     override suspend fun extract(block: StreamBlock) {
