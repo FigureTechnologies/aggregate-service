@@ -12,6 +12,6 @@ data class TxError (
     val blockDateTime: OffsetDateTime?,
     val code: Long,
     val info: String,
-    val fee: Int?,
+    val fee: Long?,
     val feeDenom: String? = "nhash"
 )

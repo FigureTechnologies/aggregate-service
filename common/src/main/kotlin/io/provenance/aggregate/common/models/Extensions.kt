@@ -35,7 +35,7 @@ fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, gasPrice
                         height,
                         blockDateTime,
                         txHash(index),
-                        (tx.gasWanted?.toInt()?.times(gasPrice))
+                        (tx.gasWanted?.toLong()?.times(gasPrice))
                     )
                 }
                 ?: emptyList()
@@ -50,7 +50,7 @@ fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, g
                 it.toBlockError(
                     blockHeight = height,
                     blockDateTime = blockDateTime,
-                    fee = (it.gasWanted?.toInt()?.times(gasPrice))
+                    fee = (it.gasWanted?.toLong()?.times(gasPrice))
                 )
             )
         }
@@ -64,7 +64,7 @@ fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDa
         blockDateTime = blockDateTime,
         code = this.code!!.toLong(),
         info = this.log ?: "",
-        fee = fee?.toInt()
+        fee = fee?.toLong()
     )
 
 fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List<BlockEvent> = run {
@@ -96,7 +96,7 @@ fun BlockResultsResponseResultEvents.toTxEvent(
         blockHeight = blockHeight,
         blockDateTime = blockDateTime,
         txHash = txHash,
-        fee = fee?.toInt(),
+        fee = fee?.toLong(),
         eventType = this.type ?: "",
         attributes = this.attributes ?: emptyList()
     )

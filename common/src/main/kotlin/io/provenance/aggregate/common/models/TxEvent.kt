@@ -12,7 +12,7 @@ data class TxEvent(
     val blockHeight: Long,
     val blockDateTime: OffsetDateTime?,
     val txHash: String,
-    val fee: Int?,
+    val fee: Long?,
     val feeDenom: String? = "nhash",
     override val eventType: String,
     override val attributes: List<Event>
