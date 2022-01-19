@@ -46,6 +46,31 @@ object Builders {
         }
 
     /**
+     * Create a mock of the Tendermint service API exposed on Provenance with Custom response.
+     */
+    fun tendermintServiceCustom(customJson: String): ServiceMocker.Builder = ServiceMocker.Builder()
+        .doFor("abciInfo") {
+            Defaults.templates.readAs(
+                ABCIInfoResponse::class.java,
+                "abci_info/success.json",
+                mapOf("last_block_height" to MAX_HISTORICAL_BLOCK_HEIGHT)
+            )
+        }
+        .doFor("block") { Defaults.templates.readAs(BlockResponse::class.java, "block/${it[0]}.json") }
+        .doFor("blockResults") {
+            Defaults.templates.readAs(
+                BlockResultsResponse::class.java,
+                "block_results/${customJson}"
+            )
+        }
+        .doFor("blockchain") {
+            Defaults.templates.readAs(
+                BlockchainResponse::class.java,
+                "blockchain/${customJson}"
+            )
+        }
+
+    /**
      * Create a mock of the Tendermint RPC event stream exposed on Provenance.
      */
     fun eventStreamService(includeLiveBlocks: Boolean = true): MockEventStreamService.Builder {
@@ -111,7 +136,7 @@ object Builders {
                 moshi = moshi ?: Defaults.moshi,
                 dispatchers = dispatchers,
                 options = options.build(),
-                gasPriceUpdate = gasPriceUpdate ?: Pair(0.025, 0)
+                gasPriceUpdate = gasPriceUpdate ?: Pair(EventStream.DEFAULT_GAS_PRICE, 0)
             )
         }
     }

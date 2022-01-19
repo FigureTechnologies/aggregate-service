@@ -31,5 +31,4 @@ sealed class MemorializeContract: FromAttributeMap {
             return action == "p8e_memorialize_contract_request"
         }
     }
-
 }

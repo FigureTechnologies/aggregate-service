@@ -13,5 +13,5 @@ data class TxError (
     val code: Long,
     val info: String,
     val fee: Long?,
-    val feeDenom: String? = "nhash"
+    val feeDenom: String? = Constants.FEE_DENOMINATION
 )

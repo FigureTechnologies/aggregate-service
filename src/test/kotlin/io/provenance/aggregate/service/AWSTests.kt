@@ -11,6 +11,7 @@ import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
+import io.provenance.aggregate.service.stream.TendermintServiceClient
 import io.provenance.aggregate.service.test.base.TestBase
 import io.provenance.aggregate.service.test.mocks.*
 import io.provenance.aggregate.service.test.utils.*
@@ -101,6 +102,34 @@ class AWSTests : TestBase() {
         val stream = Builders.eventStream()
             .eventStreamService(eventStreamService)
             .tendermintService(tendermintService)
+            .dynamoInterface(dynamoInterface)  // use LocalStack's Dynamo instance:
+            .dispatchers(dispatcherProvider)
+            .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
+            .skipIfEmpty(skipIfEmpty)
+            .skipIfSeen(skipIfSeen)
+            .build()
+
+        return Pair(stream, EXPECTED_NONEMPTY_BLOCKS + eventStreamService.expectedResponseCount())
+    }
+
+    private suspend fun createCustomResponseEventStream(
+        includeLiveBlocks: Boolean = true,
+        skipIfEmpty: Boolean = true,
+        skipIfSeen: Boolean = true,
+        dynamoInterface: DynamoClient = dynamo,
+        fileName: String
+    ): Pair<EventStream, Long> {
+        val eventStreamService: MockEventStreamService =
+            Builders.eventStreamService(includeLiveBlocks = includeLiveBlocks)
+                .dispatchers(dispatcherProvider)
+                .build()
+
+        val tendermint: TendermintServiceClient = Builders.tendermintServiceCustom(fileName)
+            .build(MockTendermintServiceClient::class.java)
+
+        val stream = Builders.eventStream()
+            .eventStreamService(eventStreamService)
+            .tendermintService(tendermint)
             .dynamoInterface(dynamoInterface)  // use LocalStack's Dynamo instance:
             .dispatchers(dispatcherProvider)
             .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
@@ -435,6 +464,54 @@ class AWSTests : TestBase() {
                         .toList()
                 }
             }
+        }
+    }
+
+    @OptIn(FlowPreview::class, ExperimentalTime::class, ExperimentalCoroutinesApi::class)
+    @Test
+    @SetEnvironmentVariables(
+        SetEnvironmentVariable(
+            key = "AWS_ACCESS_KEY_ID",
+            value = "test",
+        ),
+        SetEnvironmentVariable(
+            key = "AWS_SECRET_ACCESS_KEY",
+            value = "test"
+        )
+    )
+    fun testMalformedAmountBeforeUpload() {
+        runBlocking(dispatcherProvider.io()) {
+
+            val block1 = mutableListOf<StreamBlock>()
+
+            // Re-running with an extractor for events that exist in the blocks that are streamed will cause output to
+            // be produced. There should be no results if no extractors run to actually extract data to upload:
+            val (stream1, expectedTotal1) = createCustomResponseEventStream(
+                includeLiveBlocks = false,
+                skipIfEmpty = true,
+                skipIfSeen = false,
+                fileName = "MalformedAmount.json"
+            )
+
+            val uploadResults1: List<UploadResult>? = withTimeoutOrNull(Duration.seconds(10)) {
+                EventStreamUploader(
+                    stream1,
+                    aws,
+                    Defaults.moshi,
+                    EventStream.Options.DEFAULT.withBatchTimeout(null),
+                    dispatchers = dispatcherProvider
+                )
+                    .addExtractor("io.provenance.aggregate.service.stream.extractors.csv.impl.TxCoinTransfer")
+                    .upload{ block -> block1.add(block) }
+                    .toList()
+            }
+
+            val record = s3.readContent(s3.listBucketObjectKeys()[0])
+            val amount1 = record[1].get(6).plus(record[1].get(7))
+            val amount2 = record[2].get(6).plus(record[2].get(7))
+
+            assert(amount1 == "53126cfigurepayomni")
+            assert(amount2 == "10000000000nhash")
         }
     }
 }

@@ -44,7 +44,7 @@ fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, gasPrice
 
 fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, gasPrice: Double): List<TxError> {
     val txErrors = mutableListOf<TxError>()
-    this.txsResults?.map {
+    txsResults?.map {
         if(it.code?.toInt() != 0) {
             txErrors.add(
                 it.toBlockError(
