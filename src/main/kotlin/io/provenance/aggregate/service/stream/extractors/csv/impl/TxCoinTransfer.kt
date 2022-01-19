@@ -1,6 +1,7 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.extensions.toISOString
+import io.provenance.aggregate.common.models.AmountDenom
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.service.stream.models.provenance.cosmos.Tx as CosmosTx
@@ -19,6 +20,8 @@ class TxCoinTransfer : CSVFileExtractor(
         "sender",
         "amount",
         "denom",
+        "fee",
+        "fee_denom"
     )
 ) {
     /**
@@ -27,19 +30,34 @@ class TxCoinTransfer : CSVFileExtractor(
      *
      * To determine amount, consume as many numeric values from the string until a non-numeric value is encountered.
      */
-    private fun splitAmountAndDenom(str: String): Pair<String, String> {
-        val amount = StringBuilder(str)
-        val denom = StringBuilder()
-        for (i in str.length - 1 downTo 0) {
-            val ch = str[i]
-            if (!ch.isDigit()) {
-                amount.deleteCharAt(i)
-                denom.insert(0, ch)
-            } else {
-                break
+    private fun splitAmountAndDenom(str: String): List<AmountDenom> {
+
+        var amountDenomList = mutableListOf<AmountDenom>()
+
+        /**
+         * There has been instances where amounts have been concatenated together in a single row
+         *
+         *  ex. "53126cfigurepayomni,100nhash"
+         *
+         *  Accounting has requested that we separate this into 2 rows.
+         *
+         */
+        str.split(",").map {
+            val amount = StringBuilder(it)
+            val denom = StringBuilder()
+            for (i in it.length - 1 downTo 0) {
+                val ch = it[i]
+                if (!ch.isDigit()) {
+                    amount.deleteCharAt(i)
+                    denom.insert(0, ch)
+                } else {
+                    break
+                }
             }
+            amountDenomList.add(AmountDenom(amount.toString(), denom.toString()))
         }
-        return Pair(amount.toString(), denom.toString())
+
+        return amountDenomList
     }
 
     override suspend fun extract(block: StreamBlock) {
@@ -48,18 +66,22 @@ class TxCoinTransfer : CSVFileExtractor(
                 ?.let { record: CosmosTx ->
                     when (record) {
                         is CosmosTx.Transfer -> {
-                            val amountAndDenom: Pair<String, String>? =
+                            val amountAndDenom: List<AmountDenom>? =
                                 record.amountAndDenom?.let { splitAmountAndDenom(it) }
-                            syncWriteRecord(
-                                event.eventType,
-                                event.blockHeight,
-                                event.blockDateTime?.toISOString(),
-                                record.recipient,
-                                record.sender,
-                                amountAndDenom?.first,  // amount
-                                amountAndDenom?.second,  // denom
-                                includeHash = true
-                            )
+                            amountAndDenom?.map { amountDenom ->
+                                syncWriteRecord(
+                                    event.eventType,
+                                    event.blockHeight,
+                                    event.blockDateTime?.toISOString(),
+                                    record.recipient,
+                                    record.sender,
+                                    amountDenom.amount,  // amount
+                                    amountDenom.denom,  // denom
+                                    event.fee,
+                                    event.feeDenom,
+                                    includeHash = true
+                                )
+                            }
                         }
                     }
                 }

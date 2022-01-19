@@ -46,6 +46,31 @@ object Builders {
         }
 
     /**
+     * Create a mock of the Tendermint service API exposed on Provenance with Custom response.
+     */
+    fun tendermintServiceCustom(customJson: String): ServiceMocker.Builder = ServiceMocker.Builder()
+        .doFor("abciInfo") {
+            Defaults.templates.readAs(
+                ABCIInfoResponse::class.java,
+                "abci_info/success.json",
+                mapOf("last_block_height" to MAX_HISTORICAL_BLOCK_HEIGHT)
+            )
+        }
+        .doFor("block") { Defaults.templates.readAs(BlockResponse::class.java, "block/${it[0]}.json") }
+        .doFor("blockResults") {
+            Defaults.templates.readAs(
+                BlockResultsResponse::class.java,
+                "block_results/${customJson}"
+            )
+        }
+        .doFor("blockchain") {
+            Defaults.templates.readAs(
+                BlockchainResponse::class.java,
+                "blockchain/${customJson}"
+            )
+        }
+
+    /**
      * Create a mock of the Tendermint RPC event stream exposed on Provenance.
      */
     fun eventStreamService(includeLiveBlocks: Boolean = true): MockEventStreamService.Builder {
@@ -77,6 +102,7 @@ object Builders {
         var moshi: Moshi? = null
         var options: EventStream.Options.Builder = EventStream.Options.builder()
         var includeLiveBlocks: Boolean = true
+        var gasPriceUpdate: Pair<Double, Long>? = null
 
         fun <T : EventStreamService> eventStreamService(value: T) = apply { eventStreamService = value }
         fun <T : TendermintServiceClient> tendermintService(value: T) = apply { tendermintServiceClient = value }
@@ -85,6 +111,7 @@ object Builders {
         fun dispatchers(value: DispatcherProvider) = apply { dispatchers = value }
         fun options(value: EventStream.Options.Builder) = apply { options = value }
         fun includeLiveBlocks(value: Boolean) = apply { includeLiveBlocks = value }
+        fun gasPriceUpdate(value: Pair<Double, Long>) = apply { gasPriceUpdate = value }
 
         // shortcuts for options:
         fun batchSize(value: Int) = apply { options.batchSize(value) }
@@ -108,7 +135,8 @@ object Builders {
                 dynamo = dynamoInterface ?: defaultAws().build().dynamo(),
                 moshi = moshi ?: Defaults.moshi,
                 dispatchers = dispatchers,
-                options = options.build()
+                options = options.build(),
+                gasPriceUpdate = gasPriceUpdate ?: Pair(EventStream.DEFAULT_GAS_PRICE, 0)
             )
         }
     }

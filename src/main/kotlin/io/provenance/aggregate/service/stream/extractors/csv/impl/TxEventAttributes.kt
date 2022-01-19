@@ -19,7 +19,9 @@ class TxEventAttributes : CSVFileExtractor(
         "value",
         "type",
         "account",
-        "owner"
+        "owner",
+        "fee",
+        "fee_denom"
     )
 ) {
     override suspend fun extract(block: StreamBlock) {
@@ -39,6 +41,8 @@ class TxEventAttributes : CSVFileExtractor(
                         record.updatedType ?: record.type,
                         record.account,
                         record.owner,
+                        event.fee,
+                        event.feeDenom,
                         includeHash = true
                     )
                 }
