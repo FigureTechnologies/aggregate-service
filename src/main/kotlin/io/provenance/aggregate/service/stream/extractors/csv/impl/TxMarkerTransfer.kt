@@ -19,7 +19,9 @@ class TxMarkerTransfer : CSVFileExtractor(
         "denom",
         "administrator",
         "to_address",
-        "from_address"
+        "from_address",
+        "fee",
+        "fee_denom"
     )
 ) {
     override suspend fun extract(block: StreamBlock) {
@@ -37,6 +39,8 @@ class TxMarkerTransfer : CSVFileExtractor(
                                 record.administrator,
                                 record.toAddress,
                                 record.fromAddress,
+                                event.fee,
+                                event.feeDenom,
                                 includeHash = true
                             )
                         else -> {

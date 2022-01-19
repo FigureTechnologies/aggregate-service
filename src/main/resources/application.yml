@@ -11,6 +11,11 @@ aws:
     block-batch-table: ${AWS_DYNAMODB_BLOCK_BATCH_TABLE_NAME}
     block-metadata-table: ${AWS_DYNAMODB_BLOCK_METADATA_TABLE_NAME}
 
+# gas price and at which block height it changed at.
+gasInfo:
+  gas-price: ${GAS_PRICE}
+  block-height: ${BLOCK_HEIGHT}
+
 # Event stream-specific configuration options:
 event-stream:
   # Configuration of the Tendermint API:
@@ -44,6 +49,7 @@ event-stream:
       - provenance.marker.v1.EventMarkerTransfer
       - provenance.marker.v1.EventMarkerWithdraw
       - transfer
+      - message
 
     # A listing of block events to filter by. If no events are provided, filtering by blocks will be
     # disabled.
@@ -60,3 +66,5 @@ upload:
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMarkerTransfer
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMarkerSupply
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxCoinTransfer
+    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMemorializeContract
+    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxError
