@@ -1,6 +1,7 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.extensions.toISOString
+import io.provenance.aggregate.common.models.AmountDenom
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.service.stream.models.provenance.cosmos.Tx as CosmosTx
@@ -29,9 +30,9 @@ class TxCoinTransfer : CSVFileExtractor(
      *
      * To determine amount, consume as many numeric values from the string until a non-numeric value is encountered.
      */
-    private fun splitAmountAndDenom(str: String): List<Pair<String, String>> {
+    private fun splitAmountAndDenom(str: String): List<AmountDenom> {
 
-        var amountDenomList = mutableListOf<Pair<String, String>>()
+        var amountDenomList = mutableListOf<AmountDenom>()
 
         /**
          * There has been instances where amounts have been concatenated together in a single row
@@ -53,8 +54,7 @@ class TxCoinTransfer : CSVFileExtractor(
                     break
                 }
             }
-
-            amountDenomList.add(Pair(amount.toString(), denom.toString()))
+            amountDenomList.add(AmountDenom(amount.toString(), denom.toString()))
         }
 
         return amountDenomList
@@ -66,17 +66,17 @@ class TxCoinTransfer : CSVFileExtractor(
                 ?.let { record: CosmosTx ->
                     when (record) {
                         is CosmosTx.Transfer -> {
-                            val amountAndDenom: List<Pair<String, String>>? =
+                            val amountAndDenom: List<AmountDenom>? =
                                 record.amountAndDenom?.let { splitAmountAndDenom(it) }
-                            amountAndDenom?.map {
+                            amountAndDenom?.map { amountDenom ->
                                 syncWriteRecord(
                                     event.eventType,
                                     event.blockHeight,
                                     event.blockDateTime?.toISOString(),
                                     record.recipient,
                                     record.sender,
-                                    it.first,  // amount
-                                    it.second,  // denom
+                                    amountDenom.amount,  // amount
+                                    amountDenom.denom,  // denom
                                     event.fee,
                                     event.feeDenom,
                                     includeHash = true
