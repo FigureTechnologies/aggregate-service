@@ -63,11 +63,20 @@ data class Config(
     val aws: AwsConfig,
     @ConfigAlias("event-stream") val eventStream: EventStreamConfig,
     val upload: UploadConfig = UploadConfig.empty(),
-    val gasInfo: GasPriceUpdate
+    val gasInfo: GasPriceUpdate,
+    val dbConfig: DBConfig
 )
 
 //TODO: Unsure how frequent gas price will change, need to come up with a better solution.
 data class GasPriceUpdate(
     val gasPrice: String,
     val blockHeight: String
+)
+
+data class DBConfig(
+    val addr: String,
+    val dbName: String,
+    val username: String,
+    val password: String,
+    val dbType: String
 )
