@@ -12,7 +12,8 @@ class TxFees: CSVFileExtractor(
         "block_height",
         "block_timestamp",
         "fee",
-        "fee_denom"
+        "fee_denom",
+        "sender"
     )
 ) {
 
@@ -32,6 +33,7 @@ class TxFees: CSVFileExtractor(
                                 event.blockDateTime,
                                 event.fee,
                                 event.feeDenom,
+                                record.sender,
                                 includeHash = true
                             )
                         }
