@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.collect
 import okhttp3.OkHttpClient
 import org.slf4j.Logger
 import java.net.URI
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 
@@ -178,8 +179,8 @@ fun main(args: Array<String>) {
 
     val shutDownSignal: Channel<Unit> = installShutdownHook(log)
 
-    runBlocking(Dispatchers.IO) {
-
+    runBlocking(Executors.newFixedThreadPool(48).asCoroutineDispatcher()) {
+        Dispatchers.Default
         log.info(
             """
             |run options => {
