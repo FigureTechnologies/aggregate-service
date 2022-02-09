@@ -179,8 +179,7 @@ fun main(args: Array<String>) {
 
     val shutDownSignal: Channel<Unit> = installShutdownHook(log)
 
-    runBlocking(Executors.newFixedThreadPool(48).asCoroutineDispatcher()) {
-        Dispatchers.Default
+    runBlocking(Dispatchers.IO) {
         log.info(
             """
             |run options => {
