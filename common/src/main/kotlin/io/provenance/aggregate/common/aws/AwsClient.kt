@@ -61,7 +61,7 @@ abstract class AwsClient(val s3Config: S3Config, val dynamoConfig: DynamoConfig,
      *
      * @return The AWS S3 request concurrency value.
      */
-    protected open fun getS3MaxConcurrency(): Int = 64
+    protected open fun getS3MaxConcurrency(): Int = 128
 
     protected open fun getRegion(): Region = region?.let { Region.of(it) } ?: DEFAULT_REGION
 
