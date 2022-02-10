@@ -8,7 +8,7 @@ object Version {
         const val Text = "1.9"
     }
 
-    const val AWS = "2.17.101"
+    const val AWS = "2.17.127"
     const val DatadogStats = "2.13.0"
     const val GRPC = "1.41.0"
     const val Hoplite = "1.4.9"
