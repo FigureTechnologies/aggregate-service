@@ -88,6 +88,7 @@ abstract class AwsClient(val s3Config: S3Config, val dynamoConfig: DynamoConfig,
 
     private fun createNettyClient(): SdkAsyncHttpClient {
         return NettyNioAsyncHttpClient.builder()
+            .connectionMaxIdleTime(JavaDuration.ofSeconds(30))
             .writeTimeout(getS3WriteTimeout())
             .connectionAcquisitionTimeout(getAcquisitionTimeout())
             .maxConcurrency(getS3MaxConcurrency())
