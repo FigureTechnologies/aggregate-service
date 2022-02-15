@@ -13,9 +13,7 @@ class TxMemorializeContract: CSVFileExtractor(
         "hash",
         "event_action_type",
         "block_height",
-        "block_timestamp",
-        "fee",
-        "fee_denom"
+        "block_timestamp"
     )
 ) {
     override suspend fun extract(block: StreamBlock) {
@@ -29,8 +27,6 @@ class TxMemorializeContract: CSVFileExtractor(
                                     record.action,
                                     event.blockHeight,
                                     event.blockDateTime,
-                                    event.fee,
-                                    event.feeDenom,
                                     includeHash = true
                                 )
                             }
