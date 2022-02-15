@@ -26,9 +26,7 @@ class TxMarkerSupply : CSVFileExtractor(
         "metadata_display",
         "metadata_denom_units",
         "metadata_name",
-        "metadata_symbol",
-        "fee",
-        "fee_denom"
+        "metadata_symbol"
     )
 ) {
     override suspend fun extract(block: StreamBlock) {
@@ -54,8 +52,6 @@ class TxMarkerSupply : CSVFileExtractor(
                             record.metadataDenomUnits,
                             record.metadataName,
                             record.metadataSymbol,
-                            event.fee,
-                            event.feeDenom,
                             includeHash = true
                         )
                     }
