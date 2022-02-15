@@ -66,5 +66,5 @@ upload:
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMarkerTransfer
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMarkerSupply
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxCoinTransfer
-    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMemorializeContract
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxError
+    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxFees

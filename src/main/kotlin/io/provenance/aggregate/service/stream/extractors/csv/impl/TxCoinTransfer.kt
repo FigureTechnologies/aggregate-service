@@ -16,12 +16,11 @@ class TxCoinTransfer : CSVFileExtractor(
         "event_type",
         "block_height",
         "block_timestamp",
+        "tx_hash",
         "recipient",
         "sender",
         "amount",
-        "denom",
-        "fee",
-        "fee_denom"
+        "denom"
     )
 ) {
     /**
@@ -73,12 +72,11 @@ class TxCoinTransfer : CSVFileExtractor(
                                     event.eventType,
                                     event.blockHeight,
                                     event.blockDateTime?.toISOString(),
+                                    event.txHash,
                                     record.recipient,
                                     record.sender,
                                     amountDenom.amount,  // amount
                                     amountDenom.denom,  // denom
-                                    event.fee,
-                                    event.feeDenom,
                                     includeHash = true
                                 )
                             }

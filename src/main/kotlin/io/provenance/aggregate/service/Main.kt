@@ -179,7 +179,6 @@ fun main(args: Array<String>) {
     val shutDownSignal: Channel<Unit> = installShutdownHook(log)
 
     runBlocking(Dispatchers.IO) {
-
         log.info(
             """
             |run options => {

@@ -68,6 +68,11 @@ abstract class AwsClient(val s3Config: S3Config, val dynamoConfig: DynamoConfig,
     protected open fun getCredentialsProvider(): AwsCredentialsProvider = DefaultCredentialsProvider.create()
 
     /**
+     * Set connection acquisition timeout
+     */
+    protected fun getAcquisitionTimeout(): JavaDuration = JavaDuration.ofSeconds(60)
+
+    /**
      * Overrides the default endpoint used by the AWS SDK. This is useful when using something like LocalStack which
      * emulates various AWS services running locally.
      */
@@ -84,6 +89,7 @@ abstract class AwsClient(val s3Config: S3Config, val dynamoConfig: DynamoConfig,
     private fun createNettyClient(): SdkAsyncHttpClient {
         return NettyNioAsyncHttpClient.builder()
             .writeTimeout(getS3WriteTimeout())
+            .connectionAcquisitionTimeout(getAcquisitionTimeout())
             .maxConcurrency(getS3MaxConcurrency())
             .build()
     }
