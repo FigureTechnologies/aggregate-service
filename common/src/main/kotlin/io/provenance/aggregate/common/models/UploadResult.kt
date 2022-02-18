@@ -16,5 +16,5 @@ data class UploadResult(
     val batchSize: Int,
     val eTag: String,
     val s3Key: S3Key,
-    val blockHeightRange: String
+    val blockHeightRange: Pair<Long, Long>
 )

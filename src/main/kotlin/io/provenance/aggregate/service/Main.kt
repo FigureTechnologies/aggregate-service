@@ -320,7 +320,8 @@ fun main(args: Array<String>) {
                 .upload()
                 .cancelOnSignal(shutDownSignal)
                 .collect { result: UploadResult ->
-                    log.info("uploaded #${result.batchId} => S3 ETag: ${result.eTag} => S3Key: ${result.s3Key} Block Height Range: ${result.blockHeightRange}")
+                    log.info("uploaded #${result.batchId} => S3 ETag: ${result.eTag} => S3Key: " +
+                            "${result.s3Key} Block Height Range: ${result.blockHeightRange.first} - ${result.blockHeightRange.second}")
                 }
         }
     }

@@ -159,6 +159,8 @@ class AWSTests : TestBase() {
         // This is due to the use of [delay] in the chunk() flow operator used by `EventStreamUploader`.
         val eventStreamOptions = EventStream.Options.DEFAULT.withBatchTimeout(null)
 
+        val lastBlockHeightFromStream = "2270469"
+
         runBlocking(dispatcherProvider.io()) {
 
             // There should be no results if no extractors run to actually extract data to upload:
@@ -212,7 +214,7 @@ class AWSTests : TestBase() {
             // The max height should have been set to that of the last live block received:
 
             val maxHeight = dynamo.getMaxHistoricalBlockHeight()
-            assert(maxHeight!= null  && maxHeight == "2270469".toLong())
+            assert(maxHeight!= null  && maxHeight == lastBlockHeightFromStream.toLong())
 
             // We should be able to check that maxHeight == MAX_LIVE_BLOCK_HEIGHT. However the order the live and
             // historical streams run in test is non-deterministic. If all of the live streams are received before

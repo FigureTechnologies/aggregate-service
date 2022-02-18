@@ -219,7 +219,7 @@ class EventStreamUploader(
                                             batchSize = streamBlocks.size,
                                             eTag = putResponse.eTag(),
                                             s3Key = key,
-                                            blockHeightRange = "${streamBlocks.first().height} ... ${streamBlocks.last().height}"
+                                            blockHeightRange = Pair(streamBlocks.first().height!!, streamBlocks.last().height!!)
                                         )
                                     } else {
                                         null
