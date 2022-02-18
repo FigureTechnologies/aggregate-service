@@ -62,7 +62,7 @@ data class Batch internal constructor(
                         .onFailure { e ->
                             log.error("processing error: ${e.message} ::")
                             for (frame in e.stackTrace) {
-                                log.error("  ${frame.toString()}")
+                                log.error("  ${frame}")
                             }
                         }
                 }

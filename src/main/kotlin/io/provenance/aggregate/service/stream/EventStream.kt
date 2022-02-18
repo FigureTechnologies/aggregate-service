@@ -537,23 +537,12 @@ class EventStream(
         }
             .withIndex()
             .map { indexed ->
-                val index: Int = indexed.index
                 val heightPairChunk: List<Pair<Long, Long>> =
                     indexed.value // each pair will be `TENDERMINT_MAX_QUERY_RANGE` units apart
 
                 val lowest = heightPairChunk.minOf { it.first }
                 val highest = heightPairChunk.maxOf { it.second }
                 val fullBlockHeights: Set<Long> = (lowest..highest).toSet()
-
-                // Update every 2000 blocks:
-                if ((index % 20) == 0) {
-                    dynamo.writeMaxHistoricalBlockHeight(highest)
-                        .also {
-                            if (it.processed > 0) {
-                                log.info("historical::updating max historical block height to $highest")
-                            }
-                        }
-                }
 
                 // invariant:
                 assert(fullBlockHeights.size <= DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS)
@@ -803,4 +792,3 @@ class EventStream(
             }
         }
 }
-

@@ -184,7 +184,6 @@ class EventStreamUploader(
                             async { batch.processBlock(block) }
                         }
                             .awaitAll()
-
                         // Upload the results to S3:
                         batch.complete { batchId: BatchId, extractor: Extractor ->
                             val key: S3Key = csvS3Key(batchId, earliestDate, extractor.name)
@@ -196,12 +195,31 @@ class EventStreamUploader(
                                             override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(out.path)
                                             override val metadata: Map<String, String>? get() = out.metadata
                                         })
-                                        log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
+
+                                        /**
+                                         * We want to track the last successful block height that was processed to S3, so
+                                         * in the event of an exception to the service, the service can restart
+                                         * at the last successful processed block height, so we don't lose any data that
+                                         * was in the middle of processing.
+                                         */
+                                         if(putResponse.sdkHttpResponse().isSuccessful) {
+                                            val blockHeight = streamBlocks.last().height  // this is the height we want to upload (last in the batch)
+                                            dynamo.writeMaxHistoricalBlockHeight(blockHeight!!)
+                                                .also {
+                                                    if(it.processed > 0) {
+                                                        log.info("historical::updating max historical block height to $blockHeight")
+                                                    }
+                                                }
+
+                                             log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
+                                        }
+
                                         UploadResult(
                                             batchId = batch.id,
                                             batchSize = streamBlocks.size,
                                             eTag = putResponse.eTag(),
-                                            s3Key = key
+                                            s3Key = key,
+                                            blockHeightRange = Pair(streamBlocks.first().height!!, streamBlocks.last().height!!)
                                         )
                                     } else {
                                         null
