@@ -212,7 +212,7 @@ class AWSTests : TestBase() {
             // The max height should have been set to that of the last live block received:
 
             val maxHeight = dynamo.getMaxHistoricalBlockHeight()
-            assert(dynamo.getMaxHistoricalBlockHeight() != null && maxHeight is Long)
+            assert(maxHeight!= null  && maxHeight == "2270469".toLong())
 
             // We should be able to check that maxHeight == MAX_LIVE_BLOCK_HEIGHT. However the order the live and
             // historical streams run in test is non-deterministic. If all of the live streams are received before
@@ -507,8 +507,8 @@ class AWSTests : TestBase() {
             }
 
             val record = s3.readContent(s3.listBucketObjectKeys()[0])
-            val amount1 = record[1].get(6).plus(record[1].get(7))
-            val amount2 = record[2].get(6).plus(record[2].get(7))
+            val amount1 = record[1].get(7).plus(record[1].get(8))
+            val amount2 = record[2].get(7).plus(record[2].get(8))
 
             assert(amount1 == "53126cfigurepayomni")
             assert(amount2 == "10000000000nhash")
