@@ -210,9 +210,9 @@ class EventStreamUploader(
                                                         log.info("historical::updating max historical block height to $blockHeight")
                                                     }
                                                 }
-                                        }
 
-                                        log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
+                                             log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
+                                        }
 
                                         UploadResult(
                                             batchId = batch.id,
