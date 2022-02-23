@@ -408,9 +408,6 @@ class EventStream(
             val blockResponse = tendermintServiceClient.blockResults(blockHeight).result
             val blockEvents: List<BlockEvent> = blockResponse.blockEvents(blockDatetime)
             val txErrors: List<TxError> = blockResponse.txErroredEvents(blockDatetime)
-            if(txErrors.isNotEmpty()) {
-                println("wait")
-            }
             val txEvents: List<TxEvent> = blockResponse.txEvents(blockDatetime) { index: Int -> txHash(index) ?: "" }
             val streamBlock = StreamBlock(this, blockEvents, txEvents, txErrors, feeCollector = feeCollector)
             val matchBlock = matchesBlockEvent(blockEvents)
