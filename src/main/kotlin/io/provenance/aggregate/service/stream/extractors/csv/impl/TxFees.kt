@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
+import io.provenance.aggregate.common.models.AmountDenom
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.service.stream.models.provenance.cosmos.Tx
@@ -24,18 +25,23 @@ class TxFees: CSVFileExtractor(
                     when (record) {
                         is Tx.Transfer -> {
                             /*
-                            *   Write the transaction fees to another table so that we can
-                            *   more accurately track fees per Tx versus per transfer record.
+                            *   If the recipient is the fee collector then
+                            *   write fees to this table.
                             */
-                            syncWriteRecord(
-                                event.txHash,
-                                event.blockHeight,
-                                event.blockDateTime,
-                                event.fee,
-                                event.feeDenom,
-                                record.sender,
-                                includeHash = true
-                            )
+                            if(record.isFeeCollector(block.feeCollector)) {
+                                val amountAndDenom: List<AmountDenom>? = record.amountAndDenom?.let { record.splitAmountAndDenom(it) }
+                                amountAndDenom?.map { amountDenom ->
+                                    syncWriteRecord(
+                                        event.txHash,
+                                        event.blockHeight,
+                                        event.blockDateTime,
+                                        amountDenom.amount,
+                                        amountDenom.denom,
+                                        record.sender, // wallet addr that is paying the fee collector
+                                        includeHash = true
+                                    )
+                                }
+                            }
                         }
                     }
                 }

@@ -201,25 +201,30 @@ class EventStreamUploader(
                                          * in the event of an exception to the service, the service can restart
                                          * at the last successful processed block height, so we don't lose any data that
                                          * was in the middle of processing.
+                                         *
+                                         * At this point we only care to track historical blocks, live blocks will
+                                         * run a check to see if historical blocks has finished streaming before it can
+                                         * update the dynamo table.
                                          */
-                                         if(putResponse.sdkHttpResponse().isSuccessful) {
-                                            val blockHeight = streamBlocks.last().height  // this is the height we want to upload (last in the batch)
-                                            dynamo.writeMaxHistoricalBlockHeight(blockHeight!!)
+                                        val highestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.maxOrNull()
+                                        if(putResponse.sdkHttpResponse().isSuccessful) {
+                                             dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight!!)
                                                 .also {
                                                     if(it.processed > 0) {
-                                                        log.info("historical::updating max historical block height to $blockHeight")
+                                                        log.info("historical::updating max historical block height to $highestHistoricalBlockHeight")
                                                     }
                                                 }
-
                                              log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
                                         }
+
+                                        val lowestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.minOrNull()
 
                                         UploadResult(
                                             batchId = batch.id,
                                             batchSize = streamBlocks.size,
                                             eTag = putResponse.eTag(),
                                             s3Key = key,
-                                            blockHeightRange = Pair(streamBlocks.first().height!!, streamBlocks.last().height!!)
+                                            historicalBlockHeightRange = Pair(lowestHistoricalBlockHeight!!, highestHistoricalBlockHeight!!)
                                         )
                                     } else {
                                         null

@@ -11,10 +11,8 @@ aws:
     block-batch-table: ${AWS_DYNAMODB_BLOCK_BATCH_TABLE_NAME}
     block-metadata-table: ${AWS_DYNAMODB_BLOCK_METADATA_TABLE_NAME}
 
-# gas price and at which block height it changed at.
-gasInfo:
-  gas-price: ${GAS_PRICE}
-  block-height: ${BLOCK_HEIGHT}
+# address that collects fees
+feeCollector: ${FEE_COLLECTOR}
 
 # Event stream-specific configuration options:
 event-stream:
