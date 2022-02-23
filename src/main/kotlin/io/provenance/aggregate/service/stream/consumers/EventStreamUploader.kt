@@ -207,6 +207,7 @@ class EventStreamUploader(
                                          * update the dynamo table.
                                          */
                                         val highestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.maxOrNull()
+                                        val lowestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.minOrNull()
                                         if(putResponse.sdkHttpResponse().isSuccessful) {
                                              dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight!!)
                                                 .also {
@@ -216,9 +217,6 @@ class EventStreamUploader(
                                                 }
                                              log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
                                         }
-
-                                        val lowestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.minOrNull()
-
                                         UploadResult(
                                             batchId = batch.id,
                                             batchSize = streamBlocks.size,
