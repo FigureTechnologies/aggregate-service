@@ -135,8 +135,7 @@ object Builders {
                 dynamo = dynamoInterface ?: defaultAws().build().dynamo(),
                 moshi = moshi ?: Defaults.moshi,
                 dispatchers = dispatchers,
-                options = options.build(),
-                gasPriceUpdate = gasPriceUpdate ?: Pair(EventStream.DEFAULT_GAS_PRICE, 0)
+                options = options.build()
             )
         }
     }
