@@ -103,7 +103,7 @@ object Builders {
         var options: EventStream.Options.Builder = EventStream.Options.builder()
         var includeLiveBlocks: Boolean = true
         var feeCollector: String = ""
-        var dynamoBatchGetItems: Long = 0
+        var dynamoBatchGetItems: Long = 100
 
         fun <T : EventStreamService> eventStreamService(value: T) = apply { eventStreamService = value }
         fun <T : TendermintServiceClient> tendermintService(value: T) = apply { tendermintServiceClient = value }

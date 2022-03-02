@@ -52,6 +52,6 @@ object Defaults {
             blockMetadataTable = DynamoTable(DYNAMODB_BLOCK_METADATA_TABLE),
             blockBatchTable = DynamoTable(DYNAMODB_BLOCK_BATCH_TABLE),
             serviceMetadataTable = DynamoTable(DYNAMODB_SERVICE_METADATA_TABLE),
-            dynamoBatchGetItems = 0
+            dynamoBatchGetItems = 100
         )
 }
