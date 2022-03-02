@@ -51,6 +51,7 @@ class EventStream(
     private val moshi: Moshi,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
     private val feeCollector: String,
+    private val dynamoBatchGetItems: Long,
     private val options: Options = Options.DEFAULT
 ) {
     companion object {
@@ -70,12 +71,6 @@ class EventStream(
          * Requesting a larger range will result in the API emitting an error.
          */
         const val TENDERMINT_MAX_QUERY_RANGE = 20
-
-        /**
-         * The maximum number of items that can be included in a batch write operation to DynamoDB, as imposed by
-         * AWS.
-         */
-        const val DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS = 100
     }
 
     data class Options(
@@ -245,6 +240,7 @@ class EventStream(
             val tendermintRpc: TendermintRPCStream = scarlet.create()
             val eventStreamService = TendermintEventStreamService(tendermintRpc, lifecycle)
             val feeCollector = config.feeCollector
+            val dynamoBatchGetItems = config.aws.dynamodb.dynamoBatchGetItems
 
             return EventStream(
                 eventStreamService,
@@ -252,6 +248,7 @@ class EventStream(
                 dynamoClient,
                 moshi,
                 feeCollector = feeCollector,
+                dynamoBatchGetItems = dynamoBatchGetItems,
                 options = options,
                 dispatchers = dispatchers
             )
@@ -516,11 +513,11 @@ class EventStream(
             log.info("historical::batch size = ${options.batchSize}")
 
             // Since each pair will be TENDERMINT_MAX_QUERY_RANGE apart, and we want the cumulative number of heights
-            // to query to be DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS, we need
-            // floor(max(TENDERMINT_MAX_QUERY_RANGE, DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS) / min(TENDERMINT_MAX_QUERY_RANGE, DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS))
+            // to query to be dynamoBatchGetItems, we need
+            // floor(max(TENDERMINT_MAX_QUERY_RANGE, dynamoBatchGetItems) / min(TENDERMINT_MAX_QUERY_RANGE, dynamoBatchGetItems))
             // chunks:
             val xValue = TENDERMINT_MAX_QUERY_RANGE.toDouble()
-            val yValue = DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS.toDouble()
+            val yValue = dynamoBatchGetItems.toDouble()
             val numChunks: Int = floor(max(xValue, yValue) / min(xValue, yValue)).toInt()
 
             emitAll(
@@ -539,7 +536,7 @@ class EventStream(
                 val fullBlockHeights: Set<Long> = (lowest..highest).toSet()
 
                 // invariant:
-                assert(fullBlockHeights.size <= DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS)
+                assert(fullBlockHeights.size <= dynamoBatchGetItems)
 
                 // There are two ways to handle blocks that have been seen already and recorded in Dynamo, but are
                 // present in the stream:
@@ -551,7 +548,7 @@ class EventStream(
                 val (seenBlockMap: Map<Long, BlockStorageMetadata>, availableBlocks: List<Long>) = coroutineScope {
 
                     val seenBlockMap: Map<Long, BlockStorageMetadata> =
-                        dynamo.getBlockMetadataMap(fullBlockHeights)  // Capped at size=DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS
+                        dynamo.getBlockMetadataMap(fullBlockHeights)  // Capped at size=dynamoBatchGetItems
 
                     val availableBlocks = heightPairChunk
                         // Filter out spans in which all block heights have been seen already:

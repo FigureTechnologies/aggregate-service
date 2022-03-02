@@ -103,6 +103,7 @@ object Builders {
         var options: EventStream.Options.Builder = EventStream.Options.builder()
         var includeLiveBlocks: Boolean = true
         var feeCollector: String = ""
+        var dynamoBatchGetItems: Long = 0
 
         fun <T : EventStreamService> eventStreamService(value: T) = apply { eventStreamService = value }
         fun <T : TendermintServiceClient> tendermintService(value: T) = apply { tendermintServiceClient = value }
@@ -112,6 +113,7 @@ object Builders {
         fun options(value: EventStream.Options.Builder) = apply { options = value }
         fun includeLiveBlocks(value: Boolean) = apply { includeLiveBlocks = value }
         fun feeCollector(value: String) = apply { feeCollector = value }
+        fun dynamoBatchGetItems(value: Long) = apply{ dynamoBatchGetItems = value }
 
         // shortcuts for options:
         fun batchSize(value: Int) = apply { options.batchSize(value) }
@@ -136,6 +138,7 @@ object Builders {
                 moshi = moshi ?: Defaults.moshi,
                 dispatchers = dispatchers,
                 feeCollector = feeCollector,
+                dynamoBatchGetItems = dynamoBatchGetItems,
                 options = options.build()
             )
         }

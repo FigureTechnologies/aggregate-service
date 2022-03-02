@@ -47,6 +47,7 @@ suspend fun Data.output(environment: Environment, jobName: String, output: Outpu
                 DynamoTable(""),
                 DynamoTable(""),
             ),
+            dynamoBatchGetItems = 0
         )
         val client = AwsClient.create(environment, config.s3, config.dynamodb)
         val outputFile = Files.createTempFile("", "staging_file.csv")

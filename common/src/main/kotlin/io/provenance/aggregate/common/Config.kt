@@ -42,7 +42,8 @@ data class DynamoConfig(
     val region: String?,
     @ConfigAlias("service_metadata_table") val serviceMetadataTable: DynamoTable,
     @ConfigAlias("block_batch_table") val blockBatchTable: DynamoTable,
-    @ConfigAlias("block_metadata_table") val blockMetadataTable: DynamoTable
+    @ConfigAlias("block_metadata_table") val blockMetadataTable: DynamoTable,
+    val dynamoBatchGetItems: Long
 )
 
 data class AwsConfig(
