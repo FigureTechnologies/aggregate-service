@@ -160,7 +160,7 @@ class EventStreamUploader(
         return eventStream
             .streamBlocks()
             .onEach {
-                log.info("buffering ${if (it.historical) "historical" else "live"} block #${it.block.header?.height} for upload")
+                log.info("buffering ${if (it.historical) "historical" else "live"} block #${it.block.header?.height} for upload with ${it.txEvents.size} tx events")
             }
             .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = BufferOverflow.SUSPEND)
             .flowOn(dispatchers.io())
@@ -208,8 +208,8 @@ class EventStreamUploader(
                                          */
                                         val highestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.maxOrNull()
                                         val lowestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.minOrNull()
-                                        if(putResponse.sdkHttpResponse().isSuccessful) {
-                                             dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight!!)
+                                        if(putResponse.sdkHttpResponse().isSuccessful && highestHistoricalBlockHeight != null) {
+                                             dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight)
                                                 .also {
                                                     if(it.processed > 0) {
                                                         log.info("historical::updating max historical block height to $highestHistoricalBlockHeight")

@@ -615,7 +615,7 @@ class EventStream(
                                 }
                         }
                 } else {
-                    log.error("historical::exhausted block stream with error: ${cause.message}")
+                    log.error("historical::exhausted block stream with error: $cause")
                 }
             }
     }
