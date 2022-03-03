@@ -233,7 +233,10 @@ class EventStreamUploader(
                 }
 
                 // Mark the blocks as having been processed:
-                val s3Keys = uploaded.map { it.s3Key }
+                val s3Keys = uploaded.map { result ->
+                    result.s3Key.also { dynamo.writeS3KeyCache(result.batchId.value, "${aws.s3Config.bucket}/${it.value}") }
+                }
+
                 val blockBatch: BlockBatch = BlockBatch(batch.id, aws.s3Config.bucket, s3Keys)
                 val writeResult: WriteResult = dynamo.trackBlocks(blockBatch, streamBlocks)
                 log.info("track block batch result: $writeResult")

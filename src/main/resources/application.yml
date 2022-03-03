@@ -10,6 +10,7 @@ aws:
     service-metadata-table: ${AWS_DYNAMODB_SERVICE_METADATA_TABLE_NAME}
     block-batch-table: ${AWS_DYNAMODB_BLOCK_BATCH_TABLE_NAME}
     block-metadata-table: ${AWS_DYNAMODB_BLOCK_METADATA_TABLE_NAME}
+    s3-key-cache-table: ${AWS_DYNAMODB_S3_KEY_CACHE_TABLE_NAME}
 
 # gas price and at which block height it changed at.
 gasInfo:

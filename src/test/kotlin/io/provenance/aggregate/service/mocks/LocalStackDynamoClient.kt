@@ -11,9 +11,10 @@ class LocalStackDynamoClient(
     private val dynamoClient: DynamoDbAsyncClient,
     private val blockBatchTable: DynamoTable,
     private val blockMetadataTable: DynamoTable,
-    private val serviceMetadataTable: DynamoTable
+    private val serviceMetadataTable: DynamoTable,
+    private val s3KeyCacheTable: DynamoTable
 ) :
-    DefaultDynamoClient(dynamoClient, blockBatchTable, blockMetadataTable, serviceMetadataTable) {
+    DefaultDynamoClient(dynamoClient, blockBatchTable, blockMetadataTable, serviceMetadataTable, s3KeyCacheTable) {
 
     private fun createServiceMetadataTable(): CompletableFuture<CreateTableResponse> =
         dynamoClient.createTable(

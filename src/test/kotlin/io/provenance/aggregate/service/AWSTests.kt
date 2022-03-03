@@ -364,7 +364,8 @@ class AWSTests : TestBase() {
                 failingDynamoClient,
                 Defaults.dynamoConfig.blockBatchTable,
                 Defaults.dynamoConfig.blockMetadataTable,
-                Defaults.dynamoConfig.serviceMetadataTable
+                Defaults.dynamoConfig.serviceMetadataTable,
+                Defaults.dynamoConfig.s3KeyCacheTable
             ) {
                 // TODO: Replace this when runBlockingTest is fixed:
                 // https://github.com/Kotlin/kotlinx.coroutines/pull/2978
@@ -434,7 +435,8 @@ class AWSTests : TestBase() {
                     failingDynamoClient,
                     Defaults.dynamoConfig.blockBatchTable,
                     Defaults.dynamoConfig.blockMetadataTable,
-                    Defaults.dynamoConfig.serviceMetadataTable
+                    Defaults.dynamoConfig.serviceMetadataTable,
+                    Defaults.dynamoConfig.s3KeyCacheTable
                 ) {
                     // TODO: Replace this when runBlockingTest is fixed:
                     // https://github.com/Kotlin/kotlinx.coroutines/pull/2978

@@ -51,6 +51,7 @@ object Defaults {
             region = S3_REGION,
             blockMetadataTable = DynamoTable(DYNAMODB_BLOCK_METADATA_TABLE),
             blockBatchTable = DynamoTable(DYNAMODB_BLOCK_BATCH_TABLE),
-            serviceMetadataTable = DynamoTable(DYNAMODB_SERVICE_METADATA_TABLE)
+            serviceMetadataTable = DynamoTable(DYNAMODB_SERVICE_METADATA_TABLE),
+            s3KeyCacheTable =  DynamoTable(DYNAMODB_S3_KEY_CACHE_TABLE)
         )
 }

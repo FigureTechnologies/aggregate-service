@@ -46,6 +46,7 @@ suspend fun Data.output(environment: Environment, jobName: String, output: Outpu
                 DynamoTable(""),
                 DynamoTable(""),
                 DynamoTable(""),
+                DynamoTable("")
             ),
         )
         val client = AwsClient.create(environment, config.s3, config.dynamodb)

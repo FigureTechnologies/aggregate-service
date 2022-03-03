@@ -23,4 +23,6 @@ class NoOpDynamoClient : DynamoClient {
     override suspend fun getMaxHistoricalBlockHeight(): Long? = null
 
     override suspend fun writeMaxHistoricalBlockHeight(blockHeight: Long): WriteResult = WriteResult.empty()
+
+    override suspend fun writeS3KeyCache(batchId: String, s3Key: String) { /* no-op */ }
 }

@@ -21,6 +21,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.ImmutableTableSchema
 import software.amazon.awssdk.enhanced.dynamodb.model.*
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import software.amazon.awssdk.services.dynamodb.model.*
+import java.lang.Exception
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.ExperimentalTime
 
@@ -38,7 +39,8 @@ open class DefaultDynamoClient(
     private val dynamoClient: DynamoDbAsyncClient,
     private val blockBatchTable: DynamoTable,
     private val blockMetadataTable: DynamoTable,
-    private val serviceMetadataTable: DynamoTable
+    private val serviceMetadataTable: DynamoTable,
+    private val s3KeyCacheTable: DynamoTable
 ) : DynamoClient, DelayShim {
 
     companion object {
@@ -63,11 +65,17 @@ open class DefaultDynamoClient(
     private val blockMetadataTableSchema: ImmutableTableSchema<BlockStorageMetadata> =
         TableSchema.fromImmutableClass(BlockStorageMetadata::class.java)
 
+    private val s3KeyCacheSchema: ImmutableTableSchema<S3KeyCache> =
+        TableSchema.fromImmutableClass(S3KeyCache::class.java)
+
     val BLOCK_BATCH_TABLE: DynamoDbAsyncTable<BlockBatch> =
         enhancedClient.table(blockBatchTable.name, blockBatchTableSchema)
 
     val BLOCK_METADATA_TABLE: DynamoDbAsyncTable<BlockStorageMetadata> =
         enhancedClient.table(blockMetadataTable.name, blockMetadataTableSchema)
+
+    val S3_KEY_CACHE_TABLE: DynamoDbAsyncTable<S3KeyCache> =
+        enhancedClient.table(s3KeyCacheTable.name, s3KeyCacheSchema)
 
     override suspend fun getBlockMetadata(blockHeight: Long): BlockStorageMetadata? {
         return BLOCK_METADATA_TABLE.getItem(Key.builder().partitionValue(blockHeight).build()).await()
@@ -261,5 +269,23 @@ open class DefaultDynamoClient(
         } catch (e: ConditionalCheckFailedException) {
             WriteResult.empty()
         }
+    }
+
+    override suspend fun writeS3KeyCache(batchId: String, s3Key: String) {
+        log.info("Writing to S3 Cache Table: $batchId : $s3Key")
+        val req = TransactPutItemEnhancedRequest.builder(S3KeyCache::class.java)
+            .item(
+                S3KeyCache(
+                    batchId = batchId,
+                    s3Key = s3Key
+                )
+            )
+            .build()
+        enhancedClient.transactWriteItems { request ->
+            request.addPutItem(
+                S3_KEY_CACHE_TABLE,
+                req
+            )
+        }.asDeferred()
     }
 }

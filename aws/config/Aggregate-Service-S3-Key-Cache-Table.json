@@ -1,0 +1,19 @@
+{
+  "TableName": "Aggregate-Service-S3-Key-Cache",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "S3Key",
+      "AttributeType": "S"
+    }
+  ],
+  "KeySchema": [
+    {
+      "AttributeName": "S3Key",
+      "KeyType": "HASH"
+    }
+  ],
+  "ProvisionedThroughput": {
+    "ReadCapacityUnits": 1,
+    "WriteCapacityUnits": 1
+  }
+}

@@ -42,7 +42,8 @@ data class DynamoConfig(
     val region: String?,
     @ConfigAlias("service_metadata_table") val serviceMetadataTable: DynamoTable,
     @ConfigAlias("block_batch_table") val blockBatchTable: DynamoTable,
-    @ConfigAlias("block_metadata_table") val blockMetadataTable: DynamoTable
+    @ConfigAlias("block_metadata_table") val blockMetadataTable: DynamoTable,
+    @ConfigAlias("s3_key_cache_table") val s3KeyCacheTable: DynamoTable
 )
 
 data class AwsConfig(

@@ -149,7 +149,8 @@ abstract class AwsClient(val s3Config: S3Config, val dynamoConfig: DynamoConfig,
             dynamoClient,
             dynamoConfig.blockBatchTable,
             dynamoConfig.blockMetadataTable,
-            dynamoConfig.serviceMetadataTable
+            dynamoConfig.serviceMetadataTable,
+            dynamoConfig.s3KeyCacheTable
         )
     }
 }

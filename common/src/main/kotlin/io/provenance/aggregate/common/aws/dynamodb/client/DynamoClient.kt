@@ -64,4 +64,11 @@ interface DynamoClient {
      * @return the result of the write operation
      */
     suspend fun writeMaxHistoricalBlockHeight(blockHeight: Long): WriteResult
+
+    /**
+     * Record s3 key path for processed file, so lambda can pick off to process the file into
+     * a DW.
+     *
+     */
+    suspend fun writeS3KeyCache(batchId: String, s3Key: String): Unit
 }

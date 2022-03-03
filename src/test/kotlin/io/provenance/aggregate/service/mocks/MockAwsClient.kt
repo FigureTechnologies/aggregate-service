@@ -31,7 +31,8 @@ open class MockAwsClient protected constructor(s3Config: S3Config, dynamoConfig:
                         dynamoClient,
                         dynamoConfig.blockBatchTable,
                         dynamoConfig.blockMetadataTable,
-                        dynamoConfig.serviceMetadataTable
+                        dynamoConfig.serviceMetadataTable,
+                        dynamoConfig.s3KeyCacheTable
                     )
                 }
             }

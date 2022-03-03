@@ -7,6 +7,7 @@ TABLES=(
   Aggregate-Service-Metadata-Table
   Aggregate-Service-Block-Batch-Table
   Aggregate-Service-Block-Metadata-Table
+  Aggregate-Service-S3-Key-Cache-Table
 )
 
 for table in ${TABLES[@]}; do
