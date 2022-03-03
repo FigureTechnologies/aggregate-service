@@ -232,9 +232,19 @@ class EventStreamUploader(
                     }
                 }
 
+                val highBlockHeightBatch = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.maxOrNull() ?: 0
+                val lowBlockHeightBatch = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.minOrNull() ?: 0
+
                 // Mark the blocks as having been processed:
                 val s3Keys = uploaded.map { result ->
-                    result.s3Key.also { dynamo.writeS3KeyCache(result.batchId.value, "${aws.s3Config.bucket}/${it.value}") }
+                    result.s3Key.also {
+                        dynamo.writeS3KeyCache(
+                            batchId = result.batchId.value,
+                            s3Key = "${aws.s3Config.bucket}/${it.value}",
+                            lowBlockHeightBatch = lowBlockHeightBatch.toInt(),
+                            highBlockHeightBatch = highBlockHeightBatch.toInt()
+                        )
+                    }
                 }
 
                 val blockBatch: BlockBatch = BlockBatch(batch.id, aws.s3Config.bucket, s3Keys)

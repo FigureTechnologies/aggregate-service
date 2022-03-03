@@ -271,13 +271,15 @@ open class DefaultDynamoClient(
         }
     }
 
-    override suspend fun writeS3KeyCache(batchId: String, s3Key: String) {
+    override suspend fun writeS3KeyCache(batchId: String, s3Key: String, lowBlockHeight: Int, highBlockHeight: Int) {
         log.info("Writing to S3 Cache Table: $batchId : $s3Key")
         val req = TransactPutItemEnhancedRequest.builder(S3KeyCache::class.java)
             .item(
                 S3KeyCache(
                     batchId = batchId,
-                    s3Key = s3Key
+                    s3Key = s3Key,
+                    lowBlockHeightBatch = lowBlockHeight,
+                    highBlockHeightBatch = highBlockHeight
                 )
             )
             .build()
@@ -286,6 +288,6 @@ open class DefaultDynamoClient(
                 S3_KEY_CACHE_TABLE,
                 req
             )
-        }.asDeferred()
+        }
     }
 }

@@ -70,5 +70,5 @@ interface DynamoClient {
      * a DW.
      *
      */
-    suspend fun writeS3KeyCache(batchId: String, s3Key: String): Unit
+    suspend fun writeS3KeyCache(batchId: String, s3Key: String, lowBlockHeightBatch: Int, highBlockHeightBatch: Int)
 }
