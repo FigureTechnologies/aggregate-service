@@ -206,8 +206,9 @@ class EventStreamUploader(
                                          * run a check to see if historical blocks has finished streaming before it can
                                          * update the dynamo table.
                                          */
-                                        val highestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.maxOrNull()
-                                        val lowestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.minOrNull()
+                                        val liveHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { !block.historical } }.maxOrNull()
+                                        val highestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.maxOrNull() ?: liveHistoricalBlockHeight
+                                        val lowestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.minOrNull() ?: liveHistoricalBlockHeight
                                         if(putResponse.sdkHttpResponse().isSuccessful && highestHistoricalBlockHeight != null) {
                                              dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight)
                                                 .also {
@@ -222,7 +223,7 @@ class EventStreamUploader(
                                             batchSize = streamBlocks.size,
                                             eTag = putResponse.eTag(),
                                             s3Key = key,
-                                            historicalBlockHeightRange = Pair(lowestHistoricalBlockHeight!!, highestHistoricalBlockHeight!!)
+                                            historicalBlockHeightRange = Pair(lowestHistoricalBlockHeight, highestHistoricalBlockHeight)
                                         )
                                     } else {
                                         null
