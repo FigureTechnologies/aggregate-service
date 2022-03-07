@@ -323,7 +323,7 @@ fun main(args: Array<String>) {
                     log.info("uploaded #${result.batchId} => \n" +
                             "S3 ETag: ${result.eTag} => \n" +
                             "S3Key: ${result.s3Key} => \n" +
-                            "Historical Block Height Range: ${result.historicalBlockHeightRange.first} - ${result.historicalBlockHeightRange.second}")
+                            "Historical Block Height Range: ${result.blockHeightRange.first} - ${result.blockHeightRange.second}")
                 }
         }
     }
