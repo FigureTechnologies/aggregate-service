@@ -25,8 +25,6 @@ class TxError: CSVFileExtractor(
                 error.blockDateTime,
                 error.code,
                 error.info,
-                error.fee,
-                error.feeDenom,
                 includeHash = true
             )
         }

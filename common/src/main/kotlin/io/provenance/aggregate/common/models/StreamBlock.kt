@@ -14,7 +14,8 @@ data class StreamBlock(
     val txEvents: List<TxEvent>,
     val txErrors: List<TxError>,
     val historical: Boolean = false,
-    val metadata: BlockStorageMetadata? = null
+    val metadata: BlockStorageMetadata? = null,
+    val feeCollector: String
 ) {
     val height: Long? get() = block.header?.height
 }

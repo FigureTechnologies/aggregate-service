@@ -23,10 +23,10 @@ fun BlockHeader.dateTime(): OffsetDateTime? =
 
 fun BlockResponse.txHash(index: Int): String? = this.result?.block?.txHash(index)
 
-fun BlockResultsResponse.txEvents(blockDate: OffsetDateTime, gasPrice: Double, txHash: (index: Int) -> String): List<TxEvent> =
-    this.result.txEvents(blockDate, gasPrice, txHash)
+fun BlockResultsResponse.txEvents(blockDate: OffsetDateTime, txHash: (index: Int) -> String): List<TxEvent> =
+    this.result.txEvents(blockDate, txHash)
 
-fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, gasPrice: Double, txHash: (Int) -> String): List<TxEvent> =
+fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, txHash: (Int) -> String): List<TxEvent> =
     run {
         txsResults?.flatMapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
             tx.events
@@ -34,23 +34,21 @@ fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, gasPrice
                     it.toTxEvent(
                         height,
                         blockDateTime,
-                        txHash(index),
-                        (tx.gasWanted?.toLong()?.times(gasPrice))
+                        txHash(index)
                     )
                 }
                 ?: emptyList()
         }
     } ?: emptyList()
 
-fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, gasPrice: Double): List<TxError> {
+fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?): List<TxError> {
     val txErrors = mutableListOf<TxError>()
     txsResults?.map {
         if(it.code?.toInt() != 0) {
             txErrors.add(
                 it.toBlockError(
                     blockHeight = height,
-                    blockDateTime = blockDateTime,
-                    fee = (it.gasWanted?.toLong()?.times(gasPrice))
+                    blockDateTime = blockDateTime
                 )
             )
         }
@@ -58,13 +56,12 @@ fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, g
     return txErrors
 }
 
-fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?, fee: Double?): TxError =
+fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?): TxError =
     TxError(
         blockHeight = blockHeight,
         blockDateTime = blockDateTime,
         code = this.code!!.toLong(),
-        info = this.log ?: "",
-        fee = fee?.toLong()
+        info = this.log ?: ""
     )
 
 fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List<BlockEvent> = run {
@@ -89,14 +86,12 @@ fun BlockResultsResponseResultEvents.toBlockEvent(blockHeight: Long, blockDateTi
 fun BlockResultsResponseResultEvents.toTxEvent(
     blockHeight: Long,
     blockDateTime: OffsetDateTime?,
-    txHash: String,
-    fee: Double?
+    txHash: String
 ): TxEvent =
     TxEvent(
         blockHeight = blockHeight,
         blockDateTime = blockDateTime,
         txHash = txHash,
-        fee = fee?.toLong(),
         eventType = this.type ?: "",
         attributes = this.attributes ?: emptyList()
     )

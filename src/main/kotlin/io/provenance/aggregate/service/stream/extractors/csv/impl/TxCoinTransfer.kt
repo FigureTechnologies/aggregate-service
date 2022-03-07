@@ -23,50 +23,13 @@ class TxCoinTransfer : CSVFileExtractor(
         "denom"
     )
 ) {
-    /**
-     * Given a string like `12275197065nhash`, where the amount and denomination are concatenated, split the string
-     * into separate amount and denomination strings.
-     *
-     * To determine amount, consume as many numeric values from the string until a non-numeric value is encountered.
-     */
-    private fun splitAmountAndDenom(str: String): List<AmountDenom> {
-
-        var amountDenomList = mutableListOf<AmountDenom>()
-
-        /**
-         * There has been instances where amounts have been concatenated together in a single row
-         *
-         *  ex. "53126cfigurepayomni,100nhash"
-         *
-         *  Accounting has requested that we separate this into 2 rows.
-         *
-         */
-        str.split(",").map {
-            val amount = StringBuilder(it)
-            val denom = StringBuilder()
-            for (i in it.length - 1 downTo 0) {
-                val ch = it[i]
-                if (!ch.isDigit()) {
-                    amount.deleteCharAt(i)
-                    denom.insert(0, ch)
-                } else {
-                    break
-                }
-            }
-            amountDenomList.add(AmountDenom(amount.toString(), denom.toString()))
-        }
-
-        return amountDenomList
-    }
-
     override suspend fun extract(block: StreamBlock) {
         for (event in block.txEvents) {
             CosmosTx.mapper.fromEvent(event)
                 ?.let { record: CosmosTx ->
                     when (record) {
                         is CosmosTx.Transfer -> {
-                            val amountAndDenom: List<AmountDenom>? =
-                                record.amountAndDenom?.let { splitAmountAndDenom(it) }
+                            val amountAndDenom: List<AmountDenom>? = record.amountAndDenom?.let { record.splitAmountAndDenom(it) }
                             amountAndDenom?.map { amountDenom ->
                                 syncWriteRecord(
                                     event.eventType,
