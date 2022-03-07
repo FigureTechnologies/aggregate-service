@@ -20,6 +20,7 @@ import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.common.models.extensions.dateTime
+import io.provenance.aggregate.service.stream.repository.db.DBInterface
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -46,6 +47,7 @@ class EventStreamUploader(
     private val eventStream: EventStream,
     private val aws: AwsClient,
     private val moshi: Moshi,
+    private val dbRepository: DBInterface<Any>,
     private val options: EventStream.Options = EventStream.Options.DEFAULT,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
@@ -53,8 +55,9 @@ class EventStreamUploader(
         eventStreamFactory: EventStream.Factory,
         aws: AwsClient,
         moshi: Moshi,
+        dbRepository: DBInterface<Any>,
         options: EventStream.Options
-    ) : this(eventStreamFactory.create(options), aws, moshi, options)
+    ) : this(eventStreamFactory.create(options), aws, moshi, dbRepository, options)
 
     companion object {
         const val STREAM_BUFFER_CAPACITY: Int = 256
@@ -150,6 +153,7 @@ class EventStreamUploader(
 
         val batchBlueprint: Batch.Builder = Batch.Builder()
             .dispatchers(dispatchers)
+            .database(dbRepository)
             // Extractors are specified via their Kotlin class, along with any arguments to pass to the constructor:
             .apply {
                 for (cls in loadExtractorClasses(extractorClassNames)) {
@@ -182,8 +186,7 @@ class EventStreamUploader(
                         streamBlocks.map { block ->
                             onEachBlock(block)
                             async { batch.processBlock(block) }
-                        }
-                            .awaitAll()
+                        }.awaitAll()
 
                         // Upload the results to S3:
                         batch.complete { batchId: BatchId, extractor: Extractor ->

@@ -115,7 +115,7 @@ object Builders {
 
         // shortcuts for options:
         fun batchSize(value: Int) = apply { options.batchSize(value) }
-        fun fromHeight(value: Long) = apply { options.fromHeight(value) }
+        fun fromHeight(value: Long) = apply { options.fromHeight(800000) }
         fun toHeight(value: Long) = apply { options.toHeight(value) }
         fun skipIfEmpty(value: Boolean) = apply { options.skipIfEmpty(value) }
         fun skipIfSeen(value: Boolean) = apply { options.skipIfSeen(value) }

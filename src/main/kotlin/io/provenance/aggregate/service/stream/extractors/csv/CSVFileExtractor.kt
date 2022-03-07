@@ -5,6 +5,7 @@ import io.provenance.aggregate.common.extensions.*
 import io.provenance.aggregate.service.stream.extractors.FileExtractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.aggregate.common.utils.sha256
+import io.provenance.aggregate.service.stream.repository.db.DBInterface
 import org.apache.commons.csv.CSVFormat
 import java.io.OutputStreamWriter
 
@@ -54,16 +55,18 @@ abstract class CSVFileExtractor(
      *
      * If `includeHash` is true, the computed hash value will be the first entry of the written record.
      */
-    fun syncWriteRecord(vararg values: Any?, includeHash: Boolean) {
+    fun syncWriteRecord(vararg values: Any?, includeHash: Boolean): String? {
         synchronized(this) {
             flagWriteOutput = true
             if (includeHash) {
                 val hash = computeRowHash(*values)
                 writer.writeRecord(hash, *values)
+                return hash
             } else {
                 writer.writeRecord(*values)
             }
         }
+        return null
     }
 
     /**

@@ -5,6 +5,7 @@ import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.BatchId
 import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.aggregate.common.models.StreamBlock
+import io.provenance.aggregate.service.stream.repository.db.DBInterface
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
@@ -22,22 +23,27 @@ import kotlin.reflect.full.primaryConstructor
 data class Batch internal constructor(
     val id: BatchId,
     private val extractors: List<Extractor>,
-    private val dispatchers: DispatcherProvider
+    private val dispatchers: DispatcherProvider,
+    private val dbRepository: DBInterface<Any>
 ) {
     data class Builder(
         val extractorClassAndArgs: MutableList<Pair<KClass<out Extractor>, Array<out Any>>> = mutableListOf(),
     ) {
         var dispatchers: DispatcherProvider? = null
+        var dbInstance: DBInterface<Any>? = null
 
         fun dispatchers(value: DispatcherProvider) = apply { dispatchers = value }
         fun withExtractor(extractor: KClass<out Extractor>, vararg args: Any) =
             apply { extractorClassAndArgs.add(Pair(extractor, args)) }
 
+        fun database(db: DBInterface<Any>?) = apply { dbInstance = db }
+
         fun build(): Batch =
             Batch(
                 BatchId(), // each batch is assigned a unique ID
                 extractorClassAndArgs.mapNotNull { (klass, args) -> klass.primaryConstructor?.call(*args) },
-                dispatchers ?: error("dispatchers must be provided")
+                dispatchers ?: error("dispatchers must be provided"),
+                dbInstance ?: error("no db initialized")
             )
     }
 
@@ -58,16 +64,17 @@ data class Batch internal constructor(
         withContext(dispatchers.io()) {
             extractors.map { extractor: Extractor ->
                 async {
-                    runCatching { extractor.extract(block) }
-                        .onFailure { e ->
+                    runCatching {
+                        extractor.extract(block, dbRepository)
+                    }.onFailure { e ->
                             log.error("processing error: ${e.message} ::")
                             for (frame in e.stackTrace) {
-                                log.error("  ${frame.toString()}")
+                                log.error("  $frame")
                             }
-                        }
+                    }
                 }
             }
-        }.awaitAll()
+        }.awaitAll().also { dbRepository.saveChanges() }
 
     /**
      * Called upon completion of processing all blocks. Results will be aggregated per extractor registered to

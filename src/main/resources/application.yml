@@ -16,6 +16,13 @@ gasInfo:
   gas-price: ${GAS_PRICE}
   block-height: ${BLOCK_HEIGHT}
 
+dbConfig:
+  addr: ${DB_URI}
+  dbName: ${DB_DATABASE}
+  dbType: ${DB_TYPE}
+  username: ${DB_USERNAME}
+  password: ${DB_PASSWORD}
+
 # Event stream-specific configuration options:
 event-stream:
   # Configuration of the Tendermint API:

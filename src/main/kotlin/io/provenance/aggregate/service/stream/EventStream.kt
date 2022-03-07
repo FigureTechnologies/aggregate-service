@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.EOFException
+import java.lang.instrument.Instrumentation
 import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
@@ -80,7 +81,7 @@ class EventStream(
          * The maximum number of items that can be included in a batch write operation to DynamoDB, as imposed by
          * AWS.
          */
-        const val DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS = 100
+        const val DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS = 50
     }
 
     data class Options(
@@ -387,6 +388,17 @@ class EventStream(
     private fun <T : EncodedBlockchainEvent> matchesTxEvent(txEvents: Iterable<T>): Boolean? =
         options.txEventPredicate?.let { p -> txEvents.any { p(it.eventType) } }
 
+    object ObjectSizeFetcher {
+        private var instrumentation: Instrumentation? = null
+        fun premain(args: String?, inst: Instrumentation?) {
+            instrumentation = inst
+        }
+
+        fun getObjectSize(o: Any?): Long {
+            return instrumentation!!.getObjectSize(o)
+        }
+    }
+
     /**
      * Query a block by height, returning any events associated with the block.
      *
@@ -565,7 +577,7 @@ class EventStream(
                 //
                 // 2. Include the given StreamBlock in the resulting Flow, but mark the StreamBlock's `metadata`
                 //    property as null/non-null based on the presence of the block in upstream.
-                val (seenBlockMap: Map<Long, BlockStorageMetadata>, availableBlocks: List<Long>) = coroutineScope {
+                val (seenBlockMap: kotlin.collections.Map<kotlin.Long, io.provenance.aggregate.common.aws.dynamodb.BlockStorageMetadata>, availableBlocks: kotlin.collections.List<kotlin.Long>) = coroutineScope {
 
                     val seenBlockMap: Map<Long, BlockStorageMetadata> =
                         dynamo.getBlockMetadataMap(fullBlockHeights)  // Capped at size=DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS
@@ -803,4 +815,3 @@ class EventStream(
             }
         }
 }
-

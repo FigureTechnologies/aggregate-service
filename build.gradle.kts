@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     kotlin("jvm")
     id("org.jetbrains.kotlin.kapt")
@@ -72,6 +70,17 @@ dependencies {
     implementation("software.amazon.awssdk:dynamodb-enhanced")
 
     implementation("cloud.localstack", "localstack-utils", Version.LocalStack)
+
+    implementation ("org.hibernate", "hibernate-core", "5.4.19.Final")
+    implementation("org.postgresql", "postgresql", Version.PostgresVersion)
+    implementation("org.jetbrains.exposed","exposed-core", Version.ExposedVersion)
+    implementation("org.jetbrains.exposed", "exposed-dao", Version.ExposedVersion)
+    implementation("org.jetbrains.exposed", "exposed-jdbc", Version.ExposedVersion)
+
+    implementation("net.ravendb", "ravendb-client", Version.RavenDb)
+
+    implementation("com.fasterxml.jackson.module", "jackson-module-kotlin", "2.11.0")
+
 }
 
 sourceSets {

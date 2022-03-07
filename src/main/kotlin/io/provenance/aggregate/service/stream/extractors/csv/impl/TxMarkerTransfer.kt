@@ -1,9 +1,24 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.extensions.toISOString
+import io.provenance.aggregate.common.models.Constants
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.provenance.marker.EventMarker
+import io.provenance.aggregate.service.stream.repository.db.DBInterface
+
+data class MarkerTransferDB(
+    val event_type: String?,
+    val block_height: Long?,
+    val block_timestamp: String?,
+    val amount: String?,
+    val denom: String?,
+    val administrator: String?,
+    val to_address: String?,
+    val from_address: String?,
+    val fee: Long?,
+    val fee_denom: String? = Constants.FEE_DENOMINATION
+)
 
 /**
  * Extract data related to the transfer of a marker between parties.
@@ -24,13 +39,13 @@ class TxMarkerTransfer : CSVFileExtractor(
         "fee_denom"
     )
 ) {
-    override suspend fun extract(block: StreamBlock) {
+    override suspend fun extract(block: StreamBlock, dbRepository: DBInterface<Any>) {
         for (event in block.txEvents) {
             EventMarker.mapper.fromEvent(event)
                 ?.let { record: EventMarker ->
                     when (record) {
-                        is EventMarker.Transfer ->
-                            syncWriteRecord(
+                        is EventMarker.Transfer -> {
+                            val markerTransferData = MarkerTransferDB(
                                 event.eventType,
                                 event.blockHeight,
                                 event.blockDateTime?.toISOString(),
@@ -40,9 +55,15 @@ class TxMarkerTransfer : CSVFileExtractor(
                                 record.toAddress,
                                 record.fromAddress,
                                 event.fee,
-                                event.feeDenom,
-                                includeHash = true
+                                event.feeDenom
                             )
+                            syncWriteRecord(
+                                markerTransferData,
+                                includeHash = true
+                            ).also { hash ->
+                                dbRepository.save(hash = hash, markerTransferData)
+                            }
+                        }
                         else -> {
                             // noop
                         }

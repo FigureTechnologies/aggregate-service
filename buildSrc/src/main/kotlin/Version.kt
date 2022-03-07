@@ -28,4 +28,11 @@ object Version {
     const val Scarlet = "0.1.12"
     const val AWSSDK = "2.17.32"
     const val LocalStack = "0.2.14"
+
+    const val PostgresVersion = "42.2.9"
+    const val ExposedVersion = "0.36.2"
+
+    const val KodeinDb = "0.9.0-beta"
+    const val RavenDb = "4.0.0-rc1"
+    const val Jackson = "2.11.0"
 }

@@ -1,6 +1,7 @@
 package io.provenance.aggregate.service.stream.extractors
 
 import io.provenance.aggregate.common.models.StreamBlock
+import io.provenance.aggregate.service.stream.repository.db.DBInterface
 
 /**
  * An extractor, as the name implies, is responsible for extracting a subset of data from a stream block, formatting it,
@@ -30,7 +31,7 @@ interface Extractor {
      *
      * @property block The stream block to process.
      */
-    suspend fun extract(block: StreamBlock)
+    suspend fun extract(block: StreamBlock, dbRepository: DBInterface<Any>)
 
     // Optional methods:
 

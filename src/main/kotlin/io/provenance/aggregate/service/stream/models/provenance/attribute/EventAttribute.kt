@@ -16,7 +16,7 @@ private fun toEventTypeEnum(t: String): EventAttributeType = EventAttributeType.
  * - `provenance.attribute.v1.EventAttributeDelete`
  * - `provenance.attribute.v1.EventAttributeDeleteDistinct`
  */
-sealed class EventAttribute() : FromAttributeMap {
+sealed class EventAttribute : FromAttributeMap {
 
     companion object {
         /**
@@ -73,6 +73,14 @@ sealed class EventAttribute() : FromAttributeMap {
             owner = owner
         )
     }
+
+//    class Insert(override val attributes: Map<String, String?>): EventAttribute() {
+//        val name: String? by attributes.transform(::debase64)
+//
+//        override fun toEventRecord(): ConsolidatedEvent {
+//            TODO("Not yet implemented")
+//        }
+//    }
 
     /**
      * Event emitted when attribute is updated

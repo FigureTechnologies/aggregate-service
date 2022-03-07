@@ -1,7 +1,20 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
+import io.provenance.aggregate.common.extensions.toISOString
+import io.provenance.aggregate.common.models.Constants
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
+import io.provenance.aggregate.service.stream.repository.db.DBInterface
+
+
+data class ErrorsDB(
+    val block_height: Long?,
+    val block_timestamp: String?,
+    val error_code: Long?,
+    val info: String?,
+    val fee: Long?,
+    val fee_denom: String? = Constants.FEE_DENOMINATION
+)
 
 /**
  * Extract data related to errored transfers that collected a fee.
@@ -18,17 +31,23 @@ class TxError: CSVFileExtractor(
         "fee_denom"
     )
 ) {
-    override suspend fun extract(block: StreamBlock) {
+    override suspend fun extract(block: StreamBlock, dbRepository: DBInterface<Any>) {
         for(error in block.txErrors) {
-            syncWriteRecord(
+            val errorData = ErrorsDB(
                 error.blockHeight,
-                error.blockDateTime,
+                error.blockDateTime?.toISOString(),
                 error.code,
                 error.info,
                 error.fee,
                 error.feeDenom,
-                includeHash = true
             )
+
+            syncWriteRecord(
+                errorData,
+                includeHash = true
+            ).also { hash ->
+                dbRepository.save(hash = hash, errorData)
+            }
         }
     }
 }
