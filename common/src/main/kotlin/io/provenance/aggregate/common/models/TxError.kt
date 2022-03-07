@@ -11,7 +11,5 @@ data class TxError (
     val blockHeight: Long,
     val blockDateTime: OffsetDateTime?,
     val code: Long,
-    val info: String,
-    val fee: Long?,
-    val feeDenom: String? = Constants.FEE_DENOMINATION
+    val info: String
 )

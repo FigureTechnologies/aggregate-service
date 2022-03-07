@@ -1,7 +1,6 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.extensions.toISOString
-import io.provenance.aggregate.common.models.Constants
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.provenance.marker.EventMarker
@@ -15,9 +14,7 @@ data class MarkerTransferDB(
     val denom: String?,
     val administrator: String?,
     val to_address: String?,
-    val from_address: String?,
-    val fee: Long?,
-    val fee_denom: String? = Constants.FEE_DENOMINATION
+    val from_address: String?
 )
 
 /**
@@ -34,9 +31,7 @@ class TxMarkerTransfer : CSVFileExtractor(
         "denom",
         "administrator",
         "to_address",
-        "from_address",
-        "fee",
-        "fee_denom"
+        "from_address"
     )
 ) {
     override suspend fun extract(block: StreamBlock, dbRepository: DBInterface<Any>) {
@@ -53,9 +48,7 @@ class TxMarkerTransfer : CSVFileExtractor(
                                 record.denom,
                                 record.administrator,
                                 record.toAddress,
-                                record.fromAddress,
-                                event.fee,
-                                event.feeDenom
+                                record.fromAddress
                             )
                             syncWriteRecord(
                                 markerTransferData,

@@ -183,7 +183,6 @@ fun main(args: Array<String>) {
     val shutDownSignal: Channel<Unit> = installShutdownHook(log)
 
     runBlocking(Dispatchers.IO) {
-
         log.info(
             """
             |run options => {
@@ -226,13 +225,16 @@ fun main(args: Array<String>) {
         // will be chosen as the starting height
 
         val fromHeightGetter: suspend () -> Long? = {
-            val maxHistoricalHeight: Long? = dynamo.getMaxHistoricalBlockHeight()
+            var maxHistoricalHeight: Long? = dynamo.getMaxHistoricalBlockHeight()
             log.info("Start :: historical max block height = $maxHistoricalHeight")
             if (restart) {
                 if (maxHistoricalHeight == null) {
                     log.warn("No historical max block height found; defaulting to 0")
                 } else {
-                    log.info("Restarting from historical max block height: $maxHistoricalHeight")
+                    log.info("Restarting from historical max block height: ${maxHistoricalHeight + 1}")
+                    // maxHistoricalHeight is last successful processed, to prevent processing this block height again
+                    // we need to increment.
+                    maxHistoricalHeight += 1
                 }
                 maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)
             } else {
@@ -323,7 +325,10 @@ fun main(args: Array<String>) {
                 .upload()
                 .cancelOnSignal(shutDownSignal)
                 .collect { result: UploadResult ->
-                    println("uploaded #${result.batchId} => S3 ETag: ${result.eTag}")
+                    log.info("uploaded #${result.batchId} => \n" +
+                            "S3 ETag: ${result.eTag} => \n" +
+                            "S3Key: ${result.s3Key} => \n" +
+                            "Historical Block Height Range: ${result.blockHeightRange.first} - ${result.blockHeightRange.second}")
                 }
         }
     }

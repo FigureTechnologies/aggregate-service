@@ -1,7 +1,6 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.extensions.toISOString
-import io.provenance.aggregate.common.models.Constants
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.provenance.attribute.EventAttribute
@@ -15,9 +14,7 @@ data class AttributesDB(
     val value: String?,
     val type: String?,
     val account: String?,
-    val owner: String?,
-    val fee: Long?,
-    val fee_denom: String? = Constants.FEE_DENOMINATION
+    val owner: String?
 )
 
 /**
@@ -34,9 +31,7 @@ class TxEventAttributes : CSVFileExtractor(
         "value",
         "type",
         "account",
-        "owner",
-        "fee",
-        "fee_denom"
+        "owner"
     )
 ) {
     override suspend fun extract(block: StreamBlock, dbRepository: DBInterface<Any>) {
@@ -51,9 +46,7 @@ class TxEventAttributes : CSVFileExtractor(
                         record.updatedValue ?: record.value,
                         record.updatedType ?: record.type,
                         record.account,
-                        record.owner,
-                        event.fee,
-                        event.feeDenom
+                        record.owner
                     )
 
                     // Output transformations that make the output data easier to work with:

@@ -10,11 +10,10 @@ aws:
     service-metadata-table: ${AWS_DYNAMODB_SERVICE_METADATA_TABLE_NAME}
     block-batch-table: ${AWS_DYNAMODB_BLOCK_BATCH_TABLE_NAME}
     block-metadata-table: ${AWS_DYNAMODB_BLOCK_METADATA_TABLE_NAME}
+    dynamoBatchGetItems: ${DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS}
 
-# gas price and at which block height it changed at.
-gasInfo:
-  gas-price: ${GAS_PRICE}
-  block-height: ${BLOCK_HEIGHT}
+# address that collects fees
+feeCollector: ${FEE_COLLECTOR}
 
 dbConfig:
   addr: ${DB_URI}
@@ -73,5 +72,5 @@ upload:
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMarkerTransfer
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMarkerSupply
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxCoinTransfer
-    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMemorializeContract
     - io.provenance.aggregate.service.stream.extractors.csv.impl.TxError
+    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxFees

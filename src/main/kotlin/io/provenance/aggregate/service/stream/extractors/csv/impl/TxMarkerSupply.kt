@@ -1,7 +1,6 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.extensions.toISOString
-import io.provenance.aggregate.common.models.Constants
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.provenance.marker.EventMarker
@@ -22,9 +21,7 @@ data class MarkerSupplyDB(
     val metadata_display: String?,
     val metadata_denom_units: String?,
     val metadata_name: String?,
-    val metadata_symbol: String?,
-    val fee: Long?,
-    val fee_denom: String? = Constants.FEE_DENOMINATION
+    val metadata_symbol: String?
 )
 
 /**
@@ -48,9 +45,7 @@ class TxMarkerSupply : CSVFileExtractor(
         "metadata_display",
         "metadata_denom_units",
         "metadata_name",
-        "metadata_symbol",
-        "fee",
-        "fee_denom"
+        "metadata_symbol"
     )
 ) {
     override suspend fun extract(block: StreamBlock, dbRepository: DBInterface<Any>) {
@@ -75,9 +70,7 @@ class TxMarkerSupply : CSVFileExtractor(
                             record.metadataDisplay,
                             record.metadataDenomUnits,
                             record.metadataName,
-                            record.metadataSymbol,
-                            event.fee,
-                            event.feeDenom
+                            record.metadataSymbol
                         )
                         syncWriteRecord(
                             markerSupplyData,

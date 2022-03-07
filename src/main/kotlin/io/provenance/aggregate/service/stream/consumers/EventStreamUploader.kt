@@ -164,7 +164,7 @@ class EventStreamUploader(
         return eventStream
             .streamBlocks()
             .onEach {
-                log.info("buffering ${if (it.historical) "historical" else "live"} block #${it.block.header?.height} for upload")
+                log.info("buffering ${if (it.historical) "historical" else "live"} block #${it.block.header?.height} for upload with ${it.txEvents.size} tx events")
             }
             .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = BufferOverflow.SUSPEND)
             .flowOn(dispatchers.io())
@@ -187,7 +187,6 @@ class EventStreamUploader(
                             onEachBlock(block)
                             async { batch.processBlock(block) }
                         }.awaitAll()
-
                         // Upload the results to S3:
                         batch.complete { batchId: BatchId, extractor: Extractor ->
                             val key: S3Key = csvS3Key(batchId, earliestDate, extractor.name)
@@ -199,12 +198,43 @@ class EventStreamUploader(
                                             override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(out.path)
                                             override val metadata: Map<String, String>? get() = out.metadata
                                         })
-                                        log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
+
+                                        /**
+                                         * We want to track the last successful block height that was processed to S3, so
+                                         * in the event of an exception to the service, the service can restart
+                                         * at the last successful processed block height, so we don't lose any data that
+                                         * was in the middle of processing.
+                                         */
+                                        val liveHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { !block.historical } }.maxOrNull()
+
+                                        val highestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.maxOrNull()
+                                        val lowestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.minOrNull()
+
+                                        if(putResponse.sdkHttpResponse().isSuccessful && highestHistoricalBlockHeight != null) {
+                                             dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight)
+                                                .also {
+                                                    if(it.processed > 0) {
+                                                        log.info("historical::updating max historical block height to $highestHistoricalBlockHeight")
+                                                    }
+                                                }
+                                             log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
+                                        }
+
+                                        /**
+                                         * Logging the upload result of the block range.
+                                         */
+                                        val blockHeightRange = if(liveHistoricalBlockHeight != null) {
+                                            Pair(liveHistoricalBlockHeight, liveHistoricalBlockHeight)
+                                        } else {
+                                            Pair(lowestHistoricalBlockHeight, highestHistoricalBlockHeight)
+                                        }
+
                                         UploadResult(
                                             batchId = batch.id,
                                             batchSize = streamBlocks.size,
                                             eTag = putResponse.eTag(),
-                                            s3Key = key
+                                            s3Key = key,
+                                            blockHeightRange = blockHeightRange
                                         )
                                     } else {
                                         null
@@ -219,7 +249,7 @@ class EventStreamUploader(
 
                 // Mark the blocks as having been processed:
                 val s3Keys = uploaded.map { it.s3Key }
-                val blockBatch: BlockBatch = BlockBatch(batch.id, aws.s3Config.bucket, s3Keys)
+                val blockBatch = BlockBatch(batch.id, aws.s3Config.bucket, s3Keys)
                 val writeResult: WriteResult = dynamo.trackBlocks(blockBatch, streamBlocks)
                 log.info("track block batch result: $writeResult")
 

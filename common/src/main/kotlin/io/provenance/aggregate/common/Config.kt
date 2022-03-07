@@ -42,7 +42,8 @@ data class DynamoConfig(
     val region: String?,
     @ConfigAlias("service_metadata_table") val serviceMetadataTable: DynamoTable,
     @ConfigAlias("block_batch_table") val blockBatchTable: DynamoTable,
-    @ConfigAlias("block_metadata_table") val blockMetadataTable: DynamoTable
+    @ConfigAlias("block_metadata_table") val blockMetadataTable: DynamoTable,
+    val dynamoBatchGetItems: Long
 )
 
 data class AwsConfig(
@@ -63,14 +64,8 @@ data class Config(
     val aws: AwsConfig,
     @ConfigAlias("event-stream") val eventStream: EventStreamConfig,
     val upload: UploadConfig = UploadConfig.empty(),
-    val gasInfo: GasPriceUpdate,
-    val dbConfig: DBConfig
-)
-
-//TODO: Unsure how frequent gas price will change, need to come up with a better solution.
-data class GasPriceUpdate(
-    val gasPrice: String,
-    val blockHeight: String
+    val dbConfig: DBConfig,
+    val feeCollector: String
 )
 
 data class DBConfig(

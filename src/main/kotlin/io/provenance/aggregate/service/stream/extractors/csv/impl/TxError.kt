@@ -1,7 +1,6 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.extensions.toISOString
-import io.provenance.aggregate.common.models.Constants
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.service.stream.repository.db.DBInterface
@@ -11,9 +10,7 @@ data class ErrorsDB(
     val block_height: Long?,
     val block_timestamp: String?,
     val error_code: Long?,
-    val info: String?,
-    val fee: Long?,
-    val fee_denom: String? = Constants.FEE_DENOMINATION
+    val info: String?
 )
 
 /**
@@ -26,9 +23,7 @@ class TxError: CSVFileExtractor(
         "block_height",
         "block_timestamp",
         "error_code",
-        "info",
-        "fee",
-        "fee_denom"
+        "info"
     )
 ) {
     override suspend fun extract(block: StreamBlock, dbRepository: DBInterface<Any>) {
@@ -37,9 +32,7 @@ class TxError: CSVFileExtractor(
                 error.blockHeight,
                 error.blockDateTime?.toISOString(),
                 error.code,
-                error.info,
-                error.fee,
-                error.feeDenom,
+                error.info
             )
 
             syncWriteRecord(
