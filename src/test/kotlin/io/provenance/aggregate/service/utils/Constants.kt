@@ -1,6 +1,6 @@
 package io.provenance.aggregate.service.test.utils
 
-import io.provenance.aggregate.service.stream.EventStream
+import io.provenance.aggregate.service.stream.EventStreamLegacy
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /***********************************************************************************************************************
@@ -37,7 +37,7 @@ val heights: List<Long> = (MIN_HISTORICAL_BLOCK_HEIGHT..MAX_HISTORICAL_BLOCK_HEI
 
 @OptIn(ExperimentalCoroutinesApi::class)
 val heightChunks: List<Pair<Long, Long>> = heights
-    .chunked(EventStream.TENDERMINT_MAX_QUERY_RANGE)
+    .chunked(EventStreamLegacy.TENDERMINT_MAX_QUERY_RANGE)
     .map { Pair(it.minOrNull()!!, it.maxOrNull()!!) }
 
 /***********************************************************************************************************************

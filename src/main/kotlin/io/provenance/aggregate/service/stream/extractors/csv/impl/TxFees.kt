@@ -1,9 +1,9 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.models.AmountDenom
-import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.service.stream.models.provenance.cosmos.Tx
+import io.provenance.eventstream.stream.models.StreamBlock
 
 class TxFees: CSVFileExtractor(
     name = "tx_fees",
@@ -19,32 +19,32 @@ class TxFees: CSVFileExtractor(
 ) {
 
     override suspend fun extract(block: StreamBlock) {
-        for (event in block.txEvents) {
-            Tx.mapper.fromEvent(event)
-                ?.let { record: Tx ->
-                    when (record) {
-                        is Tx.Transfer -> {
-                            /*
-                            *   If the recipient is the fee collector then
-                            *   write fees to this table.
-                            */
-                            if(record.isFeeCollector(block.feeCollector)) {
-                                val amountAndDenom: List<AmountDenom>? = record.amountAndDenom?.let { record.splitAmountAndDenom(it) }
-                                amountAndDenom?.map { amountDenom ->
-                                    syncWriteRecord(
-                                        event.txHash,
-                                        event.blockHeight,
-                                        event.blockDateTime,
-                                        amountDenom.amount,
-                                        amountDenom.denom,
-                                        record.sender, // wallet addr that is paying the fee collector
-                                        includeHash = true
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-        }
+//        for (event in block.txEvents) {
+//            Tx.mapper.fromEvent(event)
+//                ?.let { record: Tx ->
+//                    when (record) {
+//                        is Tx.Transfer -> {
+//                            /*
+//                            *   If the recipient is the fee collector then
+//                            *   write fees to this table.
+//                            */
+//                            if(record.isFeeCollector(block.feeCollector)) {
+//                                val amountAndDenom: List<AmountDenom>? = record.amountAndDenom?.let { record.splitAmountAndDenom(it) }
+//                                amountAndDenom?.map { amountDenom ->
+//                                    syncWriteRecord(
+//                                        event.txHash,
+//                                        event.blockHeight,
+//                                        event.blockDateTime,
+//                                        amountDenom.amount,
+//                                        amountDenom.denom,
+//                                        record.sender, // wallet addr that is paying the fee collector
+//                                        includeHash = true
+//                                    )
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//        }
     }
 }

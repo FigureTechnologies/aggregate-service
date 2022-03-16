@@ -1,7 +1,7 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
-import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
+import io.provenance.eventstream.stream.models.StreamBlock
 
 /**
  * Extract data related to errored transfers that collected a fee.
@@ -19,14 +19,14 @@ class TxError: CSVFileExtractor(
     )
 ) {
     override suspend fun extract(block: StreamBlock) {
-        for(error in block.txErrors) {
-            syncWriteRecord(
-                error.blockHeight,
-                error.blockDateTime,
-                error.code,
-                error.info,
-                includeHash = true
-            )
-        }
+//        for(error in block.txErrors) {
+//            syncWriteRecord(
+//                error.blockHeight,
+//                error.blockDateTime,
+//                error.code,
+//                error.info,
+//                includeHash = true
+//            )
+//        }
     }
 }

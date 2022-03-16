@@ -4,7 +4,6 @@ import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.EnvironmentVariablesPropertySource
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
-import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.timgroup.statsd.NoOpStatsDClient
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
@@ -16,19 +15,22 @@ import io.provenance.aggregate.common.Config
 import io.provenance.aggregate.common.Environment
 import io.provenance.aggregate.service.adapter.json.JSONObjectAdapter
 import io.provenance.aggregate.common.aws.AwsClient
-import io.provenance.aggregate.common.aws.dynamodb.client.NoOpDynamoClient
 import io.provenance.aggregate.common.extensions.recordMaxBlockHeight
 import io.provenance.aggregate.common.extensions.repeatDecodeBase64
 import io.provenance.aggregate.common.green
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.service.flow.extensions.cancelOnSignal
-import io.provenance.aggregate.service.stream.EventStream
-import io.provenance.aggregate.service.stream.clients.TendermintServiceOpenApiClient
 import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
-import io.provenance.aggregate.service.stream.consumers.EventStreamViewer
-import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
-import io.provenance.aggregate.common.models.extensions.dateTime
+import io.provenance.aggregate.service.stream.EventStreamFactory
+import io.provenance.eventstream.adapter.json.decoder.MoshiDecoderEngine
+import io.provenance.eventstream.stream.BlockStreamOptions
+import io.provenance.eventstream.stream.clients.TendermintBlockFetcher
+import io.provenance.eventstream.stream.clients.TendermintServiceOpenApiClient
+import io.provenance.eventstream.stream.consumers.EventStreamViewer
+import io.provenance.eventstream.stream.infrastructure.Serializer
+import io.provenance.eventstream.stream.models.StreamBlock
+import io.provenance.eventstream.stream.models.extensions.dateTime
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.default
@@ -154,12 +156,21 @@ fun main(args: Array<String>) {
 
     val log = "main".logger()
 
-    val moshi: Moshi = Moshi.Builder()
+//    val moshi: Moshi = Moshi.Builder()
+//        .add(KotlinJsonAdapterFactory())
+//        .add(JSONObjectAdapter())
+//        .build()
+
+
+    val moshi: MoshiDecoderEngine = Serializer.moshiBuilder
         .add(KotlinJsonAdapterFactory())
         .add(JSONObjectAdapter())
         .build()
+        .let { MoshiDecoderEngine(it) }
+
     val wsStreamBuilder = configureEventStreamBuilder(config.eventStream.websocket.uri)
-    val tendermintService = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
+    val tendermintServiceClient = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
+    val tendermintService = TendermintBlockFetcher(tendermintServiceClient)
     val aws: AwsClient = AwsClient.create(environment, config.aws.s3, config.aws.dynamodb)
     val dynamo = aws.dynamo()
     val dogStatsClient = if (ddEnabled) {
@@ -238,70 +249,80 @@ fun main(args: Array<String>) {
             }
         }
 
-        val options = EventStream.Options
-            .builder()
-            .batchSize(config.eventStream.batch.size)
-            .fromHeight(fromHeightGetter)
-            .toHeight(toHeight?.toLong())
-            .skipIfEmpty(skipIfEmpty)
-            .skipIfSeen(skipIfSeen)
-            .apply {
-                if (config.eventStream.filter.txEvents.isNotEmpty()) {
-                    matchTxEvent { it in config.eventStream.filter.txEvents }
-                }
-            }
-            .apply {
-                if (config.eventStream.filter.blockEvents.isNotEmpty()) {
-                    matchBlockEvent { it in config.eventStream.filter.blockEvents }
-                }
-            }
-            .also {
-                if (config.eventStream.filter.txEvents.isNotEmpty()) {
-                    log.info("Listening for tx events:")
-                    for (event in config.eventStream.filter.txEvents) {
-                        log.info(" - $event")
-                    }
-                }
-                if (config.eventStream.filter.blockEvents.isNotEmpty()) {
-                    log.info("Listening for block events:")
-                    for (event in config.eventStream.filter.blockEvents) {
-                        log.info(" - $event")
-                    }
-                }
-            }
-            .build()
+        val options = BlockStreamOptions(
+            batchSize = config.eventStream.batch.size,
+            fromHeight = 0,
+            toHeight = toHeight?.toLong(),
+            skipEmptyBlocks = skipIfEmpty,
+            blockEvents = config.eventStream.filter.blockEvents,
+            txEvents = config.eventStream.filter.txEvents
+        )
+
+//        val options = EventStream.Options
+//            .builder()
+//            .batchSize(config.eventStream.batch.size)
+//            .fromHeight(fromHeightGetter)
+//            .toHeight(toHeight?.toLong())
+//            .skipIfEmpty(skipIfEmpty)
+//            .skipIfSeen(skipIfSeen)
+//            .apply {
+//                if (config.eventStream.filter.txEvents.isNotEmpty()) {
+//                    matchTxEvent { it in config.eventStream.filter.txEvents }
+//                }
+//            }
+//            .apply {
+//                if (config.eventStream.filter.blockEvents.isNotEmpty()) {
+//                    matchBlockEvent { it in config.eventStream.filter.blockEvents }
+//                }
+//            }
+//            .also {
+//                if (config.eventStream.filter.txEvents.isNotEmpty()) {
+//                    log.info("Listening for tx events:")
+//                    for (event in config.eventStream.filter.txEvents) {
+//                        log.info(" - $event")
+//                    }
+//                }
+//                if (config.eventStream.filter.blockEvents.isNotEmpty()) {
+//                    log.info("Listening for block events:")
+//                    for (event in config.eventStream.filter.blockEvents) {
+//                        log.info(" - $event")
+//                    }
+//                }
+//            }
+//            .build()
+//
+
 
         if (observe) {
             log.info("*** Observing blocks and events. No action will be taken. ***")
             EventStreamViewer(
-                EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, NoOpDynamoClient()),
+                EventStreamFactory(config, moshi, wsStreamBuilder, tendermintService, dynamo),
                 options
-            )
-                .consume { b: StreamBlock ->
-                    val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
-                    println(
-                        if (b.historical) {
-                            text
-                        } else {
-                            green(text)
-                        }
-                    )
-                    if (verbose) {
-                        for (event in b.blockEvents) {
-                            println("  Block-Event: ${event.eventType}")
-                            for (attr in event.attributes) {
-                                println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
-                            }
-                        }
-                        for (event in b.txEvents) {
-                            println("  Tx-Event: ${event.eventType}")
-                            for (attr in event.attributes) {
-                                println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
-                            }
+            ).consume { b: StreamBlock ->
+                val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
+                println(
+                    if(b.historical) {
+                        text
+                    } else {
+                        green(text)
+                    }
+                )
+                if(verbose) {
+                    for(event in b.blockEvents) {
+                        println("  Block-Event: ${event.eventType}")
+                        for(attr in event.attributes) {
+                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
                         }
                     }
-                    println()
+                    for(event in b.txEvents) {
+                        println(" Tx-Event: ${event.eventType}")
+                        for(attr in event.attributes) {
+                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
+                        }
+                    }
                 }
+                println()
+            }
         } else {
             if (config.upload.extractors.isNotEmpty()) {
                 log.info("upload: adding extractors")
@@ -311,7 +332,7 @@ fun main(args: Array<String>) {
             }
 
             EventStreamUploader(
-                EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, dynamo),
+                EventStreamFactory(config, moshi, wsStreamBuilder, tendermintService, dynamo),
                 aws,
                 moshi,
                 options

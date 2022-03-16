@@ -4,10 +4,10 @@ import io.provenance.aggregate.common.aws.dynamodb.*
 import io.provenance.aggregate.common.aws.dynamodb.extensions.toBlockStorageMetadata
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.BatchId
-import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.utils.DelayShim
 import io.provenance.aggregate.common.utils.backoff
 import io.provenance.aggregate.common.utils.timestamp
+import io.provenance.eventstream.stream.models.StreamBlock
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow

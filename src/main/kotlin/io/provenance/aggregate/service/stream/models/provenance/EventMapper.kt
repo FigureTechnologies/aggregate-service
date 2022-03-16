@@ -1,7 +1,7 @@
 package io.provenance.aggregate.service.stream.models.provenance
 
 import io.provenance.aggregate.common.logger
-import io.provenance.aggregate.common.models.EncodedBlockchainEvent
+import io.provenance.eventstream.stream.models.EncodedBlockchainEvent
 import org.slf4j.Logger
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction

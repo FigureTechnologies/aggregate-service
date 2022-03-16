@@ -12,14 +12,17 @@ import io.provenance.aggregate.common.aws.s3.S3Key
 import io.provenance.aggregate.common.aws.s3.StreamableObject
 import io.provenance.aggregate.service.flow.extensions.chunked
 import io.provenance.aggregate.common.logger
-import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.batch.Batch
 import io.provenance.aggregate.common.models.BatchId
 import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
-import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
-import io.provenance.aggregate.common.models.extensions.dateTime
+import io.provenance.aggregate.service.stream.EventStreamFactory
+import io.provenance.eventstream.adapter.json.decoder.DecoderEngine
+import io.provenance.eventstream.stream.BlockStreamOptions
+import io.provenance.eventstream.stream.EventStream
+import io.provenance.eventstream.stream.models.StreamBlock
+import io.provenance.eventstream.stream.models.extensions.dateTime
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -33,7 +36,7 @@ import kotlin.time.ExperimentalTime
 /**
  * An event stream consumer responsible for uploading streamed blocks to S3.
  *
- * @property eventStream The event stream which provides blocks to this consumer.
+ * @property  The event stream which provides blocks to this consumer.
  * @property aws The client used to interact with AWS.
  * @property moshi The JSON serializer/deserializer used by this consumer.
  * @property options Options used to configure this consumer.
@@ -45,16 +48,16 @@ import kotlin.time.ExperimentalTime
 class EventStreamUploader(
     private val eventStream: EventStream,
     private val aws: AwsClient,
-    private val moshi: Moshi,
-    private val options: EventStream.Options = EventStream.Options.DEFAULT,
+    private val moshi: DecoderEngine,
+    private val options: BlockStreamOptions,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
     constructor(
-        eventStreamFactory: EventStream.Factory,
+        eventStreamFactory: EventStreamFactory,
         aws: AwsClient,
-        moshi: Moshi,
-        options: EventStream.Options
-    ) : this(eventStreamFactory.create(options), aws, moshi, options)
+        moshi: DecoderEngine,
+        options: BlockStreamOptions
+    ) : this(eventStreamFactory.createSource(options) as EventStream, aws, moshi, options)
 
     companion object {
         const val STREAM_BUFFER_CAPACITY: Int = 256
@@ -164,7 +167,7 @@ class EventStreamUploader(
             }
             .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = BufferOverflow.SUSPEND)
             .flowOn(dispatchers.io())
-            .chunked(size = options.batchSize, timeout = options.batchTimeout)
+            .chunked(size = options.batchSize, timeout = Duration.seconds(10))
             .transform { streamBlocks: List<StreamBlock> ->
 
                 log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")

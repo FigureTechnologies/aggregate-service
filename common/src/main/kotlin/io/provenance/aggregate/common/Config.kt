@@ -60,7 +60,7 @@ data class UploadConfig(
     }
 }
 
-data class Config(
+data class Config (
     val aws: AwsConfig,
     @ConfigAlias("event-stream") val eventStream: EventStreamConfig,
     val upload: UploadConfig = UploadConfig.empty(),

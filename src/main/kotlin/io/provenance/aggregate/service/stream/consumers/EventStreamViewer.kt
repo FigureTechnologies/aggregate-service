@@ -2,7 +2,7 @@ package io.provenance.aggregate.service.stream.consumers
 
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.StreamBlock
-import io.provenance.aggregate.service.stream.EventStream
+import io.provenance.aggregate.service.stream.EventStreamLegacy
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.buffer
@@ -18,12 +18,12 @@ import kotlinx.coroutines.flow.collect
 @OptIn(FlowPreview::class)
 @ExperimentalCoroutinesApi
 class EventStreamViewer(
-    private val eventStream: EventStream,
-    private val options: EventStream.Options = EventStream.Options.DEFAULT
+    private val eventStream: EventStreamLegacy,
+    private val options: EventStreamLegacy.Options = EventStreamLegacy.Options.DEFAULT
 ) {
     constructor(
-        eventStreamFactory: EventStream.Factory,
-        options: EventStream.Options = EventStream.Options.DEFAULT
+        eventStreamFactory: EventStreamLegacy.Factory,
+        options: EventStreamLegacy.Options = EventStreamLegacy.Options.DEFAULT
     ) : this(eventStreamFactory.create(options), options)
 
     private val log = logger()

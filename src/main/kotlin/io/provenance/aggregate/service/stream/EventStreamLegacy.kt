@@ -44,8 +44,8 @@ typealias HeightGetter = suspend () -> Long?
 
 @OptIn(FlowPreview::class, ExperimentalTime::class)
 @ExperimentalCoroutinesApi
-class EventStream(
-    private val eventStreamService: EventStreamService,
+class EventStreamLegacy(
+    private val eventStreamService: EventStreamServiceLegacy,
     private val tendermintServiceClient: TendermintServiceClient,
     private val dynamo: DynamoClient,
     private val moshi: Moshi,
@@ -226,7 +226,7 @@ class EventStream(
     ) {
         private fun noop(_options: Options.Builder) {}
 
-        fun create(setOptions: (options: Options.Builder) -> Unit = ::noop): EventStream {
+        fun create(setOptions: (options: Options.Builder) -> Unit = ::noop): EventStreamLegacy {
             val optionsBuilder = Options.Builder()
                 .batchSize(config.eventStream.batch.size)
                 .skipIfEmpty(true)
@@ -234,15 +234,15 @@ class EventStream(
             return create(optionsBuilder.build())
         }
 
-        fun create(options: Options): EventStream {
+        fun create(options: Options): EventStreamLegacy {
             val lifecycle = LifecycleRegistry(config.eventStream.websocket.throttleDurationMs)
             val scarlet: Scarlet = eventStreamBuilder.lifecycle(lifecycle).build()
-            val tendermintRpc: TendermintRPCStream = scarlet.create()
-            val eventStreamService = TendermintEventStreamService(tendermintRpc, lifecycle)
+            val tendermintRpc: TendermintRPCStreamLegacy = scarlet.create()
+            val eventStreamService = TendermintEventStreamLegacyServiceLegacy(tendermintRpc, lifecycle)
             val feeCollector = config.feeCollector
             val dynamoBatchGetItems = config.aws.dynamodb.dynamoBatchGetItems
 
-            return EventStream(
+            return EventStreamLegacy(
                 eventStreamService,
                 tendermintServiceClient,
                 dynamoClient,

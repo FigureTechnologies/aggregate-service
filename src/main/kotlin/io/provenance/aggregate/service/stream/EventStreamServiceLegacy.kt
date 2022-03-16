@@ -50,7 +50,7 @@ data class NewBlockEventResultValue(
  * Used by the Scarlet library to instantiate an implementation that provides access to a
  * `ReceiveChannel<WebSocket.Event>` that can be used to listen for web socket events.
  */
-interface TendermintRPCStream {
+interface TendermintRPCStreamLegacy {
 
     @Receive
     fun observeWebSocketEvent(): ReceiveChannel<WebSocket.Event>
@@ -69,7 +69,7 @@ interface TendermintRPCStream {
     // fun streamEvents(): ReceiveChannel<RpcResponse<Result>>
 }
 
-interface EventStreamService : TendermintRPCStream {
+interface EventStreamServiceLegacy : TendermintRPCStreamLegacy {
     /**
      * Starts the stream
      */
@@ -87,8 +87,8 @@ interface EventStreamService : TendermintRPCStream {
  * @property rpcStream The Tendermint RPC API websocket stream provider (powered by Scarlet).
  * @property lifecycle The lifecycle responsible for starting and stopping the underlying websocket event stream.
  */
-class TendermintEventStreamService(rpcStream: TendermintRPCStream, val lifecycle: LifecycleRegistry) :
-    TendermintRPCStream by rpcStream, EventStreamService {
+class TendermintEventStreamLegacyServiceLegacy(rpcStream: TendermintRPCStreamLegacy, val lifecycle: LifecycleRegistry) :
+    TendermintRPCStreamLegacy by rpcStream, EventStreamServiceLegacy {
     /**
      * Allows the provided event stream to start receiving events.
      *

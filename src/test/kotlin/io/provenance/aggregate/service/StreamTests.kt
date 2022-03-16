@@ -262,7 +262,7 @@ class StreamTests : TestBase() {
                         .toTypedArray()
 
                 // set up:
-                val ess = MockEventStreamService
+                val ess = MockEventStreamLegacyService
                     .builder()
                     .dispatchers(dispatcherProvider)
                     .response(BlockResponse::class.java, *blocks)

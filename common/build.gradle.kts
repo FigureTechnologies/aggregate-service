@@ -66,6 +66,8 @@ dependencies {
     implementation("software.amazon.awssdk:dynamodb-enhanced")
 
     implementation("cloud.localstack", "localstack-utils", Version.LocalStack)
+
+    implementation("io.provenance.eventstream:es-api-model:0.3.1")
 }
 
 sourceSets {

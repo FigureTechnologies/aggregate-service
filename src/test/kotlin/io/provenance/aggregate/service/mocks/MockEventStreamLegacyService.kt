@@ -6,7 +6,7 @@ import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
 import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.common.logger
-import io.provenance.aggregate.service.stream.EventStreamService
+import io.provenance.aggregate.service.stream.EventStreamServiceLegacy
 import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
 import io.provenance.aggregate.service.test.utils.Defaults
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -14,15 +14,14 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelIterator
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runBlockingTest
 import java.util.concurrent.atomic.AtomicLong
 
-class MockEventStreamService private constructor(
+class MockEventStreamLegacyService private constructor(
     private val channel: Channel<WebSocket.Event>,
     private val responseCount: Long,
     private val moshi: Moshi,
     private val dispatchers: DispatcherProvider
-) : EventStreamService {
+) : EventStreamServiceLegacy {
 
     companion object {
         fun builder() = Builder()
@@ -80,12 +79,12 @@ class MockEventStreamService private constructor(
          *
          * @return A mock event stream.
          */
-        suspend fun build(): MockEventStreamService {
+        suspend fun build(): MockEventStreamLegacyService {
             val channel = Channel<WebSocket.Event>(payloads.size)
             for (payload in payloads) {
                 channel.send(WebSocket.Event.OnMessageReceived(Message.Text(payload)))
             }
-            return MockEventStreamService(
+            return MockEventStreamLegacyService(
                 channel = channel,
                 responseCount = payloads.size.toLong(),
                 moshi = moshi,
