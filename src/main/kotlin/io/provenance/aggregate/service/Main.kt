@@ -29,7 +29,9 @@ import io.provenance.eventstream.stream.clients.TendermintBlockFetcher
 import io.provenance.eventstream.stream.clients.TendermintServiceOpenApiClient
 import io.provenance.eventstream.stream.consumers.EventStreamViewer
 import io.provenance.eventstream.stream.infrastructure.Serializer
+import io.provenance.eventstream.stream.infrastructure.Serializer.moshi
 import io.provenance.eventstream.stream.models.StreamBlock
+import io.provenance.eventstream.stream.models.StreamBlockImplJsonAdapter
 import io.provenance.eventstream.stream.models.extensions.dateTime
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -165,6 +167,7 @@ fun main(args: Array<String>) {
     val moshi: MoshiDecoderEngine = Serializer.moshiBuilder
         .add(KotlinJsonAdapterFactory())
         .add(JSONObjectAdapter())
+        .add(StreamBlock::class.java, StreamBlockImplJsonAdapter(moshi))
         .build()
         .let { MoshiDecoderEngine(it) }
 
@@ -251,7 +254,7 @@ fun main(args: Array<String>) {
 
         val options = BlockStreamOptions(
             batchSize = config.eventStream.batch.size,
-            fromHeight = 0,
+            fromHeight = 6878190,
             toHeight = toHeight?.toLong(),
             skipEmptyBlocks = skipIfEmpty,
             blockEvents = config.eventStream.filter.blockEvents,
@@ -296,27 +299,27 @@ fun main(args: Array<String>) {
         if (observe) {
             log.info("*** Observing blocks and events. No action will be taken. ***")
             EventStreamViewer(
-                EventStreamFactory(config, moshi, wsStreamBuilder, tendermintService, dynamo),
+                EventStreamFactory(config, moshi, wsStreamBuilder, tendermintService),
                 options
             ).consume { b: StreamBlock ->
                 val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
                 println(
-                    if(b.historical) {
+                    if (b.historical) {
                         text
                     } else {
                         green(text)
                     }
                 )
-                if(verbose) {
-                    for(event in b.blockEvents) {
+                if (verbose) {
+                    for (event in b.blockEvents) {
                         println("  Block-Event: ${event.eventType}")
-                        for(attr in event.attributes) {
+                        for (attr in event.attributes) {
                             println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
                         }
                     }
-                    for(event in b.txEvents) {
+                    for (event in b.txEvents) {
                         println(" Tx-Event: ${event.eventType}")
-                        for(attr in event.attributes) {
+                        for (attr in event.attributes) {
                             println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
                         }
                     }
@@ -332,7 +335,7 @@ fun main(args: Array<String>) {
             }
 
             EventStreamUploader(
-                EventStreamFactory(config, moshi, wsStreamBuilder, tendermintService, dynamo),
+                EventStreamFactory(config, moshi, wsStreamBuilder, tendermintService),
                 aws,
                 moshi,
                 options
@@ -341,10 +344,12 @@ fun main(args: Array<String>) {
                 .upload()
                 .cancelOnSignal(shutDownSignal)
                 .collect { result: UploadResult ->
-                    log.info("uploaded #${result.batchId} => \n" +
-                            "S3 ETag: ${result.eTag} => \n" +
-                            "S3Key: ${result.s3Key} => \n" +
-                            "Historical Block Height Range: ${result.blockHeightRange.first} - ${result.blockHeightRange.second}")
+                    log.info(
+                        "uploaded #${result.batchId} => \n" +
+                                "S3 ETag: ${result.eTag} => \n" +
+                                "S3Key: ${result.s3Key} => \n" +
+                                "Historical Block Height Range: ${result.blockHeightRange.first} - ${result.blockHeightRange.second}"
+                    )
                 }
         }
     }

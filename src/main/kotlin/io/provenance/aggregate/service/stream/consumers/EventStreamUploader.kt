@@ -1,6 +1,5 @@
 package io.provenance.aggregate.service.stream.consumers
 
-import com.squareup.moshi.Moshi
 import io.provenance.aggregate.service.DefaultDispatcherProvider
 import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.common.aws.AwsClient

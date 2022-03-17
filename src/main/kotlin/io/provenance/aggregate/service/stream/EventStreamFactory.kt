@@ -24,7 +24,7 @@ class EventStreamFactory(
     private val moshi: DecoderEngine,
     private val eventStreamBuilder: Scarlet.Builder,
     private val fetcher: TendermintBlockFetcher,
-    private val dynamoClient: DynamoClient,
+//    private val dynamoClient: DynamoClient,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
     private val checkpoint: Checkpoint = FileCheckpoint()
 ): BlockStreamFactory {

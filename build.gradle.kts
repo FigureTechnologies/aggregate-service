@@ -23,12 +23,12 @@ repositories {
 dependencies {
     implementation(project(":common"))
 
-    implementation("io.provenance.eventstream:es-api-model:0.3.1")
-    implementation("io.provenance.eventstream:es-api:0.3.1")
-    implementation("io.provenance.eventstream:es-kafka-coroutine:0.3.1")
-    implementation("io.provenance.eventstream:es-core:0.3.1")
-    implementation("io.provenance.eventstream:es-kafka:0.3.1")
-    implementation("io.provenance.eventstream:es-cli:0.3.1")
+    implementation("io.provenance.eventstream:es-api-model:0.4.0")
+    implementation("io.provenance.eventstream:es-api:0.4.0")
+    implementation("io.provenance.eventstream:es-kafka-coroutine:0.4.0")
+    implementation("io.provenance.eventstream:es-core:0.4.0")
+    implementation("io.provenance.eventstream:es-kafka:0.4.0")
+    implementation("io.provenance.eventstream:es-cli:0.4.0")
 
 
     // All dependencies in the `org.jetbrains.kotlin` package will use the version of kotlin defined in
