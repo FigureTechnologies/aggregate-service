@@ -20,7 +20,7 @@ import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.common.models.extensions.dateTime
-import io.provenance.aggregate.service.stream.repository.db.DBInterface
+import io.provenance.aggregate.repository.RepositoryBase
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -28,7 +28,6 @@ import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import java.time.OffsetDateTime
 import kotlin.reflect.KClass
-import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
 /**
@@ -47,7 +46,7 @@ class EventStreamUploader(
     private val eventStream: EventStream,
     private val aws: AwsClient,
     private val moshi: Moshi,
-    private val dbRepository: DBInterface<Any>,
+    private val repository: RepositoryBase<Any>,
     private val options: EventStream.Options = EventStream.Options.DEFAULT,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
@@ -55,9 +54,9 @@ class EventStreamUploader(
         eventStreamFactory: EventStream.Factory,
         aws: AwsClient,
         moshi: Moshi,
-        dbRepository: DBInterface<Any>,
+        repository: RepositoryBase<Any>,
         options: EventStream.Options
-    ) : this(eventStreamFactory.create(options), aws, moshi, dbRepository, options)
+    ) : this(eventStreamFactory.create(options), aws, moshi, repository, options)
 
     companion object {
         const val STREAM_BUFFER_CAPACITY: Int = 256
@@ -153,7 +152,6 @@ class EventStreamUploader(
 
         val batchBlueprint: Batch.Builder = Batch.Builder()
             .dispatchers(dispatchers)
-            .database(dbRepository)
             // Extractors are specified via their Kotlin class, along with any arguments to pass to the constructor:
             .apply {
                 for (cls in loadExtractorClasses(extractorClassNames)) {
@@ -185,8 +183,12 @@ class EventStreamUploader(
 
                         streamBlocks.map { block ->
                             onEachBlock(block)
+                            repository.save(block) // RavenDB store
                             async { batch.processBlock(block) }
                         }.awaitAll()
+
+                        repository.saveChanges()
+
                         // Upload the results to S3:
                         batch.complete { batchId: BatchId, extractor: Extractor ->
                             val key: S3Key = csvS3Key(batchId, earliestDate, extractor.name)

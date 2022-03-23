@@ -5,7 +5,6 @@ import io.provenance.aggregate.common.extensions.*
 import io.provenance.aggregate.service.stream.extractors.FileExtractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.aggregate.common.utils.sha256
-import io.provenance.aggregate.service.stream.repository.db.DBInterface
 import org.apache.commons.csv.CSVFormat
 import java.io.OutputStreamWriter
 

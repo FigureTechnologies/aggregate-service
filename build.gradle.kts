@@ -20,6 +20,7 @@ repositories {
 
 dependencies {
     implementation(project(":common"))
+    implementation(project(":l2-cache"))
 
     // All dependencies in the `org.jetbrains.kotlin` package will use the version of kotlin defined in
     // `gradle.properties`: used to pin the org.jetbrains.kotlin.{jvm,kapt} plugin versions in `settings.gradle.kts`.
@@ -76,11 +77,6 @@ dependencies {
     implementation("org.jetbrains.exposed","exposed-core", Version.ExposedVersion)
     implementation("org.jetbrains.exposed", "exposed-dao", Version.ExposedVersion)
     implementation("org.jetbrains.exposed", "exposed-jdbc", Version.ExposedVersion)
-
-    implementation("net.ravendb", "ravendb-client", Version.RavenDb)
-
-    implementation("com.fasterxml.jackson.module", "jackson-module-kotlin", "2.11.0")
-
 }
 
 sourceSets {

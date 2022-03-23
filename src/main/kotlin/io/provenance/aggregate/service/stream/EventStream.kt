@@ -421,10 +421,11 @@ class EventStream(
             val blockHeight = header?.height
             val blockDatetime = header?.dateTime()
             val blockResponse = tendermintServiceClient.blockResults(blockHeight).result
+            val blockTxResult = blockResponse.txsResults
             val blockEvents: List<BlockEvent> = blockResponse.blockEvents(blockDatetime)
             val txErrors: List<TxError> = blockResponse.txErroredEvents(blockDatetime)
             val txEvents: List<TxEvent> = blockResponse.txEvents(blockDatetime) { index: Int -> txHash(index) ?: "" }
-            val streamBlock = StreamBlock(this, blockEvents, txEvents, txErrors, feeCollector = feeCollector)
+            val streamBlock = StreamBlock(this, blockEvents, blockTxResult, txEvents, txErrors, feeCollector = feeCollector)
             val matchBlock = matchesBlockEvent(blockEvents)
             val matchTx = matchesTxEvent(txEvents)
             // ugly:

@@ -4,19 +4,7 @@ import io.provenance.aggregate.common.extensions.toISOString
 import io.provenance.aggregate.common.models.AmountDenom
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
-import io.provenance.aggregate.service.stream.repository.db.DBInterface
 import io.provenance.aggregate.service.stream.models.provenance.cosmos.Tx as CosmosTx
-
-data class CoinTransferDB(
-    val event_type: String?,
-    val block_height: Long?,
-    val block_timestamp: String?,
-    val tx_hash: String?,
-    val recipient: String?,
-    val sender: String?,
-    val amount: String?,
-    val denom: String?
-)
 
 /**
  * Extract data related to the movement of coins between accounts
@@ -35,7 +23,7 @@ class TxCoinTransfer : CSVFileExtractor(
         "denom"
     )
 ) {
-    override suspend fun extract(block: StreamBlock, dbRepository: DBInterface<Any>) {
+    override suspend fun extract(block: StreamBlock) {
         for (event in block.txEvents) {
             CosmosTx.mapper.fromEvent(event)
                 ?.let { record: CosmosTx ->
@@ -43,7 +31,7 @@ class TxCoinTransfer : CSVFileExtractor(
                         is CosmosTx.Transfer -> {
                             val amountAndDenom: List<AmountDenom>? = record.amountAndDenom?.let { record.splitAmountAndDenom(it) }
                             amountAndDenom?.map { amountDenom ->
-                                val coinTransferData = CoinTransferDB(
+                                syncWriteRecord(
                                     event.eventType,
                                     event.blockHeight,
                                     event.blockDateTime?.toISOString(),
@@ -51,15 +39,9 @@ class TxCoinTransfer : CSVFileExtractor(
                                     record.recipient,
                                     record.sender,
                                     amountDenom.amount,  // amount
-                                    amountDenom.denom  // denom
-                                )
-
-                                syncWriteRecord(
-                                    coinTransferData,
+                                    amountDenom.denom,  // denom
                                     includeHash = true
-                                ).also { hash ->
-                                    dbRepository.save(hash = hash, coinTransferData)
-                                }
+                                )
                             }
                         }
                     }

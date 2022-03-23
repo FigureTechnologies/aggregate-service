@@ -4,25 +4,6 @@ import io.provenance.aggregate.common.extensions.toISOString
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.provenance.marker.EventMarker
-import io.provenance.aggregate.service.stream.repository.db.DBInterface
-
-data class MarkerSupplyDB(
-    val event_type: String?,
-    val block_height: Long?,
-    val block_timestamp: String?,
-    val coins: String?,
-    val denom: String?,
-    val amount: String?,
-    val administrator: String?,
-    val to_address: String?,
-    val from_address: String?,
-    val metadata_base: String?,
-    val metadata_description: String?,
-    val metadata_display: String?,
-    val metadata_denom_units: String?,
-    val metadata_name: String?,
-    val metadata_symbol: String?
-)
 
 /**
  * Extract data related to the overall supply of a marker.
@@ -48,14 +29,14 @@ class TxMarkerSupply : CSVFileExtractor(
         "metadata_symbol"
     )
 ) {
-    override suspend fun extract(block: StreamBlock, dbRepository: DBInterface<Any>) {
+    override suspend fun extract(block: StreamBlock) {
         for (event in block.txEvents) {
             EventMarker.mapper.fromEvent(event)
                 ?.toEventRecord()
                 ?.let { record ->
                     // All transfers are processed by `TxMarkerTransfer`
                     if (!record.isTransfer()) {
-                        val markerSupplyData = MarkerSupplyDB(
+                        syncWriteRecord(
                             event.eventType,
                             event.blockHeight,
                             event.blockDateTime?.toISOString(),
@@ -70,14 +51,9 @@ class TxMarkerSupply : CSVFileExtractor(
                             record.metadataDisplay,
                             record.metadataDenomUnits,
                             record.metadataName,
-                            record.metadataSymbol
-                        )
-                        syncWriteRecord(
-                            markerSupplyData,
+                            record.metadataSymbol,
                             includeHash = true
-                        ).also { hash ->
-                            dbRepository.save(hash = hash, markerSupplyData)
-                        }
+                        )
                     }
                 }
         }

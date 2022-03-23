@@ -11,6 +11,7 @@ import io.provenance.aggregate.common.aws.dynamodb.BlockStorageMetadata
 data class StreamBlock(
     val block: Block,
     val blockEvents: List<BlockEvent>,
+    val blockResult: List<BlockResultsResponseResultTxsResults>?,
     val txEvents: List<TxEvent>,
     val txErrors: List<TxError>,
     val historical: Boolean = false,

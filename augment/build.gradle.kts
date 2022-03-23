@@ -33,7 +33,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:${Version.Kotlinx.Core}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${Version.Kotlinx.Core}")
 
-    // implementation("com.github.jasync-sql:jasync-postgresql:2.0.2")
     implementation("net.snowflake:snowflake-jdbc:3.13.8")
     implementation("commons-dbutils:commons-dbutils:1.7")
 
