@@ -14,8 +14,7 @@ repositories {
 dependencies {
     implementation(project(":common"))
 
-    implementation("net.ravendb", "ravendb-client", Version.RavenDb)
-    implementation("com.fasterxml.jackson.module", "jackson-module-kotlin", "2.11.0")
+    implementation("net.ravendb","ravendb", Version.RavenDb)
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")

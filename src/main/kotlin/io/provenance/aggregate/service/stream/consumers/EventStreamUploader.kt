@@ -21,6 +21,7 @@ import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.common.models.extensions.dateTime
 import io.provenance.aggregate.repository.RepositoryBase
+import io.provenance.aggregate.repository.model.txHash
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -180,10 +181,14 @@ class EventStreamUploader(
                 // Run the extract steps:
                 val uploaded: List<UploadResult> = coroutineScope {
                     withContext(dispatchers.io()) {
-
                         streamBlocks.map { block ->
                             onEachBlock(block)
-                            repository.save(block) // RavenDB store
+
+                            // RavenDB Store for l2 caching
+                            repository.saveBlockMetadata(block)
+                            repository.saveBlockTx(block.height, block.blockResult) { index: Int ->  block.txHash(index) }
+                            repository.saveBlockTxEvents(block.height, block.txEvents)
+
                             async { batch.processBlock(block) }
                         }.awaitAll()
 

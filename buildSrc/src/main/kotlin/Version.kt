@@ -31,7 +31,5 @@ object Version {
     const val PostgresVersion = "42.2.9"
     const val ExposedVersion = "0.36.2"
 
-    const val KodeinDb = "0.9.0-beta"
-    const val RavenDb = "4.0.0-rc1"
-    const val Jackson = "2.11.0"
+    const val RavenDb = "5.2.3"
 }
