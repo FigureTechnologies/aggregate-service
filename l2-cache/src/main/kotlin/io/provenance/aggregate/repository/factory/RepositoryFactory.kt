@@ -15,6 +15,6 @@ class RepositoryFactory(
          *
          * RavenDB is only supported db at the moment.
          */
-        return RavenDB(dbConfig.addr, dbConfig.dbName)
+        return RavenDB(dbConfig.addr, dbConfig.dbName, dbConfig.dbMaxConnections)
     }
 }

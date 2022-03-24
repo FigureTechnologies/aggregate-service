@@ -19,8 +19,7 @@ dbConfig:
   addr: ${DB_URI}
   dbName: ${DB_DATABASE}
   dbType: ${DB_TYPE}
-  username: ${DB_USERNAME}
-  password: ${DB_PASSWORD}
+  dbMaxConnections: ${DB_MAX_CONNECTIONS}
 
 # Event stream-specific configuration options:
 event-stream:

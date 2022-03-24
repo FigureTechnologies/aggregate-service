@@ -71,7 +71,6 @@ data class Config(
 data class DBConfig(
     val addr: String,
     val dbName: String,
-    val username: String,
-    val password: String,
+    val dbMaxConnections: Int,
     val dbType: String
 )
