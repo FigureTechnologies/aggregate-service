@@ -15,7 +15,8 @@ import java.util.UUID
 
 class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBase<Any> {
 
-    private val store = DocumentStore(addr, dbName).also { it.conventions.maxNumberOfRequestsPerSession = maxConnections }.also { it.initialize() }
+    private val store =
+        DocumentStore(addr, dbName).also { it.conventions.maxNumberOfRequestsPerSession = maxConnections }.initialize()
     private var session: IDocumentSession = store.openSession()
 
     override fun saveBlockMetadata(block: StreamBlock) =
