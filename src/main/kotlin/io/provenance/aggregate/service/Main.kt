@@ -29,7 +29,6 @@ import io.provenance.aggregate.service.stream.consumers.EventStreamViewer
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.common.models.extensions.dateTime
-import io.provenance.aggregate.repository.RepositoryBase
 import io.provenance.aggregate.repository.factory.RepositoryFactory
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -163,7 +162,7 @@ fun main(args: Array<String>) {
     val wsStreamBuilder = configureEventStreamBuilder(config.eventStream.websocket.uri)
     val tendermintService = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
     val aws: AwsClient = AwsClient.create(environment, config.aws.s3, config.aws.dynamodb)
-    val dbClient: RepositoryBase<Any> = RepositoryFactory(config.dbConfig).dbInstance()
+    val repository = RepositoryFactory(config.dbConfig).dbInstance()
     val dynamo = aws.dynamo()
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
@@ -317,7 +316,7 @@ fun main(args: Array<String>) {
                 EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, dynamo),
                 aws,
                 moshi,
-                dbClient,
+                config.dbConfig,
                 options
             )
                 .addExtractor(config.upload.extractors)

@@ -1,6 +1,7 @@
 package io.provenance.aggregate.repository.database
 
 import io.provenance.aggregate.common.extensions.toHexString
+import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.BlockResultsResponseResultTxsResults
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.TxEvent
@@ -9,32 +10,40 @@ import io.provenance.aggregate.repository.RepositoryBase
 import io.provenance.aggregate.repository.model.BlockMetadata
 import io.provenance.aggregate.repository.model.Tx
 import io.provenance.aggregate.repository.model.TxEvents
+import io.provenance.aggregate.repository.model.txHash
 import net.ravendb.client.documents.DocumentStore
 import net.ravendb.client.documents.session.IDocumentSession
 import java.util.UUID
 
 class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBase<Any> {
 
-    private val store =
-        DocumentStore(addr, dbName).also { it.conventions.maxNumberOfRequestsPerSession = maxConnections }.initialize()
+    private val store = DocumentStore(addr, dbName).also { it.conventions.maxNumberOfRequestsPerSession = maxConnections }.initialize()
     private var session: IDocumentSession = store.openSession()
+    private val log = logger()
 
-    override fun saveBlockMetadata(block: StreamBlock) =
+    override fun saveBlock(block: StreamBlock) {
+        saveBlockMetadata(block)
+        saveBlockTx(block.height, block.blockResult) { index: Int ->  block.txHash(index) }
+        saveBlockTxEvents(block.height, block.txEvents)
+    }
+
+    private fun saveBlockMetadata(block: StreamBlock) =
         session.store(blockMetadata(block), sha256(UUID.randomUUID().toString()).toHexString())
 
-    override fun saveBlockTx(blockHeight: Long?, blockTxResult: List<BlockResultsResponseResultTxsResults>?, txHash: (Int) -> String?) {
+    private fun saveBlockTx(blockHeight: Long?, blockTxResult: List<BlockResultsResponseResultTxsResults>?, txHash: (Int) -> String?) {
         blockTx(blockHeight, blockTxResult, txHash).map {
             session.store(it)
         }
     }
 
-    override fun saveBlockTxEvents(blockHeight: Long?, txEvents: List<TxEvent>?) {
+    private fun saveBlockTxEvents(blockHeight: Long?, txEvents: List<TxEvent>?) {
         blockTxEvent(blockHeight, txEvents).map {
             session.store(it)
         }
     }
 
     override fun saveChanges() {
+        log.info(" Saving batched data and closing session request ")
         session.saveChanges()
         session.close()
     }

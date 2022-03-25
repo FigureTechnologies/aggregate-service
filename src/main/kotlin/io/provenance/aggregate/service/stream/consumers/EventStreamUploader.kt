@@ -1,6 +1,7 @@
 package io.provenance.aggregate.service.stream.consumers
 
 import com.squareup.moshi.Moshi
+import io.provenance.aggregate.common.DBConfig
 import io.provenance.aggregate.service.DefaultDispatcherProvider
 import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.common.aws.AwsClient
@@ -20,8 +21,7 @@ import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.common.models.extensions.dateTime
-import io.provenance.aggregate.repository.RepositoryBase
-import io.provenance.aggregate.repository.model.txHash
+import io.provenance.aggregate.repository.factory.RepositoryFactory
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -47,7 +47,7 @@ class EventStreamUploader(
     private val eventStream: EventStream,
     private val aws: AwsClient,
     private val moshi: Moshi,
-    private val repository: RepositoryBase<Any>,
+    private val dbConfig: DBConfig,
     private val options: EventStream.Options = EventStream.Options.DEFAULT,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
@@ -55,9 +55,9 @@ class EventStreamUploader(
         eventStreamFactory: EventStream.Factory,
         aws: AwsClient,
         moshi: Moshi,
-        repository: RepositoryBase<Any>,
+        dbConfig: DBConfig,
         options: EventStream.Options
-    ) : this(eventStreamFactory.create(options), aws, moshi, repository, options)
+    ) : this(eventStreamFactory.create(options), aws, moshi, dbConfig, options)
 
     companion object {
         const val STREAM_BUFFER_CAPACITY: Int = 256
@@ -147,7 +147,6 @@ class EventStreamUploader(
      *  @return A flow yielding the results of uploading blocks to S3.
      */
     suspend fun upload(onEachBlock: (StreamBlock) -> Unit = {}): Flow<UploadResult> {
-
         val s3: S3Client = aws.s3()
         val dynamo: DynamoClient = aws.dynamo()
 
@@ -169,10 +168,16 @@ class EventStreamUploader(
             .flowOn(dispatchers.io())
             .chunked(size = options.batchSize, timeout = options.batchTimeout)
             .transform { streamBlocks: List<StreamBlock> ->
-
                 log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")
 
                 val batch: Batch = batchBlueprint.build()
+
+                //TODO: Need to find a better way of doing this.
+                val repository = RepositoryFactory(dbConfig).dbInstance()
+                streamBlocks.map {
+                    repository.saveBlock(it)
+                }
+                repository.saveChanges()
 
                 // Use the earliest block date to generate the S3 key prefix the data files will be stored under:
                 val earliestDate: OffsetDateTime? =
@@ -183,16 +188,8 @@ class EventStreamUploader(
                     withContext(dispatchers.io()) {
                         streamBlocks.map { block ->
                             onEachBlock(block)
-
-                            // RavenDB Store for l2 caching
-                            repository.saveBlockMetadata(block)
-                            repository.saveBlockTx(block.height, block.blockResult) { index: Int ->  block.txHash(index) }
-                            repository.saveBlockTxEvents(block.height, block.txEvents)
-
                             async { batch.processBlock(block) }
                         }.awaitAll()
-
-                        repository.saveChanges()
 
                         // Upload the results to S3:
                         batch.complete { batchId: BatchId, extractor: Extractor ->
