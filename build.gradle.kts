@@ -22,13 +22,13 @@ repositories {
 
 dependencies {
     implementation(project(":common"))
+    implementation("com.google.protobuf:protobuf-java:3.5.1")
 
-    implementation("io.provenance.eventstream:es-api-model:0.4.0")
-    implementation("io.provenance.eventstream:es-api:0.4.0")
-    implementation("io.provenance.eventstream:es-kafka-coroutine:0.4.0")
-    implementation("io.provenance.eventstream:es-core:0.4.0")
-    implementation("io.provenance.eventstream:es-kafka:0.4.0")
-    implementation("io.provenance.eventstream:es-cli:0.4.0")
+    implementation("io.provenance.eventstream:es-api-model:1.0-SNAPSHOT")//0.4.0")
+    implementation("io.provenance.eventstream:es-api:1.0-SNAPSHOT")//0.4.0")
+    implementation("io.provenance.eventstream:es-core:1.0-SNAPSHOT")//0.4.0")
+    implementation("io.provenance.eventstream:es-kafka:1.0-SNAPSHOT")//0.4.0")
+    implementation("io.provenance.eventstream:es-cli:1.0-SNAPSHOT")//0.4.0")
 
 
     // All dependencies in the `org.jetbrains.kotlin` package will use the version of kotlin defined in

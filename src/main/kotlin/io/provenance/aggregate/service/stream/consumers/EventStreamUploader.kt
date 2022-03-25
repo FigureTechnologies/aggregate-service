@@ -161,14 +161,13 @@ class EventStreamUploader(
 
         return eventStream
             .streamBlocks()
-            .onEach {
-                log.info("buffering ${if (it.historical) "historical" else "live"} block #${it.block.header?.height} for upload with ${it.txEvents.size} tx events")
+            .onEach { block ->
+                log.info("buffering ${if (block.historical) "historical" else "live"} block #${block.block.header?.height} for upload with ${block.txEvents.size} tx events")
             }
             .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = BufferOverflow.SUSPEND)
             .flowOn(dispatchers.io())
             .chunked(size = options.batchSize, timeout = Duration.seconds(10))
             .transform { streamBlocks: List<StreamBlock> ->
-
                 log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")
 
                 val batch: Batch = batchBlueprint.build()
@@ -183,7 +182,8 @@ class EventStreamUploader(
 
                         streamBlocks.map { block ->
                             onEachBlock(block)
-                            async { batch.processBlock(block) }
+                            async {
+                                batch.processBlock(block) }
                         }
                             .awaitAll()
                         // Upload the results to S3:
@@ -204,25 +204,31 @@ class EventStreamUploader(
                                          * at the last successful processed block height, so we don't lose any data that
                                          * was in the middle of processing.
                                          */
-                                        val liveHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { !block.historical } }.maxOrNull()
+                                        val liveHistoricalBlockHeight =
+                                            streamBlocks.mapNotNull { block -> block.height.takeIf { !block.historical } }
+                                                .maxOrNull()
 
-                                        val highestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.maxOrNull()
-                                        val lowestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.minOrNull()
+                                        val highestHistoricalBlockHeight =
+                                            streamBlocks.mapNotNull { block -> block.height.takeIf { block.historical } }
+                                                .maxOrNull()
+                                        val lowestHistoricalBlockHeight =
+                                            streamBlocks.mapNotNull { block -> block.height.takeIf { block.historical } }
+                                                .minOrNull()
 
-                                        if(putResponse.sdkHttpResponse().isSuccessful && highestHistoricalBlockHeight != null) {
-                                             dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight)
+                                        if (putResponse.sdkHttpResponse().isSuccessful && highestHistoricalBlockHeight != null) {
+                                            dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight)
                                                 .also {
-                                                    if(it.processed > 0) {
+                                                    if (it.processed > 0) {
                                                         log.info("historical::updating max historical block height to $highestHistoricalBlockHeight")
                                                     }
                                                 }
-                                             log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
+                                            log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
                                         }
 
                                         /**
                                          * Logging the upload result of the block range.
                                          */
-                                        val blockHeightRange = if(liveHistoricalBlockHeight != null) {
+                                        val blockHeightRange = if (liveHistoricalBlockHeight != null) {
                                             Pair(liveHistoricalBlockHeight, liveHistoricalBlockHeight)
                                         } else {
                                             Pair(lowestHistoricalBlockHeight, highestHistoricalBlockHeight)

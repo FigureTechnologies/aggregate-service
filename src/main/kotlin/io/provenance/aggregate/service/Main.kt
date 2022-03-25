@@ -158,12 +158,6 @@ fun main(args: Array<String>) {
 
     val log = "main".logger()
 
-//    val moshi: Moshi = Moshi.Builder()
-//        .add(KotlinJsonAdapterFactory())
-//        .add(JSONObjectAdapter())
-//        .build()
-
-
     val moshi: MoshiDecoderEngine = Serializer.moshiBuilder
         .add(KotlinJsonAdapterFactory())
         .add(JSONObjectAdapter())
@@ -246,7 +240,7 @@ fun main(args: Array<String>) {
                     // we need to increment.
                     maxHistoricalHeight += 1
                 }
-                maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)
+                maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
             } else {
                 fromHeight?.toLong()
             }
@@ -254,47 +248,13 @@ fun main(args: Array<String>) {
 
         val options = BlockStreamOptions(
             batchSize = config.eventStream.batch.size,
-            fromHeight = 6878190,
-            toHeight = toHeight?.toLong(),
+            fromHeight = 148873,//fromHeightGetter(),//6878190,
+            toHeight = toHeight?.toLong(),//148873
             skipEmptyBlocks = skipIfEmpty,
             blockEvents = config.eventStream.filter.blockEvents,
-            txEvents = config.eventStream.filter.txEvents
+            txEvents = config.eventStream.filter.txEvents,
+            ordered = true
         )
-
-//        val options = EventStream.Options
-//            .builder()
-//            .batchSize(config.eventStream.batch.size)
-//            .fromHeight(fromHeightGetter)
-//            .toHeight(toHeight?.toLong())
-//            .skipIfEmpty(skipIfEmpty)
-//            .skipIfSeen(skipIfSeen)
-//            .apply {
-//                if (config.eventStream.filter.txEvents.isNotEmpty()) {
-//                    matchTxEvent { it in config.eventStream.filter.txEvents }
-//                }
-//            }
-//            .apply {
-//                if (config.eventStream.filter.blockEvents.isNotEmpty()) {
-//                    matchBlockEvent { it in config.eventStream.filter.blockEvents }
-//                }
-//            }
-//            .also {
-//                if (config.eventStream.filter.txEvents.isNotEmpty()) {
-//                    log.info("Listening for tx events:")
-//                    for (event in config.eventStream.filter.txEvents) {
-//                        log.info(" - $event")
-//                    }
-//                }
-//                if (config.eventStream.filter.blockEvents.isNotEmpty()) {
-//                    log.info("Listening for block events:")
-//                    for (event in config.eventStream.filter.blockEvents) {
-//                        log.info(" - $event")
-//                    }
-//                }
-//            }
-//            .build()
-//
-
 
         if (observe) {
             log.info("*** Observing blocks and events. No action will be taken. ***")
@@ -338,7 +298,7 @@ fun main(args: Array<String>) {
                 EventStreamFactory(config, moshi, wsStreamBuilder, tendermintService),
                 aws,
                 moshi,
-                options
+                options,
             )
                 .addExtractor(config.upload.extractors)
                 .upload()
