@@ -4,11 +4,11 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
-import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.common.logger
-import io.provenance.aggregate.service.stream.EventStreamServiceLegacy
-import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
 import io.provenance.aggregate.service.test.utils.Defaults
+import io.provenance.eventstream.coroutines.DispatcherProvider
+import io.provenance.eventstream.stream.EventStreamService
+import io.provenance.eventstream.stream.rpc.request.Subscribe
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelIterator
@@ -16,12 +16,12 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicLong
 
-class MockEventStreamLegacyService private constructor(
+class MockEventStreamService private constructor(
     private val channel: Channel<WebSocket.Event>,
     private val responseCount: Long,
     private val moshi: Moshi,
     private val dispatchers: DispatcherProvider
-) : EventStreamServiceLegacy {
+) : EventStreamService {
 
     companion object {
         fun builder() = Builder()
@@ -79,12 +79,12 @@ class MockEventStreamLegacyService private constructor(
          *
          * @return A mock event stream.
          */
-        suspend fun build(): MockEventStreamLegacyService {
+        suspend fun build(): MockEventStreamService {
             val channel = Channel<WebSocket.Event>(payloads.size)
             for (payload in payloads) {
                 channel.send(WebSocket.Event.OnMessageReceived(Message.Text(payload)))
             }
-            return MockEventStreamLegacyService(
+            return MockEventStreamService(
                 channel = channel,
                 responseCount = payloads.size.toLong(),
                 moshi = moshi,
