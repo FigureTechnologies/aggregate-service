@@ -73,11 +73,10 @@ application {
 
 tasks.withType<Jar> {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
     manifest {
         attributes["Main-Class"] = "tech.figure.augment.MainKt"
     }
-
+    isZip64 = true
     from(sourceSets.main.get().output)
     dependsOn(configurations.runtimeClasspath)
     from({
