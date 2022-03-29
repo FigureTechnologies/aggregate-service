@@ -71,12 +71,6 @@ dependencies {
     implementation("software.amazon.awssdk:dynamodb-enhanced")
 
     implementation("cloud.localstack", "localstack-utils", Version.LocalStack)
-
-    implementation ("org.hibernate", "hibernate-core", "5.4.19.Final")
-    implementation("org.postgresql", "postgresql", Version.PostgresVersion)
-    implementation("org.jetbrains.exposed","exposed-core", Version.ExposedVersion)
-    implementation("org.jetbrains.exposed", "exposed-dao", Version.ExposedVersion)
-    implementation("org.jetbrains.exposed", "exposed-jdbc", Version.ExposedVersion)
 }
 
 sourceSets {

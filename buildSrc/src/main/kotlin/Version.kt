@@ -28,8 +28,5 @@ object Version {
     const val Scarlet = "0.1.12"
     const val LocalStack = "0.2.14"
 
-    const val PostgresVersion = "42.2.9"
-    const val ExposedVersion = "0.36.2"
-
     const val RavenDb = "5.2.3"
 }
