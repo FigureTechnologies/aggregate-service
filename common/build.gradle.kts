@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm")
-    id("org.jetbrains.kotlin.kapt")
+    kotlin("kapt")
     idea
 }
 
@@ -11,63 +11,28 @@ java.sourceCompatibility = JavaVersion.VERSION_11
 val TENDERMINT_OPENAPI_YAML = "$rootDir/src/main/resources/tendermint-v0.34.12-rpc-openapi-FIXED.yaml"
 
 repositories {
-    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
-    // All dependencies in the `org.jetbrains.kotlin` package will use the version of kotlin defined in
-    // `gradle.properties`: used to pin the org.jetbrains.kotlin.{jvm,kapt} plugin versions in `settings.gradle.kts`.
-    implementation("org.jetbrains.kotlin", "kotlin-stdlib")
-    implementation("org.jetbrains.kotlin", "kotlin-reflect")
+    implementation(libs.bundles.kotlin)
+    testImplementation(libs.kotlin.testcoroutines)
+    testImplementation(libs.bundles.junit)
 
-    implementation("org.jetbrains.kotlinx", "kotlinx-cli-jvm", Version.Kotlinx.CLI)
-    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", Version.Kotlinx.Core)
-    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-jdk8", Version.Kotlinx.Core)
-    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-reactive", Version.Kotlinx.Core)
-
-    testImplementation("org.jetbrains.kotlinx", "kotlinx-coroutines-test", Version.Kotlinx.Core)
-    testImplementation("org.junit.jupiter", "junit-jupiter-engine", Version.JUnit)
-    testImplementation("org.apache.commons", "commons-text", Version.ApacheCommons.Text)
-    testImplementation("org.junit-pioneer", "junit-pioneer", Version.JUnitPioneer)
-
-    implementation("io.arrow-kt", "arrow-core", Version.Arrow)
-
-    implementation("org.apache.commons", "commons-csv", Version.ApacheCommons.CSV)
-    implementation("commons-io", "commons-io", Version.ApacheCommons.IO)
-    implementation("org.apache.commons", "commons-lang3", Version.ApacheCommons.Lang3)
-
-    implementation("com.tinder.scarlet", "scarlet", Version.Scarlet)
-    implementation("com.tinder.scarlet", "stream-adapter-coroutines", Version.Scarlet)
-    implementation("com.tinder.scarlet", "websocket-okhttp", Version.Scarlet)
-    implementation("com.tinder.scarlet", "message-adapter-moshi", Version.Scarlet)
-
-    implementation("com.datadoghq", "java-dogstatsd-client", Version.DatadogStats)
-
-    implementation("io.grpc", "grpc-protobuf", Version.GRPC)
-
-    implementation("io.provenance.protobuf", "pb-proto-java", Version.Provenance)
-
-    implementation("ch.qos.logback.contrib", "logback-json-core", Version.Logback)
-    implementation("ch.qos.logback.contrib", "logback-json-classic", Version.Logback)
-
-    implementation("com.squareup.moshi", "moshi-kotlin-codegen", Version.Moshi)
-    kapt("com.squareup.moshi:moshi-kotlin-codegen:${Version.Moshi}")
-
-    implementation("com.sksamuel.hoplite", "hoplite-core", Version.Hoplite)
-    implementation("com.sksamuel.hoplite", "hoplite-yaml", Version.Hoplite)
-
-    implementation("org.json", "json", Version.JSON)
-
-    implementation(platform("software.amazon.awssdk:bom:${Version.AWS}"))
-    implementation("software.amazon.awssdk:netty-nio-client")
-    implementation("software.amazon.awssdk:s3")
-    implementation("software.amazon.awssdk:dynamodb")
-    implementation("software.amazon.awssdk:dynamodb-enhanced")
-
-    implementation("cloud.localstack", "localstack-utils", Version.LocalStack)
-
-    implementation("io.provenance.eventstream:es-api-model:0.3.1")
+    implementation(libs.bundles.apache.commons)
+    implementation(libs.bundles.scarlet)
+    implementation(libs.datadog)
+    implementation(libs.grpc)
+    implementation(libs.provenance.protos)
+    implementation(libs.bundles.logback)
+    implementation(libs.moshi.kotlin.codegen)
+    kapt(libs.moshi.kotlin.codegen)
+    implementation(libs.bundles.hoplite)
+    implementation(libs.json)
+    implementation(platform(libs.aws.bom))
+    implementation(libs.bundles.aws)
+    implementation(libs.localstack)
+    implementation(libs.bundles.eventstream)
 }
 
 sourceSets {
