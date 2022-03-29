@@ -3,6 +3,8 @@ eventStream = "0.5.0"
 kotlinxCore = "1.5.2"
 kotlinxCli = "0.3.3"
 kotlinxDateTime = "0.3.0"
+kotlinReflect = "1.6.0"
+kotlinStdLib = "1.6.0"
 junitPioneer = "1.4.2"
 junit = "5.1.0"
 commonsText = "1.9"
@@ -42,8 +44,8 @@ kotlin-jdk8coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-jdk
 kotlin-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "kotlinxCore" }
 kotlin-reactivecoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactive", version.ref = "kotlinxCore" }
 kotlin-testcoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCore" }
-kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib" }
-kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlinStdLib" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlinReflect" }
 kotlin-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinSerialization"}
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test" }
 
