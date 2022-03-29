@@ -1,7 +1,6 @@
 package io.provenance.aggregate.service.stream.consumers
 
 import com.squareup.moshi.Moshi
-import io.provenance.aggregate.common.DBConfig
 import io.provenance.aggregate.service.DefaultDispatcherProvider
 import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.common.aws.AwsClient
@@ -21,6 +20,7 @@ import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.common.models.extensions.dateTime
+import io.provenance.aggregate.repository.RepositoryBase
 import io.provenance.aggregate.repository.factory.RepositoryFactory
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
@@ -47,7 +47,7 @@ class EventStreamUploader(
     private val eventStream: EventStream,
     private val aws: AwsClient,
     private val moshi: Moshi,
-    private val dbConfig: DBConfig,
+    private val repository: RepositoryBase,
     private val options: EventStream.Options = EventStream.Options.DEFAULT,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
@@ -55,9 +55,9 @@ class EventStreamUploader(
         eventStreamFactory: EventStream.Factory,
         aws: AwsClient,
         moshi: Moshi,
-        dbConfig: DBConfig,
+        repository: RepositoryBase,
         options: EventStream.Options
-    ) : this(eventStreamFactory.create(options), aws, moshi, dbConfig, options)
+    ) : this(eventStreamFactory.create(options), aws, moshi, repository, options)
 
     companion object {
         const val STREAM_BUFFER_CAPACITY: Int = 256
@@ -172,12 +172,13 @@ class EventStreamUploader(
 
                 val batch: Batch = batchBlueprint.build()
 
-                //TODO: Need to find a better way of doing this.
-                val repository = RepositoryFactory(dbConfig).dbInstance()
-                streamBlocks.map {
-                    repository.saveBlock(it)
+                runBlocking(dispatchers.io()) {
+                    launch {
+                        streamBlocks.map {
+                            repository.saveBlock(it)
+                        }
+                    }
                 }
-                repository.saveChanges()
 
                 // Use the earliest block date to generate the S3 key prefix the data files will be stored under:
                 val earliestDate: OffsetDateTime? =

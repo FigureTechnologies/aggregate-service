@@ -7,7 +7,7 @@ import io.provenance.aggregate.repository.database.RavenDB
 class RepositoryFactory(
     private val dbConfig: DBConfig
 ) {
-    fun dbInstance(): RepositoryBase<Any> {
+    fun dbInstance(): RepositoryBase {
         /**
          * If we want to support other types of NoSQL database we
          * can wrap with a when and select which database based on

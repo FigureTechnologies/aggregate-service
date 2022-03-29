@@ -15,35 +15,49 @@ import net.ravendb.client.documents.DocumentStore
 import net.ravendb.client.documents.session.IDocumentSession
 import java.util.UUID
 
-class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBase<Any> {
+class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBase {
 
     private val store = DocumentStore(addr, dbName).also { it.conventions.maxNumberOfRequestsPerSession = maxConnections }.initialize()
-    private var session: IDocumentSession = store.openSession()
     private val log = logger()
 
     override fun saveBlock(block: StreamBlock) {
-        saveBlockMetadata(block)
-        saveBlockTx(block.height, block.blockResult) { index: Int ->  block.txHash(index) }
-        saveBlockTxEvents(block.height, block.txEvents)
+        val session = openSession() // open a new session when preparing to save block
+
+        saveBlockMetadata(session, block)
+        saveBlockTx(session, block.height, block.blockResult) { index: Int ->  block.txHash(index) }
+        saveBlockTxEvents(session, block.height, block.txEvents)
+
+        /**
+         * We need to close after save session due to amount of request we can make to RavenDB
+         * at a time (100 set) the amount of request degrades RavenDB write performance.
+         */
+        saveChanges(session) // close session when done saving block data
     }
 
-    private fun saveBlockMetadata(block: StreamBlock) =
-        session.store(blockMetadata(block), sha256(UUID.randomUUID().toString()).toHexString())
+    private fun openSession(): IDocumentSession = store.openSession()
 
-    private fun saveBlockTx(blockHeight: Long?, blockTxResult: List<BlockResultsResponseResultTxsResults>?, txHash: (Int) -> String?) {
+    private fun saveBlockMetadata(session: IDocumentSession, block: StreamBlock) =
+        session.store(blockMetadata(block), sha256(UUID.randomUUID().toString()).toHexString())
+            .also {
+                log.info(" Storing data for Block Height = ${block.height}: Block Result Size = ${block.blockResult?.size}: Tx Event Size = ${block.txEvents.size}")
+            }
+
+    private fun saveBlockTx(
+        session: IDocumentSession,
+        blockHeight: Long?,
+        blockTxResult: List<BlockResultsResponseResultTxsResults>?,
+        txHash: (Int) -> String?
+    ) =
         blockTx(blockHeight, blockTxResult, txHash).map {
             session.store(it)
         }
-    }
 
-    private fun saveBlockTxEvents(blockHeight: Long?, txEvents: List<TxEvent>?) {
+    private fun saveBlockTxEvents(session: IDocumentSession, blockHeight: Long?, txEvents: List<TxEvent>?) =
         blockTxEvent(blockHeight, txEvents).map {
             session.store(it)
         }
-    }
 
-    override fun saveChanges() {
-        log.info(" Saving batched data and closing session request ")
+    private fun saveChanges(session: IDocumentSession) {
         session.saveChanges()
         session.close()
     }

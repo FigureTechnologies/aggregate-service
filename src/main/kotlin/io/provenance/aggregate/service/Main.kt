@@ -316,7 +316,7 @@ fun main(args: Array<String>) {
                 EventStream.Factory(config, moshi, wsStreamBuilder, tendermintService, dynamo),
                 aws,
                 moshi,
-                config.dbConfig,
+                repository,
                 options
             )
                 .addExtractor(config.upload.extractors)
