@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.bundles.eventstream)
     implementation(libs.bundles.kotlin)
     testImplementation(libs.bundles.junit)
+    testImplementation(libs.kotlin.testcoroutines)
     implementation(libs.bundles.apache.commons)
     implementation(libs.bundles.scarlet)
     implementation(libs.datadog)

@@ -19,6 +19,9 @@ json = "20210307"
 aws = "2.17.127"
 localstack = "0.2.14"
 grpc = "1.41.0"
+kotlinSerialization = "1.2.2"
+snowflake = "3.13.8"
+dbUtils = "1.7"
 
 pluginProtobuf = "0.18.7"
 pluginNexusPublishPlugin = "1.1.0"
@@ -36,10 +39,13 @@ kotlin-cli = { module = "org.jetbrains.kotlinx:kotlinx-cli-jvm", version.ref = "
 kotlin-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDateTime" }
 kotlin-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCore" }
 kotlin-jdk8coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8", version.ref = "kotlinxCore" }
+kotlin-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "kotlinxCore" }
 kotlin-reactivecoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactive", version.ref = "kotlinxCore" }
 kotlin-testcoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCore" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
+kotlin-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinSerialization"}
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test" }
 
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 commons-text = { module = "org.apache.commons:commons-text", version.ref = "commonsText" }
@@ -77,7 +83,12 @@ aws-dynamodb-enhanced = { module = "software.amazon.awssdk:dynamodb-enhanced" }
 
 localstack = { module = "cloud.localstack:localstack-utils", version.ref = "localstack"}
 
-grpc = { module = "io.grpc:grpc-protobuf", version.ref = "grpc"}
+grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc"}
+grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc"}
+grpc-netty = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc"}
+
+snowflake = { module = "net.snowflake:snowflake-jdbc", version.ref = "snowflake"}
+commons-dbutils = { module = "commons-dbutils:commons-dbutils", version.ref = "dbUtils"}
 
 [plugins]
 kapt = { id = "org.jetbrains.kotlin.kapt" }

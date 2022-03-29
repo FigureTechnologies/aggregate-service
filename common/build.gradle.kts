@@ -22,7 +22,7 @@ dependencies {
     implementation(libs.bundles.apache.commons)
     implementation(libs.bundles.scarlet)
     implementation(libs.datadog)
-    implementation(libs.grpc)
+    implementation(libs.grpc.protobuf)
     implementation(libs.provenance.protos)
     implementation(libs.bundles.logback)
     implementation(libs.moshi.kotlin.codegen)
