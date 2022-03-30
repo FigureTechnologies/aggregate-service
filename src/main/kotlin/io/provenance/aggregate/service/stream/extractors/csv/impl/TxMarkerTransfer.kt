@@ -27,7 +27,7 @@ class TxMarkerTransfer : CSVFileExtractor(
             EventMarker.mapper.fromEvent(event)
                 ?.let { record: EventMarker ->
                     when (record) {
-                        is EventMarker.Transfer -> {
+                        is EventMarker.Transfer ->
                             syncWriteRecord(
                                 event.eventType,
                                 event.blockHeight,
@@ -39,7 +39,6 @@ class TxMarkerTransfer : CSVFileExtractor(
                                 record.fromAddress,
                                 includeHash = true
                             )
-                        }
                         else -> {
                             // noop
                         }
