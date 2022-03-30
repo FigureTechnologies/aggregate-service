@@ -3,6 +3,7 @@ package io.provenance.aggregate.service.test
 import cloud.localstack.ServiceName
 import cloud.localstack.docker.LocalstackDockerExtension
 import cloud.localstack.docker.annotation.LocalstackDockerProperties
+import io.provenance.aggregate.common.DBConfig
 import io.provenance.aggregate.common.aws.dynamodb.client.DefaultDynamoClient
 import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.service.clients.FailingDynamoDbAsyncClient
@@ -11,6 +12,8 @@ import io.provenance.aggregate.service.stream.EventStream
 import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
+import io.provenance.aggregate.repository.RepositoryBase
+import io.provenance.aggregate.repository.factory.RepositoryFactory
 import io.provenance.aggregate.service.stream.TendermintServiceClient
 import io.provenance.aggregate.service.test.base.TestBase
 import io.provenance.aggregate.service.test.mocks.*
@@ -52,6 +55,8 @@ class AWSTests : TestBase() {
 
     val DEFAULT_EXTRACTORS: Array<String> =
         arrayOf("io.provenance.aggregate.service.test.stream.extractors.csv.impl.EventMetdataSessionCreated")
+
+    val repository: RepositoryBase = RepositoryFactory(DBConfig("http://localhost:8080", "", 100, "")).dbInstance()
 
     @BeforeAll
     override fun setup() {
@@ -159,8 +164,6 @@ class AWSTests : TestBase() {
         // This is due to the use of [delay] in the chunk() flow operator used by `EventStreamUploader`.
         val eventStreamOptions = EventStream.Options.DEFAULT.withBatchTimeout(null)
 
-        val lastBlockHeightFromStream = "2270469"
-
         runBlocking(dispatcherProvider.io()) {
 
             // There should be no results if no extractors run to actually extract data to upload:
@@ -170,6 +173,7 @@ class AWSTests : TestBase() {
                     stream0,
                     aws,
                     Defaults.moshi,
+                    repository,
                     eventStreamOptions,
                     dispatchers = dispatcherProvider
                 )
@@ -182,7 +186,6 @@ class AWSTests : TestBase() {
         }
 
         runBlocking(dispatcherProvider.io()) {
-
             // Re-running with an extractor for events that exist in the blocks that are streamed will cause output to
             // be produced. There should be no results if no extractors run to actually extract data to upload:
             val (stream1, expectedTotal1) = createSimpleEventStream(
@@ -195,6 +198,7 @@ class AWSTests : TestBase() {
                     stream1,
                     aws,
                     Defaults.moshi,
+                    repository,
                     eventStreamOptions,
                     dispatchers = dispatcherProvider
                 )
@@ -214,7 +218,7 @@ class AWSTests : TestBase() {
             // The max height should have been set to that of the last live block received:
 
             val maxHeight = dynamo.getMaxHistoricalBlockHeight()
-            assert(maxHeight!= null  && maxHeight == lastBlockHeightFromStream.toLong())
+            assert(dynamo.getMaxHistoricalBlockHeight() != null && maxHeight is Long)
 
             // We should be able to check that maxHeight == MAX_LIVE_BLOCK_HEIGHT. However the order the live and
             // historical streams run in test is non-deterministic. If all of the live streams are received before
@@ -258,6 +262,7 @@ class AWSTests : TestBase() {
                     stream1,
                     aws,
                     Defaults.moshi,
+                    repository,
                     eventStreamOptions,
                     dispatchers = dispatcherProvider
                 )
@@ -284,6 +289,7 @@ class AWSTests : TestBase() {
                     stream2,
                     aws,
                     Defaults.moshi,
+                    repository,
                     eventStreamOptions,
                     dispatchers = dispatcherProvider
                 )
@@ -308,6 +314,7 @@ class AWSTests : TestBase() {
                     stream3,
                     aws,
                     Defaults.moshi,
+                    repository,
                     eventStreamOptions,
                     dispatchers = dispatcherProvider
                 )
@@ -389,6 +396,7 @@ class AWSTests : TestBase() {
                         stream,
                         failingAws,
                         Defaults.moshi,
+                        repository,
                         eventStreamOptions,
                         dispatchers = dispatcherProvider
                     )
@@ -458,6 +466,7 @@ class AWSTests : TestBase() {
                         stream,
                         failingAws,
                         Defaults.moshi,
+                        repository,
                         eventStreamOptions,
                         dispatchers = dispatcherProvider
                     )
@@ -500,6 +509,7 @@ class AWSTests : TestBase() {
                     stream1,
                     aws,
                     Defaults.moshi,
+                    repository,
                     EventStream.Options.DEFAULT.withBatchTimeout(null),
                     dispatchers = dispatcherProvider
                 )
@@ -509,8 +519,8 @@ class AWSTests : TestBase() {
             }
 
             val record = s3.readContent(s3.listBucketObjectKeys()[0])
-            val amount1 = record[1].get(7).plus(record[1].get(8))
-            val amount2 = record[2].get(7).plus(record[2].get(8))
+            val amount1 = record[1].get(6).plus(record[1].get(7))
+            val amount2 = record[2].get(6).plus(record[2].get(7))
 
             assert(amount1 == "53126cfigurepayomni")
             assert(amount2 == "10000000000nhash")

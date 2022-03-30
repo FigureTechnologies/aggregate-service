@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
+import io.provenance.aggregate.common.extensions.toISOString
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.service.stream.models.provenance.memorialization.MemorializeContract
@@ -26,7 +27,7 @@ class TxMemorializeContract: CSVFileExtractor(
                                 syncWriteRecord(
                                     record.action,
                                     event.blockHeight,
-                                    event.blockDateTime,
+                                    event.blockDateTime?.toISOString(),
                                     includeHash = true
                                 )
                             }

@@ -12,3 +12,4 @@ pluginManagement {
 }
 
 include("augment", "common")
+include("l2-cache")

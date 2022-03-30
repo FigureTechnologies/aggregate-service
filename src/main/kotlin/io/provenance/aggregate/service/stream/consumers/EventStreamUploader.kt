@@ -20,6 +20,8 @@ import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.common.models.extensions.dateTime
+import io.provenance.aggregate.repository.RepositoryBase
+import io.provenance.aggregate.repository.factory.RepositoryFactory
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -27,7 +29,6 @@ import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import java.time.OffsetDateTime
 import kotlin.reflect.KClass
-import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
 /**
@@ -46,6 +47,7 @@ class EventStreamUploader(
     private val eventStream: EventStream,
     private val aws: AwsClient,
     private val moshi: Moshi,
+    private val repository: RepositoryBase,
     private val options: EventStream.Options = EventStream.Options.DEFAULT,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
@@ -53,8 +55,9 @@ class EventStreamUploader(
         eventStreamFactory: EventStream.Factory,
         aws: AwsClient,
         moshi: Moshi,
+        repository: RepositoryBase,
         options: EventStream.Options
-    ) : this(eventStreamFactory.create(options), aws, moshi, options)
+    ) : this(eventStreamFactory.create(options), aws, moshi, repository, options)
 
     companion object {
         const val STREAM_BUFFER_CAPACITY: Int = 256
@@ -144,7 +147,6 @@ class EventStreamUploader(
      *  @return A flow yielding the results of uploading blocks to S3.
      */
     suspend fun upload(onEachBlock: (StreamBlock) -> Unit = {}): Flow<UploadResult> {
-
         val s3: S3Client = aws.s3()
         val dynamo: DynamoClient = aws.dynamo()
 
@@ -166,10 +168,17 @@ class EventStreamUploader(
             .flowOn(dispatchers.io())
             .chunked(size = options.batchSize, timeout = options.batchTimeout)
             .transform { streamBlocks: List<StreamBlock> ->
-
                 log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")
 
                 val batch: Batch = batchBlueprint.build()
+
+                runBlocking(dispatchers.io()) {
+                    launch {
+                        streamBlocks.map {
+                            repository.saveBlock(it)
+                        }
+                    }
+                }
 
                 // Use the earliest block date to generate the S3 key prefix the data files will be stored under:
                 val earliestDate: OffsetDateTime? =
@@ -178,12 +187,11 @@ class EventStreamUploader(
                 // Run the extract steps:
                 val uploaded: List<UploadResult> = coroutineScope {
                     withContext(dispatchers.io()) {
-
                         streamBlocks.map { block ->
                             onEachBlock(block)
                             async { batch.processBlock(block) }
-                        }
-                            .awaitAll()
+                        }.awaitAll()
+
                         // Upload the results to S3:
                         batch.complete { batchId: BatchId, extractor: Extractor ->
                             val key: S3Key = csvS3Key(batchId, earliestDate, extractor.name)

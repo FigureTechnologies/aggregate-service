@@ -24,13 +24,12 @@ class TxEventAttributes : CSVFileExtractor(
 ) {
     override suspend fun extract(block: StreamBlock) {
         for (event in block.txEvents) {
-            EventAttribute.mapper.fromEvent(event)
-                ?.toEventRecord()
+            EventAttribute.mapper.fromEvent(event)?.toEventRecord()
                 ?.let { record ->
                     // Output transformations that make the output data easier to work with:
                     // If `updatedValue` is non-null, write that, otherwise fallback to `value`
                     // If `updatedType` is non-null, write that, otherwise fallback to `type`
-                    syncWriteRecord(
+                    syncWriteRecord (
                         event.eventType,
                         event.blockHeight,
                         event.blockDateTime?.toISOString(),

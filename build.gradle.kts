@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     kotlin("jvm")
     id("org.jetbrains.kotlin.kapt")
@@ -22,6 +20,7 @@ repositories {
 
 dependencies {
     implementation(project(":common"))
+    implementation(project(":l2-cache"))
 
     // All dependencies in the `org.jetbrains.kotlin` package will use the version of kotlin defined in
     // `gradle.properties`: used to pin the org.jetbrains.kotlin.{jvm,kapt} plugin versions in `settings.gradle.kts`.

@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.EOFException
+import java.lang.instrument.Instrumentation
 import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
@@ -71,6 +72,12 @@ class EventStream(
          * Requesting a larger range will result in the API emitting an error.
          */
         const val TENDERMINT_MAX_QUERY_RANGE = 20
+
+        /**
+         * The maximum number of items that can be included in a batch write operation to DynamoDB, as imposed by
+         * AWS.
+         */
+        const val DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS = 50
     }
 
     data class Options(
@@ -403,10 +410,11 @@ class EventStream(
             val blockHeight = header?.height
             val blockDatetime = header?.dateTime()
             val blockResponse = tendermintServiceClient.blockResults(blockHeight).result
+            val blockTxResult = blockResponse.txsResults
             val blockEvents: List<BlockEvent> = blockResponse.blockEvents(blockDatetime)
             val txErrors: List<TxError> = blockResponse.txErroredEvents(blockDatetime)
             val txEvents: List<TxEvent> = blockResponse.txEvents(blockDatetime) { index: Int -> txHash(index) ?: "" }
-            val streamBlock = StreamBlock(this, blockEvents, txEvents, txErrors, feeCollector = feeCollector)
+            val streamBlock = StreamBlock(this, blockEvents, blockTxResult, txEvents, txErrors, feeCollector = feeCollector)
             val matchBlock = matchesBlockEvent(blockEvents)
             val matchTx = matchesTxEvent(txEvents)
             // ugly:

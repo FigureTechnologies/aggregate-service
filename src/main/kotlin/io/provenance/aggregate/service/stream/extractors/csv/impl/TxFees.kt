@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
+import io.provenance.aggregate.common.extensions.toISOString
 import io.provenance.aggregate.common.models.AmountDenom
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
@@ -34,10 +35,10 @@ class TxFees: CSVFileExtractor(
                                     syncWriteRecord(
                                         event.txHash,
                                         event.blockHeight,
-                                        event.blockDateTime,
+                                        event.blockDateTime?.toISOString(),
                                         amountDenom.amount,
                                         amountDenom.denom,
-                                        record.sender, // wallet addr that is paying the fee collector
+                                        record.sender,
                                         includeHash = true
                                     )
                                 }
