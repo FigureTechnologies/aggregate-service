@@ -1,5 +1,21 @@
 package io.provenance.aggregate.service
 
+import com.sksamuel.hoplite.ConfigLoader
+import com.sksamuel.hoplite.EnvironmentVariablesPropertySource
+import com.sksamuel.hoplite.PropertySource
+import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.timgroup.statsd.NoOpStatsDClient
+import com.timgroup.statsd.NonBlockingStatsDClientBuilder
+import com.tinder.scarlet.Scarlet
+import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
+import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
+import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
+import io.provenance.aggregate.common.Config
+import io.provenance.aggregate.common.aws.AwsClient
+import io.provenance.aggregate.common.extensions.recordMaxBlockHeight
+import io.provenance.aggregate.common.logger
+import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.service.stream.EventStreamFactory
 import io.provenance.eventstream.adapter.json.decoder.MoshiDecoderEngine
 import io.provenance.eventstream.stream.BlockStreamOptions
@@ -12,6 +28,12 @@ import io.provenance.eventstream.stream.models.StreamBlock
 import io.provenance.eventstream.stream.models.StreamBlockImplJsonAdapter
 import io.provenance.eventstream.stream.models.extensions.dateTime
 import io.provenance.aggregate.repository.factory.RepositoryFactory
+import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
+import io.provenance.eventstream.adapter.json.JSONObjectAdapter
+import io.provenance.eventstream.config.Environment
+import io.provenance.eventstream.extensions.repeatDecodeBase64
+import io.provenance.eventstream.flow.extensions.cancelOnSignal
+import io.provenance.eventstream.utils.colors.green
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.default
@@ -228,8 +250,8 @@ fun main(args: Array<String>) {
 
         val options = BlockStreamOptions(
             batchSize = config.eventStream.batch.size,
-            fromHeight = 148873,//fromHeightGetter(),//6878190,
-            toHeight = toHeight?.toLong(),//148873
+            fromHeight = fromHeightGetter(),
+            toHeight = toHeight?.toLong(),
             skipEmptyBlocks = skipIfEmpty,
             blockEvents = config.eventStream.filter.blockEvents,
             txEvents = config.eventStream.filter.txEvents,

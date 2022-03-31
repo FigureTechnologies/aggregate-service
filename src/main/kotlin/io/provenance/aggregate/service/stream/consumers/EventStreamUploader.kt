@@ -1,12 +1,28 @@
 package io.provenance.aggregate.service.stream.consumers
 
+import io.provenance.aggregate.common.aws.AwsClient
+import io.provenance.aggregate.common.aws.dynamodb.BlockBatch
+import io.provenance.aggregate.common.aws.dynamodb.WriteResult
+import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
+import io.provenance.aggregate.common.aws.s3.S3Key
+import io.provenance.aggregate.common.aws.s3.StreamableObject
+import io.provenance.aggregate.common.aws.s3.client.S3Client
+import io.provenance.aggregate.common.logger
+import io.provenance.aggregate.common.models.BatchId
+import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.eventstream.adapter.json.decoder.DecoderEngine
 import io.provenance.eventstream.stream.BlockStreamOptions
 import io.provenance.eventstream.stream.EventStream
-import io.provenance.eventstream.stream.models.StreamBlock
 import io.provenance.eventstream.stream.models.extensions.dateTime
 import io.provenance.aggregate.repository.RepositoryBase
-import io.provenance.aggregate.repository.factory.RepositoryFactory
+import io.provenance.aggregate.service.stream.EventStreamFactory
+import io.provenance.aggregate.service.stream.batch.Batch
+import io.provenance.aggregate.service.stream.extractors.Extractor
+import io.provenance.aggregate.service.stream.extractors.OutputType
+import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
+import io.provenance.eventstream.coroutines.DispatcherProvider
+import io.provenance.eventstream.flow.extensions.chunked
+import io.provenance.eventstream.stream.models.StreamBlock
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -14,12 +30,13 @@ import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import java.time.OffsetDateTime
 import kotlin.reflect.KClass
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 
 /**
  * An event stream consumer responsible for uploading streamed blocks to S3.
  *
- * @property  The event stream which provides blocks to this consumer.
+ * @property The event stream which provides blocks to this consumer.
  * @property aws The client used to interact with AWS.
  * @property moshi The JSON serializer/deserializer used by this consumer.
  * @property options Options used to configure this consumer.
@@ -151,8 +168,10 @@ class EventStreamUploader(
             }
             .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = BufferOverflow.SUSPEND)
             .flowOn(dispatchers.io())
-            .chunked(size = options.batchSize, timeout = Duration.seconds(10))
-            .transform { streamBlocks: List<StreamBlock> ->
+            .chunked(size = options.batchSize, timeout = 10.seconds)
+            .transform { flowStreamBlock ->
+                val streamBlocks = flowStreamBlock.toList()
+
                 log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")
 
                 val batch: Batch = batchBlueprint.build()

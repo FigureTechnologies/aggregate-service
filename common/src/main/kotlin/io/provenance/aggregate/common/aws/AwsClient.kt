@@ -1,13 +1,13 @@
 package io.provenance.aggregate.common.aws
 
 import io.provenance.aggregate.common.DynamoConfig
-import io.provenance.aggregate.common.Environment
 import io.provenance.aggregate.common.S3Config
 import io.provenance.aggregate.common.aws.dynamodb.client.DefaultDynamoClient
 import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.common.aws.s3.client.DefaultS3Client
 import io.provenance.aggregate.common.aws.s3.client.S3Client
 import io.provenance.aggregate.common.logger
+import io.provenance.eventstream.config.Environment
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider

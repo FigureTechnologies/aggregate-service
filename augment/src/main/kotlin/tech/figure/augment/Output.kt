@@ -2,7 +2,6 @@ package tech.figure.augment
 
 import io.provenance.aggregate.common.AwsConfig
 import io.provenance.aggregate.common.DynamoConfig
-import io.provenance.aggregate.common.Environment
 import io.provenance.aggregate.common.S3Config
 import io.provenance.aggregate.common.aws.AwsClient
 import io.provenance.aggregate.common.aws.dynamodb.DynamoTable
@@ -10,6 +9,7 @@ import io.provenance.aggregate.common.aws.s3.S3Bucket
 import io.provenance.aggregate.common.aws.s3.S3Key
 import io.provenance.aggregate.common.aws.s3.StreamableObject
 import io.provenance.aggregate.common.writer.csv.ApacheCommonsCSVRecordWriter
+import io.provenance.eventstream.config.Environment
 import org.apache.commons.csv.CSVFormat
 import org.slf4j.Logger
 import software.amazon.awssdk.core.async.AsyncRequestBody

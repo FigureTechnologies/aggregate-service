@@ -2,6 +2,7 @@ package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.service.stream.models.provenance.memorialization.MemorializeContract
+import io.provenance.eventstream.extensions.toISOString
 import io.provenance.eventstream.stream.models.StreamBlock
 
 /**

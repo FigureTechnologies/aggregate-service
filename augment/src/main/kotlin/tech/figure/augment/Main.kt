@@ -1,8 +1,8 @@
 package tech.figure.augment
 
 import io.grpc.ManagedChannelBuilder
-import io.provenance.aggregate.common.Environment
 import io.provenance.aggregate.common.models.extensions.dateTime
+import io.provenance.eventstream.config.Environment
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -19,9 +19,6 @@ import tech.figure.augment.provenance.ProvenanceClient
 import tech.figure.augment.provenance.query
 import java.net.URI
 import java.sql.DriverManager
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Properties
 
