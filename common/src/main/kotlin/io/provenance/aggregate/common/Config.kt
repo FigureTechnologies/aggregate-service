@@ -64,5 +64,13 @@ data class Config (
     val aws: AwsConfig,
     @ConfigAlias("event-stream") val eventStream: EventStreamConfig,
     val upload: UploadConfig = UploadConfig.empty(),
+    val dbConfig: DBConfig,
     val feeCollector: String
+)
+
+data class DBConfig(
+    val addr: String,
+    val dbName: String,
+    val dbMaxConnections: Int,
+    val dbType: String
 )

@@ -58,13 +58,14 @@ data class Batch internal constructor(
         withContext(dispatchers.io()) {
             extractors.map { extractor: Extractor ->
                 async {
-                    runCatching { extractor.extract(block) }
-                        .onFailure { e ->
+                    runCatching {
+                        extractor.extract(block)
+                    }.onFailure { e ->
                             log.error("processing error: ${e.message} ::")
                             for (frame in e.stackTrace) {
-                                log.error("  ${frame}")
+                                log.error("  $frame")
                             }
-                        }
+                    }
                 }
             }
         }.awaitAll()

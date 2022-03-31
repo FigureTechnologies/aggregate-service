@@ -19,7 +19,7 @@ import io.provenance.aggregate.service.stream.models.provenance.debase64
  * - `provenance.marker.v1.EventMarkerTransfer`
  * - `provenance.marker.v1.EventMarkerWithdraw`
  */
-sealed class EventMarker() : FromAttributeMap {
+sealed class EventMarker : FromAttributeMap {
 
     companion object {
         /**

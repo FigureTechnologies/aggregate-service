@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
+import io.provenance.aggregate.common.extensions.toISOString
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.eventstream.stream.models.StreamBlock
 
@@ -13,16 +14,14 @@ class TxError: CSVFileExtractor(
         "block_height",
         "block_timestamp",
         "error_code",
-        "info",
-        "fee",
-        "fee_denom"
+        "info"
     )
 ) {
     override suspend fun extract(block: StreamBlock) {
         for(error in block.txErrors) {
             syncWriteRecord(
                 error.blockHeight,
-                error.blockDateTime,
+                error.blockDateTime?.toISOString(),
                 error.code,
                 error.info,
                 includeHash = true

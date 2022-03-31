@@ -27,4 +27,6 @@ object Version {
     const val Provenance = "1.7.0"
     const val Scarlet = "0.1.12"
     const val LocalStack = "0.2.14"
+
+    const val RavenDb = "5.2.3"
 }

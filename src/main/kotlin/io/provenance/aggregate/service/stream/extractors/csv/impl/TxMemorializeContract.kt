@@ -26,7 +26,7 @@ class TxMemorializeContract: CSVFileExtractor(
                                 syncWriteRecord(
                                     record.action,
                                     event.blockHeight,
-                                    event.blockDateTime,
+                                    event.blockDateTime?.toISOString(),
                                     includeHash = true
                                 )
                             }

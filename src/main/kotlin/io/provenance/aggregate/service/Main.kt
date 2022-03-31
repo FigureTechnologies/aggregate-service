@@ -1,27 +1,5 @@
 package io.provenance.aggregate.service
 
-import com.sksamuel.hoplite.ConfigLoader
-import com.sksamuel.hoplite.EnvironmentVariablesPropertySource
-import com.sksamuel.hoplite.PropertySource
-import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import com.timgroup.statsd.NoOpStatsDClient
-import com.timgroup.statsd.NonBlockingStatsDClientBuilder
-import com.tinder.scarlet.Scarlet
-import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
-import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
-import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
-import io.provenance.aggregate.common.Config
-import io.provenance.aggregate.common.Environment
-import io.provenance.aggregate.service.adapter.json.JSONObjectAdapter
-import io.provenance.aggregate.common.aws.AwsClient
-import io.provenance.aggregate.common.extensions.recordMaxBlockHeight
-import io.provenance.aggregate.common.extensions.repeatDecodeBase64
-import io.provenance.aggregate.common.green
-import io.provenance.aggregate.common.logger
-import io.provenance.aggregate.service.flow.extensions.cancelOnSignal
-import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
-import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.service.stream.EventStreamFactory
 import io.provenance.eventstream.adapter.json.decoder.MoshiDecoderEngine
 import io.provenance.eventstream.stream.BlockStreamOptions
@@ -33,6 +11,7 @@ import io.provenance.eventstream.stream.infrastructure.Serializer.moshi
 import io.provenance.eventstream.stream.models.StreamBlock
 import io.provenance.eventstream.stream.models.StreamBlockImplJsonAdapter
 import io.provenance.eventstream.stream.models.extensions.dateTime
+import io.provenance.aggregate.repository.factory.RepositoryFactory
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.default
@@ -169,6 +148,7 @@ fun main(args: Array<String>) {
     val tendermintServiceClient = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
     val tendermintService = TendermintBlockFetcher(tendermintServiceClient)
     val aws: AwsClient = AwsClient.create(environment, config.aws.s3, config.aws.dynamodb)
+    val repository = RepositoryFactory(config.dbConfig).dbInstance()
     val dynamo = aws.dynamo()
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
@@ -298,7 +278,8 @@ fun main(args: Array<String>) {
                 EventStreamFactory(config, moshi, wsStreamBuilder, tendermintService),
                 aws,
                 moshi,
-                options,
+                repository,
+                options
             )
                 .addExtractor(config.upload.extractors)
                 .upload()
