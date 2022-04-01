@@ -7,6 +7,7 @@ import io.provenance.aggregate.service.test.mocks.MockEventStreamService
 import io.provenance.aggregate.service.test.mocks.MockTendermintServiceClient
 import io.provenance.aggregate.service.test.mocks.ServiceMocker
 import io.provenance.eventstream.adapter.json.decoder.MoshiDecoderEngine
+import io.provenance.eventstream.coroutines.DispatcherProvider
 import io.provenance.eventstream.stream.BlockStreamOptions
 import io.provenance.eventstream.stream.EventStream
 import io.provenance.eventstream.stream.EventStreamService
@@ -97,7 +98,7 @@ object Builders {
      * Create a mock of the Provenance block event stream.
      */
     data class EventStreamBuilder(val builders: Builders) {
-        var dispatchers: io.provenance.eventstream.coroutines.DispatcherProvider? = null
+        var dispatchers: DispatcherProvider? = null
         var eventStreamService: EventStreamService? = null
         var tendermintServiceClient: TendermintServiceClient? = null
         var moshi: Moshi? = null
@@ -107,7 +108,7 @@ object Builders {
         fun <T : EventStreamService> eventStreamService(value: T) = apply { eventStreamService = value }
         fun <T : TendermintServiceClient> tendermintService(value: T) = apply { tendermintServiceClient = value }
         fun moshi(value: Moshi) = apply { moshi = value }
-        fun dispatchers(value: io.provenance.eventstream.coroutines.DispatcherProvider) = apply { dispatchers = value }
+        fun dispatchers(value: DispatcherProvider) = apply { dispatchers = value }
         fun options(value: BlockStreamOptions) = apply { options = value }
         fun includeLiveBlocks(value: Boolean) = apply { includeLiveBlocks = value }
 
@@ -121,6 +122,7 @@ object Builders {
 
         suspend fun build(): EventStream {
             val dispatchers = dispatchers ?: error("dispatchers must be provided")
+
             return EventStream(
                 eventStreamService = eventStreamService
                     ?: builders
