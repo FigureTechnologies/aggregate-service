@@ -33,6 +33,13 @@ import io.provenance.eventstream.adapter.json.JSONObjectAdapter
 import io.provenance.eventstream.config.Environment
 import io.provenance.eventstream.extensions.repeatDecodeBase64
 import io.provenance.eventstream.flow.extensions.cancelOnSignal
+import io.provenance.eventstream.stream.withBatchSize
+import io.provenance.eventstream.stream.withBlockEvents
+import io.provenance.eventstream.stream.withFromHeight
+import io.provenance.eventstream.stream.withOrdered
+import io.provenance.eventstream.stream.withSkipEmptyBlocks
+import io.provenance.eventstream.stream.withToHeight
+import io.provenance.eventstream.stream.withTxEvents
 import io.provenance.eventstream.utils.colors.green
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -119,7 +126,7 @@ fun main(args: Array<String>) {
         ArgType.Choice(listOf(false, true), { it.toBooleanStrict() }),
         fullName = "skip-if-empty",
         description = "Skip blocks that have no transactions"
-    ).default(true)
+    ).default(false)
     val skipIfSeen by parser.option(
         ArgType.Choice(listOf(false, true), { it.toBooleanStrict() }),
         fullName = "skip-if-seen",
@@ -248,14 +255,14 @@ fun main(args: Array<String>) {
             }
         }
 
-        val options = BlockStreamOptions(
-            batchSize = config.eventStream.batch.size,
-            fromHeight = fromHeightGetter(),
-            toHeight = toHeight?.toLong(),
-            skipEmptyBlocks = skipIfEmpty,
-            blockEvents = config.eventStream.filter.blockEvents,
-            txEvents = config.eventStream.filter.txEvents,
-            ordered = true
+        val options = BlockStreamOptions.create(
+            withBatchSize(config.eventStream.batch.size),
+            withFromHeight(145933),
+            withToHeight(toHeight?.toLong()),
+            withSkipEmptyBlocks(skipIfEmpty),
+            withBlockEvents(config.eventStream.filter.blockEvents),
+            withTxEvents(config.eventStream.filter.txEvents),
+            withOrdered(config.eventStream.ordered)
         )
 
         if (observe) {

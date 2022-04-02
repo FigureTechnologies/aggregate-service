@@ -41,29 +41,6 @@ fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, txHash: 
         }
     } ?: emptyList()
 
-fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?): List<TxError> {
-    val txErrors = mutableListOf<TxError>()
-    txsResults?.map {
-        if(it.code?.toInt() != 0) {
-            txErrors.add(
-                it.toBlockError(
-                    blockHeight = height,
-                    blockDateTime = blockDateTime
-                )
-            )
-        }
-    }
-    return txErrors
-}
-
-fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?): TxError =
-    TxError(
-        blockHeight = blockHeight,
-        blockDateTime = blockDateTime,
-        code = this.code!!.toLong(),
-        info = this.log ?: ""
-    )
-
 fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List<BlockEvent> = run {
     beginBlockEvents?.map { e: BlockResultsResponseResultEvents ->
         BlockEvent(
@@ -74,14 +51,6 @@ fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List
         )
     }
 } ?: emptyList()
-
-fun BlockResultsResponseResultEvents.toBlockEvent(blockHeight: Long, blockDateTime: OffsetDateTime?): BlockEvent =
-    BlockEvent(
-        blockHeight = blockHeight,
-        blockDateTime = blockDateTime,
-        eventType = this.type ?: "",
-        attributes = this.attributes ?: emptyList()
-    )
 
 fun BlockResultsResponseResultEvents.toTxEvent(
     blockHeight: Long,

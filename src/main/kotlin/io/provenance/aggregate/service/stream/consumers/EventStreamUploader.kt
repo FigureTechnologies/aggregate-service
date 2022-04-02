@@ -15,13 +15,13 @@ import io.provenance.eventstream.stream.BlockStreamOptions
 import io.provenance.eventstream.stream.EventStream
 import io.provenance.eventstream.stream.models.extensions.dateTime
 import io.provenance.aggregate.repository.RepositoryBase
+import io.provenance.aggregate.service.flow.extensions.chunked
 import io.provenance.aggregate.service.stream.EventStreamFactory
 import io.provenance.aggregate.service.stream.batch.Batch
 import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
 import io.provenance.eventstream.coroutines.DispatcherProvider
-import io.provenance.eventstream.flow.extensions.chunked
 import io.provenance.eventstream.stream.models.StreamBlock
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
@@ -163,17 +163,23 @@ class EventStreamUploader(
 
         return eventStream
             .streamBlocks()
-            .onEach { block ->
-                log.info("buffering ${if (block.historical) "historical" else "live"} block #${block.block.header?.height} for upload with ${block.txEvents.size} tx events")
+            .filter { streamBlock ->
+                !streamBlock.blockResult.isNullOrEmpty()
+                    .also {
+                        log.info(
+                            if (streamBlock.blockResult.isNullOrEmpty())
+                                "Skipping empty ${if (streamBlock.historical) "historical" else "live"} block: ${streamBlock.height}"
+                            else
+                                "buffering ${if (streamBlock.historical) "historical" else "live"} " +
+                                        "block #${streamBlock.block.header?.height} for upload with ${streamBlock.txEvents.size} tx events"
+                        )
+                    }
             }
             .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = BufferOverflow.SUSPEND)
             .flowOn(dispatchers.io())
             .chunked(size = options.batchSize, timeout = 10.seconds)
-            .transform { flowStreamBlock ->
-                val streamBlocks = flowStreamBlock.toList()
-
+            .transform { streamBlocks: List<StreamBlock> ->
                 log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")
-
                 val batch: Batch = batchBlueprint.build()
 
                 runBlocking(dispatchers.io()) {
