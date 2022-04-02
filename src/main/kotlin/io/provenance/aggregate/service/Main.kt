@@ -257,7 +257,7 @@ fun main(args: Array<String>) {
 
         val options = BlockStreamOptions.create(
             withBatchSize(config.eventStream.batch.size),
-            withFromHeight(145933),
+            withFromHeight(fromHeightGetter()),
             withToHeight(toHeight?.toLong()),
             withSkipEmptyBlocks(skipIfEmpty),
             withBlockEvents(config.eventStream.filter.blockEvents),
