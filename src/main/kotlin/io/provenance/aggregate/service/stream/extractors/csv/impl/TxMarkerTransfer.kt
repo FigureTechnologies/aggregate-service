@@ -2,8 +2,8 @@ package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.extensions.toISOString
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
-import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.models.provenance.marker.EventMarker
+import io.provenance.eventstream.stream.models.StreamBlock
 
 /**
  * Extract data related to the transfer of a marker between parties.

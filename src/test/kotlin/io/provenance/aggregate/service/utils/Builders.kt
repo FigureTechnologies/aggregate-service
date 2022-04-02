@@ -1,20 +1,23 @@
 package io.provenance.aggregate.service.test.utils
 
 import com.squareup.moshi.Moshi
-import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.common.aws.AwsClient
-import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
-import io.provenance.aggregate.service.stream.EventStream
-import io.provenance.aggregate.service.stream.EventStreamService
-import io.provenance.aggregate.service.stream.TendermintServiceClient
-import io.provenance.aggregate.common.models.ABCIInfoResponse
-import io.provenance.aggregate.common.models.BlockResponse
-import io.provenance.aggregate.common.models.BlockResultsResponse
-import io.provenance.aggregate.common.models.BlockchainResponse
 import io.provenance.aggregate.service.test.mocks.MockAwsClient
 import io.provenance.aggregate.service.test.mocks.MockEventStreamService
 import io.provenance.aggregate.service.test.mocks.MockTendermintServiceClient
 import io.provenance.aggregate.service.test.mocks.ServiceMocker
+import io.provenance.eventstream.adapter.json.decoder.MoshiDecoderEngine
+import io.provenance.eventstream.coroutines.DispatcherProvider
+import io.provenance.eventstream.stream.BlockStreamOptions
+import io.provenance.eventstream.stream.EventStream
+import io.provenance.eventstream.stream.EventStreamService
+import io.provenance.eventstream.stream.TendermintServiceClient
+import io.provenance.eventstream.stream.clients.TendermintBlockFetcher
+import io.provenance.eventstream.stream.models.ABCIInfoResponse
+import io.provenance.eventstream.stream.models.BlockResponse
+import io.provenance.eventstream.stream.models.BlockResultsResponse
+import io.provenance.eventstream.stream.models.BlockchainResponse
+import io.provenance.eventstream.decoderEngine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
@@ -98,48 +101,41 @@ object Builders {
         var dispatchers: DispatcherProvider? = null
         var eventStreamService: EventStreamService? = null
         var tendermintServiceClient: TendermintServiceClient? = null
-        var dynamoInterface: DynamoClient? = null
         var moshi: Moshi? = null
-        var options: EventStream.Options.Builder = EventStream.Options.builder()
+        var options: BlockStreamOptions = BlockStreamOptions()
         var includeLiveBlocks: Boolean = true
-        var feeCollector: String = ""
-        var dynamoBatchGetItems: Long = 100
 
         fun <T : EventStreamService> eventStreamService(value: T) = apply { eventStreamService = value }
         fun <T : TendermintServiceClient> tendermintService(value: T) = apply { tendermintServiceClient = value }
-        fun <T : DynamoClient> dynamoInterface(value: T) = apply { dynamoInterface = value }
         fun moshi(value: Moshi) = apply { moshi = value }
         fun dispatchers(value: DispatcherProvider) = apply { dispatchers = value }
-        fun options(value: EventStream.Options.Builder) = apply { options = value }
+        fun options(value: BlockStreamOptions) = apply { options = value }
         fun includeLiveBlocks(value: Boolean) = apply { includeLiveBlocks = value }
-        fun feeCollector(value: String) = apply { feeCollector = value }
-        fun dynamoBatchGetItems(value: Long) = apply{ dynamoBatchGetItems = value }
 
         // shortcuts for options:
-        fun batchSize(value: Int) = apply { options.batchSize(value) }
-        fun fromHeight(value: Long) = apply { options.fromHeight(value) }
-        fun toHeight(value: Long) = apply { options.toHeight(value) }
-        fun skipIfEmpty(value: Boolean) = apply { options.skipIfEmpty(value) }
-        fun skipIfSeen(value: Boolean) = apply { options.skipIfSeen(value) }
-        fun matchBlockEvent(predicate: (event: String) -> Boolean) = apply { options.matchBlockEvent(predicate) }
-        fun matchTxEvent(predicate: (event: String) -> Boolean) = apply { options.matchTxEvent(predicate) }
+        fun batchSize(value: Int) = apply { options = options.copy(batchSize = value) }
+        fun fromHeight(value: Long) = apply { options = options.copy(fromHeight = value) }
+        fun toHeight(value: Long) = apply { options = options.copy(toHeight = value) }
+        fun skipEmptyBlocks(value: Boolean) = apply { options = options.copy(skipEmptyBlocks = value) }
+        fun matchBlockEvents(events: Set<String>) = apply { options = options.copy(blockEvents = events) }
+        fun matchTxEvents(events: Set<String>) = apply { options = options.copy(txEvents = events) }
 
         suspend fun build(): EventStream {
             val dispatchers = dispatchers ?: error("dispatchers must be provided")
+
             return EventStream(
                 eventStreamService = eventStreamService
                     ?: builders
                         .eventStreamService(includeLiveBlocks = includeLiveBlocks)
                         .dispatchers(dispatchers)
                         .build(),
-                tendermintServiceClient = tendermintServiceClient
-                    ?: builders.tendermintService().build(MockTendermintServiceClient::class.java),
-                dynamo = dynamoInterface ?: defaultAws().build().dynamo(),
-                moshi = moshi ?: Defaults.moshi,
+                fetcher = TendermintBlockFetcher(
+                    tendermintServiceClient
+                        ?: builders.tendermintService().build(MockTendermintServiceClient::class.java)
+                ),
+                decoder = if (moshi != null) MoshiDecoderEngine(moshi!!) else decoderEngine(),
                 dispatchers = dispatchers,
-                feeCollector = feeCollector,
-                dynamoBatchGetItems = dynamoBatchGetItems,
-                options = options.build()
+                options = options
             )
         }
     }

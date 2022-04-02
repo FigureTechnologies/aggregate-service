@@ -1,6 +1,7 @@
 package io.provenance.aggregate.service.test.utils
 
-import io.provenance.aggregate.service.stream.EventStream
+
+import io.provenance.eventstream.stream.EventStream
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /***********************************************************************************************************************

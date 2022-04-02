@@ -11,37 +11,42 @@ group = "tech.figure.augment"
 version = project.property("version")?.takeIf { it != "unspecified" } ?: "1.0-SNAPSHOT"
 
 repositories {
-    mavenLocal()
     mavenCentral()
     maven { url = uri("https://javadoc.jitpack.io") }
 }
 
 dependencies {
-    implementation(project(":common"))
+    implementation(projects.common)
 
-    implementation("org.apache.commons", "commons-csv", Version.ApacheCommons.CSV)
-    implementation("commons-io", "commons-io", Version.ApacheCommons.IO)
-    implementation("org.apache.commons", "commons-lang3", Version.ApacheCommons.Lang3)
-
-    implementation("io.provenance.protobuf:pb-proto-java:${Version.Provenance}")
-    implementation("io.grpc:grpc-protobuf:${Version.GRPC}")
-    implementation("io.grpc:grpc-stub:${Version.GRPC}")
-    implementation("ch.qos.logback:logback-classic:1.0.13")
-
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Version.Kotlinx.Core}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:${Version.Kotlinx.Core}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${Version.Kotlinx.Core}")
-
-    implementation("net.snowflake:snowflake-jdbc:3.13.8")
-    implementation("commons-dbutils:commons-dbutils:1.7")
-
-    implementation(platform("software.amazon.awssdk:bom:${Version.AWS}"))
-    implementation("software.amazon.awssdk:s3")
-
-    runtimeOnly("io.grpc:grpc-netty-shaded:${Version.GRPC}")
-
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    implementation(libs.bundles.eventstream)
+    implementation(libs.bundles.kotlin)
+    testImplementation(libs.bundles.junit)
+    testImplementation(libs.kotlin.testcoroutines)
+    implementation(libs.bundles.apache.commons)
+    implementation(libs.bundles.scarlet)
+    implementation(libs.datadog)
+    implementation(libs.provenance.protos)
+    implementation(libs.bundles.logback)
+    implementation(libs.moshi.kotlin.codegen)
+    implementation(libs.hoplite.core)
+    implementation(libs.hoplite.yaml)
+    implementation(libs.json)
+    implementation(platform(libs.aws.bom))
+    implementation(libs.bundles.aws)
+    implementation(libs.localstack)
+    implementation(libs.grpc.protobuf)
+    implementation(libs.grpc.stub)
+    implementation(libs.logback.classic)
+    implementation(libs.kotlin.serialization)
+    implementation(libs.kotlin.core)
+    implementation(libs.kotlin.guava)
+    implementation(libs.kotlin.jdk8coroutines)
+    implementation(libs.snowflake)
+    implementation(libs.commons.dbutils)
+    implementation(platform(libs.aws.bom))
+    implementation(libs.aws.s3)
+    runtimeOnly(libs.grpc.netty)
+    testImplementation(libs.kotlin.test)
 }
 
 tasks.compileTestKotlin {
@@ -68,11 +73,10 @@ application {
 
 tasks.withType<Jar> {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
     manifest {
         attributes["Main-Class"] = "tech.figure.augment.MainKt"
     }
-
+    isZip64 = true
     from(sourceSets.main.get().output)
     dependsOn(configurations.runtimeClasspath)
     from({

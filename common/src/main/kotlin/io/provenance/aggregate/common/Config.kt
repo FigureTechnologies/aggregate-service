@@ -31,6 +31,7 @@ data class EventStreamConfig(
     val websocket: WebsocketStreamConfig,
     val rpc: RpcStreamConfig,
     val batch: BatchConfig,
+    val ordered: Boolean,
     val filter: StreamEventsFilterConfig = StreamEventsFilterConfig.empty()
 )
 
@@ -60,7 +61,7 @@ data class UploadConfig(
     }
 }
 
-data class Config(
+data class Config (
     val aws: AwsConfig,
     @ConfigAlias("event-stream") val eventStream: EventStreamConfig,
     val upload: UploadConfig = UploadConfig.empty(),

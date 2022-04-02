@@ -11,5 +11,6 @@ pluginManagement {
     }
 }
 
-include("augment", "common")
-include("l2-cache")
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
+include("augment", "common", "l2-cache")

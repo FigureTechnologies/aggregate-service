@@ -4,17 +4,16 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
-import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.common.logger
-import io.provenance.aggregate.service.stream.EventStreamService
-import io.provenance.aggregate.service.stream.models.rpc.request.Subscribe
 import io.provenance.aggregate.service.test.utils.Defaults
+import io.provenance.eventstream.coroutines.DispatcherProvider
+import io.provenance.eventstream.stream.EventStreamService
+import io.provenance.eventstream.stream.rpc.request.Subscribe
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelIterator
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runBlockingTest
 import java.util.concurrent.atomic.AtomicLong
 
 class MockEventStreamService private constructor(

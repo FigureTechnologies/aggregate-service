@@ -1,27 +1,28 @@
 package io.provenance.aggregate.service.stream.consumers
 
-import com.squareup.moshi.Moshi
-import io.provenance.aggregate.service.DefaultDispatcherProvider
-import io.provenance.aggregate.service.DispatcherProvider
 import io.provenance.aggregate.common.aws.AwsClient
-import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.common.aws.dynamodb.BlockBatch
 import io.provenance.aggregate.common.aws.dynamodb.WriteResult
-import io.provenance.aggregate.common.aws.s3.client.S3Client
+import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.common.aws.s3.S3Key
 import io.provenance.aggregate.common.aws.s3.StreamableObject
-import io.provenance.aggregate.service.flow.extensions.chunked
+import io.provenance.aggregate.common.aws.s3.client.S3Client
 import io.provenance.aggregate.common.logger
-import io.provenance.aggregate.service.stream.EventStream
-import io.provenance.aggregate.service.stream.batch.Batch
 import io.provenance.aggregate.common.models.BatchId
+import io.provenance.aggregate.common.models.UploadResult
+import io.provenance.eventstream.adapter.json.decoder.DecoderEngine
+import io.provenance.eventstream.stream.BlockStreamOptions
+import io.provenance.eventstream.stream.EventStream
+import io.provenance.eventstream.stream.models.extensions.dateTime
+import io.provenance.aggregate.repository.RepositoryBase
+import io.provenance.aggregate.service.flow.extensions.chunked
+import io.provenance.aggregate.service.stream.EventStreamFactory
+import io.provenance.aggregate.service.stream.batch.Batch
 import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
-import io.provenance.aggregate.common.models.StreamBlock
-import io.provenance.aggregate.common.models.UploadResult
-import io.provenance.aggregate.common.models.extensions.dateTime
-import io.provenance.aggregate.repository.RepositoryBase
-import io.provenance.aggregate.repository.factory.RepositoryFactory
+import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
+import io.provenance.eventstream.coroutines.DispatcherProvider
+import io.provenance.eventstream.stream.models.StreamBlock
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -29,12 +30,13 @@ import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import java.time.OffsetDateTime
 import kotlin.reflect.KClass
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 
 /**
  * An event stream consumer responsible for uploading streamed blocks to S3.
  *
- * @property eventStream The event stream which provides blocks to this consumer.
+ * @property The event stream which provides blocks to this consumer.
  * @property aws The client used to interact with AWS.
  * @property moshi The JSON serializer/deserializer used by this consumer.
  * @property options Options used to configure this consumer.
@@ -46,18 +48,18 @@ import kotlin.time.ExperimentalTime
 class EventStreamUploader(
     private val eventStream: EventStream,
     private val aws: AwsClient,
-    private val moshi: Moshi,
+    private val moshi: DecoderEngine,
     private val repository: RepositoryBase,
-    private val options: EventStream.Options = EventStream.Options.DEFAULT,
+    private val options: BlockStreamOptions,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
     constructor(
-        eventStreamFactory: EventStream.Factory,
+        eventStreamFactory: EventStreamFactory,
         aws: AwsClient,
-        moshi: Moshi,
+        moshi: DecoderEngine,
         repository: RepositoryBase,
-        options: EventStream.Options
-    ) : this(eventStreamFactory.create(options), aws, moshi, repository, options)
+        options: BlockStreamOptions
+    ) : this(eventStreamFactory.createSource(options) as EventStream, aws, moshi, repository, options)
 
     companion object {
         const val STREAM_BUFFER_CAPACITY: Int = 256
@@ -161,15 +163,23 @@ class EventStreamUploader(
 
         return eventStream
             .streamBlocks()
-            .onEach {
-                log.info("buffering ${if (it.historical) "historical" else "live"} block #${it.block.header?.height} for upload with ${it.txEvents.size} tx events")
+            .filter { streamBlock ->
+                !streamBlock.blockResult.isNullOrEmpty()
+                    .also {
+                        log.info(
+                            if (streamBlock.blockResult.isNullOrEmpty())
+                                "Skipping empty ${if (streamBlock.historical) "historical" else "live"} block: ${streamBlock.height}"
+                            else
+                                "buffering ${if (streamBlock.historical) "historical" else "live"} " +
+                                        "block #${streamBlock.block.header?.height} for upload with ${streamBlock.txEvents.size} tx events"
+                        )
+                    }
             }
             .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = BufferOverflow.SUSPEND)
             .flowOn(dispatchers.io())
-            .chunked(size = options.batchSize, timeout = options.batchTimeout)
+            .chunked(size = options.batchSize, timeout = 10.seconds)
             .transform { streamBlocks: List<StreamBlock> ->
                 log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")
-
                 val batch: Batch = batchBlueprint.build()
 
                 runBlocking(dispatchers.io()) {
@@ -210,25 +220,31 @@ class EventStreamUploader(
                                          * at the last successful processed block height, so we don't lose any data that
                                          * was in the middle of processing.
                                          */
-                                        val liveHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { !block.historical } }.maxOrNull()
+                                        val liveHistoricalBlockHeight =
+                                            streamBlocks.mapNotNull { block -> block.height.takeIf { !block.historical } }
+                                                .maxOrNull()
 
-                                        val highestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.maxOrNull()
-                                        val lowestHistoricalBlockHeight = streamBlocks.mapNotNull{ block -> block.height.takeIf { block.historical } }.minOrNull()
+                                        val highestHistoricalBlockHeight =
+                                            streamBlocks.mapNotNull { block -> block.height.takeIf { block.historical } }
+                                                .maxOrNull()
+                                        val lowestHistoricalBlockHeight =
+                                            streamBlocks.mapNotNull { block -> block.height.takeIf { block.historical } }
+                                                .minOrNull()
 
-                                        if(putResponse.sdkHttpResponse().isSuccessful && highestHistoricalBlockHeight != null) {
-                                             dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight)
+                                        if (putResponse.sdkHttpResponse().isSuccessful && highestHistoricalBlockHeight != null) {
+                                            dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight)
                                                 .also {
-                                                    if(it.processed > 0) {
+                                                    if (it.processed > 0) {
                                                         log.info("historical::updating max historical block height to $highestHistoricalBlockHeight")
                                                     }
                                                 }
-                                             log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
+                                            log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
                                         }
 
                                         /**
                                          * Logging the upload result of the block range.
                                          */
-                                        val blockHeightRange = if(liveHistoricalBlockHeight != null) {
+                                        val blockHeightRange = if (liveHistoricalBlockHeight != null) {
                                             Pair(liveHistoricalBlockHeight, liveHistoricalBlockHeight)
                                         } else {
                                             Pair(lowestHistoricalBlockHeight, highestHistoricalBlockHeight)

@@ -1,0 +1,112 @@
+[versions]
+eventStream = "0.5.0"
+kotlinxCore = "1.5.2"
+kotlinxCli = "0.3.3"
+kotlinxDateTime = "0.3.0"
+kotlinReflect = "1.6.0"
+kotlinStdLib = "1.6.0"
+junitPioneer = "1.4.2"
+junit = "5.1.0"
+commonsText = "1.9"
+commonscsv = "1.9.0"
+commonsio = "2.11.0"
+commonslang = "3.12.0"
+scarlet = "0.1.12"
+datadog = "2.13.0"
+provenanceProtos = "1.8.0"
+logback = "1.2.3"
+moshi = "1.13.0"
+hoplite = "1.4.15"
+json = "20210307"
+aws = "2.17.127"
+localstack = "0.2.14"
+grpc = "1.41.0"
+kotlinSerialization = "1.2.2"
+snowflake = "3.13.8"
+dbUtils = "1.7"
+ravendb = "5.2.3"
+
+pluginProtobuf = "0.18.7"
+pluginNexusPublishPlugin = "1.1.0"
+pluginOpenAPI = "5.2.1"
+
+
+[libraries]
+es-model = { module = "io.provenance.eventstream:es-api-model", version.ref = "eventStream" }
+es-api = { module = "io.provenance.eventstream:es-api", version.ref = "eventStream" }
+es-core = { module = "io.provenance.eventstream:es-core", version.ref = "eventStream" }
+es-kakfa = { module = "io.provenance.eventstream:es-kafka", version.ref = "eventStream" }
+es-cli = { module = "io.provenance.eventstream:es-cli", version.ref = "eventStream" }
+
+kotlin-cli = { module = "org.jetbrains.kotlinx:kotlinx-cli-jvm", version.ref = "kotlinxCli" }
+kotlin-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDateTime" }
+kotlin-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCore" }
+kotlin-jdk8coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8", version.ref = "kotlinxCore" }
+kotlin-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "kotlinxCore" }
+kotlin-reactivecoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactive", version.ref = "kotlinxCore" }
+kotlin-testcoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCore" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlinStdLib" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlinReflect" }
+kotlin-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinSerialization"}
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test" }
+
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+commons-text = { module = "org.apache.commons:commons-text", version.ref = "commonsText" }
+junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version.ref = "junitPioneer" }
+commons-lang = { module = "org.apache.commons:commons-lang3", version.ref = "commonslang" }
+commons-io = { module = "commons-io:commons-io", version.ref = "commonsio" }
+commons-csv = { module = "org.apache.commons:commons-csv", version.ref = "commonscsv" }
+
+scarlet-core = { module = "com.tinder.scarlet:scarlet", version.ref = "scarlet" }
+scarlet-stream = { module = "com.tinder.scarlet:stream-adapter-coroutines", version.ref = "scarlet" }
+scarlet-websocket = { module = "com.tinder.scarlet:websocket-okhttp", version.ref = "scarlet" }
+scarlet-moshi = { module = "com.tinder.scarlet:message-adapter-moshi", version.ref = "scarlet" }
+
+datadog = { module = "com.datadoghq:java-dogstatsd-client", version.ref = "datadog"}
+
+provenance-protos = { module = "io.provenance:proto-kotlin", version.ref = "provenanceProtos" }
+
+logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+moshi-kotlin-codegen = { module = "com.squareup.moshi:moshi-kotlin-codegen", version.ref = "moshi" }
+moshi-core = { module = "com.squareup.moshi:moshi", version.ref = "moshi" }
+moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
+
+hoplite-core = { module = "com.sksamuel.hoplite:hoplite-core", version.ref = "hoplite" }
+hoplite-yaml = { module = "com.sksamuel.hoplite:hoplite-yaml", version.ref = "hoplite" }
+
+json = { module = "org.json:json", version.ref = "json" }
+
+aws-bom = { module = "software.amazon.awssdk:bom", version.ref = "aws"}
+aws-netty = { module = "software.amazon.awssdk:netty-nio-client" }
+aws-s3 = { module = "software.amazon.awssdk:s3" }
+aws-dynamodb = { module = "software.amazon.awssdk:dynamodb" }
+aws-dynamodb-enhanced = { module = "software.amazon.awssdk:dynamodb-enhanced" }
+
+localstack = { module = "cloud.localstack:localstack-utils", version.ref = "localstack"}
+
+grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc"}
+grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc"}
+grpc-netty = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc"}
+
+snowflake = { module = "net.snowflake:snowflake-jdbc", version.ref = "snowflake"}
+commons-dbutils = { module = "commons-dbutils:commons-dbutils", version.ref = "dbUtils"}
+
+raven-db = { module = "net.ravendb:ravendb", version.ref = "ravendb" }
+
+[plugins]
+kapt = { id = "org.jetbrains.kotlin.kapt" }
+publish-nexus = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "pluginNexusPublishPlugin" }
+protobuf = { id = "com.google.protobuf", version.ref = "pluginProtobuf" }
+openapi-generator = { id = "org.openapi.generator", version.ref = "pluginOpenAPI" }
+
+[bundles]
+eventstream = ["es-model", "es-api", "es-core", "es-kakfa", "es-cli"]
+kotlin = ["kotlin-cli", "kotlin-datetime", "kotlin-core", "kotlin-jdk8coroutines", "kotlin-reactivecoroutines", "kotlin-stdlib", "kotlin-reflect"]
+junit = ["junit-pioneer", "junit-jupiter", "commons-text"]
+apache-commons = ["commons-lang", "commons-io", "commons-csv"]
+scarlet = ["scarlet-core", "scarlet-stream", "scarlet-websocket", "scarlet-moshi"]
+logback = ["logback-core", "logback-classic"]
+aws = ["aws-netty", "aws-s3", "aws-dynamodb", "aws-dynamodb-enhanced"]
+hoplite = ["hoplite-core", "hoplite-yaml"]

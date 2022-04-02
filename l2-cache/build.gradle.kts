@@ -12,15 +12,11 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":common"))
+    implementation(projects.common)
 
-    implementation("net.ravendb","ravendb", Version.RavenDb)
-
-    implementation("ch.qos.logback.contrib", "logback-json-core", Version.Logback)
-    implementation("ch.qos.logback.contrib", "logback-json-classic", Version.Logback)
-
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    implementation(libs.raven.db)
+    implementation(libs.bundles.logback)
+    implementation(libs.bundles.eventstream)
 }
 
 tasks.compileKotlin {

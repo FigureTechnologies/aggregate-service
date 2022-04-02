@@ -1,6 +1,6 @@
 package io.provenance.aggregate.service.test.base
 
-import io.provenance.aggregate.service.DispatcherProvider
+import io.provenance.eventstream.coroutines.DispatcherProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineDispatcher
@@ -8,7 +8,7 @@ import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.runBlockingTest
 
 @ExperimentalCoroutinesApi
-class TestDispatcherProvider : DispatcherProvider {
+class TestDispatcherProvider: DispatcherProvider {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val dispatcher: TestCoroutineDispatcher = TestCoroutineDispatcher()

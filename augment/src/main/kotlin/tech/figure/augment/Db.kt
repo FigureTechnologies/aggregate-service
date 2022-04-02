@@ -3,7 +3,7 @@ package tech.figure.augment.db
 import tech.figure.augment.dsl.DbSource
 import tech.figure.augment.dsl.Operator
 
-fun String.escape() = "\"${this.toUpperCase()}\""
+fun String.escape() = "\"${this.uppercase()}\""
 
 data class Sql(val value: String)
 data class SqlParams(val value: List<String>)
