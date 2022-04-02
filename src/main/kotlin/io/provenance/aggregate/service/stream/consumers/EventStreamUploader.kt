@@ -236,6 +236,8 @@ class EventStreamUploader(
                                                 .also {
                                                     if (it.processed > 0) {
                                                         log.info("historical::updating max historical block height to $highestHistoricalBlockHeight")
+                                                    } else {
+                                                        log.info("Failed to process max historical:: code=${it.processed} highest=${highestHistoricalBlockHeight} lowest=$lowestHistoricalBlockHeight")
                                                     }
                                                 }
                                             log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
