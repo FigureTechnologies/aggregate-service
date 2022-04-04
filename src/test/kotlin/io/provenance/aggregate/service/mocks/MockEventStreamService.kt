@@ -4,12 +4,12 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.tinder.scarlet.Message
 import com.tinder.scarlet.WebSocket
+import com.tinder.scarlet.WebSocket.Event
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.service.test.utils.Defaults
 import io.provenance.eventstream.coroutines.DispatcherProvider
-import io.provenance.eventstream.stream.EventStreamService
+import io.provenance.eventstream.stream.WebSocketService
 import io.provenance.eventstream.stream.rpc.request.Subscribe
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelIterator
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -21,7 +21,7 @@ class MockEventStreamService private constructor(
     private val responseCount: Long,
     private val moshi: Moshi,
     private val dispatchers: DispatcherProvider
-) : EventStreamService {
+) : WebSocketService {
 
     companion object {
         fun builder() = Builder()
@@ -95,28 +95,17 @@ class MockEventStreamService private constructor(
 
     private val log = logger()
 
-    /**
-     * Returns the number of expected responses this event stream is supposed to produce.
-     *
-     * @return The number of expected responses.
-     */
-    fun expectedResponseCount(): Long = responseCount
-
-    /**
-     * A stubbed out channel that will stop the iterator and subsequent blocking when all the items in the channel
-     * have been added via the `response()` builder method have been consumed.
-     */
-    override fun observeWebSocketEvent(): ReceiveChannel<WebSocket.Event> {
+    override fun observeWebSocketEvent(): ReceiveChannel<Event> {
         val iterator = channel.iterator()
         var unconsumedMessageCount = AtomicLong(responseCount)
 
-        return object : ReceiveChannel<WebSocket.Event> by channel {
+        return object : ReceiveChannel<Event> by channel {
 
-            override fun iterator(): ChannelIterator<WebSocket.Event> {
+            override fun iterator(): ChannelIterator<Event> {
 
-                return object : ChannelIterator<WebSocket.Event> by iterator {
+                return object : ChannelIterator<Event> by iterator {
 
-                    override fun next(): WebSocket.Event {
+                    override fun next(): Event {
                         unconsumedMessageCount.decrementAndGet()
                         return iterator.next()
                     }
@@ -125,7 +114,7 @@ class MockEventStreamService private constructor(
                         if (unconsumedMessageCount.get() <= 0) {
                             // All messages have been read. We're done:
                             channel.close()
-                            stopListening()
+                            stop()
                             return false
                         }
                         return iterator.hasNext()
@@ -135,18 +124,19 @@ class MockEventStreamService private constructor(
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun start() {
+        // noop
+    }
+
+    override fun stop() {
+        // noop
+    }
+
     override fun subscribe(subscribe: Subscribe) {
         runBlocking(dispatchers.io()) {
-            channel.send(WebSocket.Event.OnConnectionOpened(Unit))
+            channel.send(Event.OnConnectionOpened(Unit))
         }
     }
 
-    override fun startListening() {
-        // no-op
-    }
-
-    override fun stopListening() {
-        // no-op
-    }
+    fun expectedResponseCount(): Long = responseCount
 }

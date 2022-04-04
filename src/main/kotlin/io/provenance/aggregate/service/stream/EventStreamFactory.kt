@@ -1,43 +1,49 @@
 package io.provenance.aggregate.service.stream
 
-import com.tinder.scarlet.Scarlet
 import com.tinder.scarlet.lifecycle.LifecycleRegistry
 import io.provenance.aggregate.common.Config
 import io.provenance.eventstream.coroutines.DispatcherProvider
 import io.provenance.blockchain.stream.api.BlockSource
-import io.provenance.eventstream.adapter.json.decoder.DecoderEngine
 import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
+import io.provenance.eventstream.decoder.DecoderAdapter
+import io.provenance.eventstream.defaultWebSocketChannel
+import io.provenance.eventstream.net.NetAdapter
 import io.provenance.eventstream.stream.BlockStreamFactory
 import io.provenance.eventstream.stream.BlockStreamOptions
 import io.provenance.eventstream.stream.Checkpoint
 import io.provenance.eventstream.stream.EventStream
 import io.provenance.eventstream.stream.FileCheckpoint
-import io.provenance.eventstream.stream.TendermintEventStreamService
-import io.provenance.eventstream.stream.TendermintRPCStream
 import io.provenance.eventstream.stream.clients.TendermintBlockFetcher
 import io.provenance.eventstream.stream.models.StreamBlockImpl
+import io.provenance.eventstream.stream.withLifecycle
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.ExperimentalTime
 
 class EventStreamFactory(
     private val config: Config,
-    private val moshi: DecoderEngine,
-    private val eventStreamBuilder: Scarlet.Builder,
+    private val moshiNetAdapter: NetAdapter,
+    private val moshiDecoderAdapter: DecoderAdapter,
     private val fetcher: TendermintBlockFetcher,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
     private val checkpoint: Checkpoint = FileCheckpoint()
 ): BlockStreamFactory {
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
     override fun createSource(options: BlockStreamOptions): BlockSource<StreamBlockImpl> {
-        val lifecycle = LifecycleRegistry(config.eventStream.websocket.throttleDurationMs)
-        val scarlet: Scarlet = eventStreamBuilder.lifecycle(lifecycle).build()
-        val tendermintRpc: TendermintRPCStream = scarlet.create(TendermintRPCStream::class.java)
-        val eventStreamService = TendermintEventStreamService(tendermintRpc, lifecycle)
+        val throttle = config.eventStream.websocket.throttleDurationMs
+        val lifecycle = LifecycleRegistry(throttle)
+        val webSocketService = defaultWebSocketChannel(
+            moshiNetAdapter.wsAdapter,
+            moshiDecoderAdapter.wsDecoder,
+            throttle.milliseconds,
+            lifecycle
+        ).withLifecycle(lifecycle)
 
         return EventStream(
-            eventStreamService,
+            webSocketService,
             fetcher,
-            moshi,
+            moshiDecoderAdapter.decoderEngine,
             dispatchers,
             checkpoint,
             options

@@ -16,6 +16,7 @@ import io.provenance.aggregate.service.test.base.TestBase
 import io.provenance.aggregate.service.test.mocks.*
 import io.provenance.aggregate.service.test.utils.*
 import io.provenance.eventstream.adapter.json.decoder.MoshiDecoderEngine
+import io.provenance.eventstream.decoder.moshiDecoderAdapter
 import io.provenance.eventstream.stream.BlockStreamOptions
 import io.provenance.eventstream.stream.EventStream
 import io.provenance.eventstream.stream.TendermintServiceClient
@@ -99,7 +100,7 @@ class AWSTests : TestBase() {
         dynamoInterface: DynamoClient = dynamo
     ): Pair<EventStream, Long> {
         val eventStreamService: MockEventStreamService =
-            Builders.eventStreamService(includeLiveBlocks = includeLiveBlocks)
+            Builders.webSocketService(includeLiveBlocks)
                 .dispatchers(dispatcherProvider)
                 .build()
 
@@ -107,7 +108,6 @@ class AWSTests : TestBase() {
             .build(MockTendermintServiceClient::class.java)
 
         val stream = Builders.eventStream()
-            .eventStreamService(eventStreamService)
             .tendermintService(tendermintService)
             .dispatchers(dispatcherProvider)
             .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
@@ -124,7 +124,7 @@ class AWSTests : TestBase() {
         fileName: String
     ): Pair<EventStream, Long> {
         val eventStreamService: MockEventStreamService =
-            Builders.eventStreamService(includeLiveBlocks = includeLiveBlocks)
+            Builders.webSocketService(includeLiveBlocks)
                 .dispatchers(dispatcherProvider)
                 .build()
 
@@ -132,7 +132,6 @@ class AWSTests : TestBase() {
             .build(MockTendermintServiceClient::class.java)
 
         val stream = Builders.eventStream()
-            .eventStreamService(eventStreamService)
             .tendermintService(tendermint)
             .dispatchers(dispatcherProvider)
             .fromHeight(MIN_HISTORICAL_BLOCK_HEIGHT)
@@ -155,7 +154,6 @@ class AWSTests : TestBase() {
         )
     )
     fun testSimpleStreamBlocksToS3() {
-
         val blockStreamOptions = BlockStreamOptions.Companion.create()
 
         runBlocking(dispatcherProvider.main()) {
@@ -166,7 +164,7 @@ class AWSTests : TestBase() {
                 EventStreamUploader(
                     stream0,
                     aws,
-                    MoshiDecoderEngine(moshi),
+                    moshiDecoderAdapter(),
                     repository,
                     blockStreamOptions,
                     dispatchers = dispatcherProvider
@@ -191,7 +189,7 @@ class AWSTests : TestBase() {
                 EventStreamUploader(
                     stream1,
                     aws,
-                    MoshiDecoderEngine(moshi),
+                    moshiDecoderAdapter(),
                     repository,
                     blockStreamOptions,
                     dispatchers = dispatcherProvider
@@ -252,12 +250,12 @@ class AWSTests : TestBase() {
                 EventStreamUploader(
                     stream1,
                     aws,
-                    MoshiDecoderEngine(Defaults.moshi),
+                    moshiDecoderAdapter(),
                     repository,
                     blockStreamOptions
                 )
                     .addExtractor(*DEFAULT_EXTRACTORS)
-                    .upload { block ->
+                    .upload {
                         // Inspect each block
                         inspected1 = true
                     }
@@ -275,7 +273,7 @@ class AWSTests : TestBase() {
                 EventStreamUploader(
                     stream2,
                     aws,
-                    MoshiDecoderEngine(Defaults.moshi),
+                    moshiDecoderAdapter(),
                     repository,
                     blockStreamOptions,
                     dispatchers = dispatcherProvider
@@ -300,7 +298,7 @@ class AWSTests : TestBase() {
                 EventStreamUploader(
                     stream3,
                     aws,
-                    MoshiDecoderEngine(Defaults.moshi),
+                    moshiDecoderAdapter(),
                     repository,
                     blockStreamOptions,
                     dispatchers = dispatcherProvider
@@ -375,7 +373,7 @@ class AWSTests : TestBase() {
                     EventStreamUploader(
                         stream,
                         failingAws,
-                        MoshiDecoderEngine(Defaults.moshi),
+                        moshiDecoderAdapter(),
                         repository,
                         blockStreamOptions,
                         dispatchers = dispatcherProvider
@@ -442,7 +440,7 @@ class AWSTests : TestBase() {
                     EventStreamUploader(
                         stream,
                         failingAws,
-                        MoshiDecoderEngine(Defaults.moshi),
+                        moshiDecoderAdapter(),
                         repository,
                         blockStreamOptions,
                         dispatchers = dispatcherProvider
@@ -488,7 +486,7 @@ class AWSTests : TestBase() {
                 EventStreamUploader(
                     stream1,
                     aws,
-                    MoshiDecoderEngine(Defaults.moshi),
+                    moshiDecoderAdapter(),
                     repository,
                     blockStreamOptions,
                     dispatchers = dispatcherProvider

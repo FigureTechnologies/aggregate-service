@@ -10,7 +10,6 @@ import io.provenance.aggregate.common.aws.s3.client.S3Client
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.BatchId
 import io.provenance.aggregate.common.models.UploadResult
-import io.provenance.eventstream.adapter.json.decoder.DecoderEngine
 import io.provenance.eventstream.stream.BlockStreamOptions
 import io.provenance.eventstream.stream.EventStream
 import io.provenance.eventstream.stream.models.extensions.dateTime
@@ -22,6 +21,7 @@ import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
 import io.provenance.eventstream.coroutines.DispatcherProvider
+import io.provenance.eventstream.decoder.DecoderAdapter
 import io.provenance.eventstream.stream.models.StreamBlock
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
@@ -38,7 +38,7 @@ import kotlin.time.ExperimentalTime
  *
  * @property The event stream which provides blocks to this consumer.
  * @property aws The client used to interact with AWS.
- * @property moshi The JSON serializer/deserializer used by this consumer.
+ * @property decoderAdapter The JSON serializer/deserializer used by this consumer.
  * @property options Options used to configure this consumer.
  * @property dispatchers The coroutine dispatchers used to run asynchronous tasks in this consumer.
  * @p
@@ -48,7 +48,7 @@ import kotlin.time.ExperimentalTime
 class EventStreamUploader(
     private val eventStream: EventStream,
     private val aws: AwsClient,
-    private val moshi: DecoderEngine,
+    private val decoderAdapter: DecoderAdapter,
     private val repository: RepositoryBase,
     private val options: BlockStreamOptions,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
@@ -56,10 +56,10 @@ class EventStreamUploader(
     constructor(
         eventStreamFactory: EventStreamFactory,
         aws: AwsClient,
-        moshi: DecoderEngine,
+        decoderAdapter: DecoderAdapter,
         repository: RepositoryBase,
         options: BlockStreamOptions
-    ) : this(eventStreamFactory.createSource(options) as EventStream, aws, moshi, repository, options)
+    ) : this(eventStreamFactory.createSource(options) as EventStream, aws, decoderAdapter, repository, options)
 
     companion object {
         const val STREAM_BUFFER_CAPACITY: Int = 256
