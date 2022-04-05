@@ -223,7 +223,6 @@ class EventStreamUploader(
                                         val liveBlockHeight =
                                             streamBlocks.mapNotNull { block -> block.height.takeIf { !block.historical } }
                                                 .maxOrNull()
-
                                         val highestHistoricalBlockHeight =
                                             streamBlocks.mapNotNull { block -> block.height.takeIf { block.historical } }
                                                 .maxOrNull()
@@ -237,7 +236,7 @@ class EventStreamUploader(
                                             dynamo.writeMaxHistoricalBlockHeight(blockCheckpoint!!)
                                                 .also {
                                                     if (it.processed > 0) {
-                                                        log.info("historical::updating max historical block height to $highestHistoricalBlockHeight")
+                                                        log.info("Checkpoint::Updating max block height to = $blockCheckpoint")
                                                     }
                                                 }
                                             log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
