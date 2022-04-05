@@ -31,7 +31,6 @@ data class EventStreamConfig(
     val websocket: WebsocketStreamConfig,
     val rpc: RpcStreamConfig,
     val batch: BatchConfig,
-    val ordered: Boolean,
     val filter: StreamEventsFilterConfig = StreamEventsFilterConfig.empty()
 )
 

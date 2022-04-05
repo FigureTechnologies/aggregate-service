@@ -98,6 +98,11 @@ fun main(args: Array<String>) {
     val verbose by parser.option(
         ArgType.Boolean, shortName = "v", fullName = "verbose", description = "Enables verbose output"
     ).default(false)
+    val ordered by parser.option(
+        ArgType.Boolean,
+        fullName = "ordered",
+        description = "Stream from the event stream in order"
+    ).default(true)
     val skipIfEmpty by parser.option(
         ArgType.Choice(listOf(false, true), { it.toBooleanStrict() }),
         fullName = "skip-if-empty",
@@ -232,7 +237,7 @@ fun main(args: Array<String>) {
             withSkipEmptyBlocks(skipIfEmpty),
             withBlockEvents(config.eventStream.filter.blockEvents),
             withTxEvents(config.eventStream.filter.txEvents),
-            withOrdered(config.eventStream.ordered)
+            withOrdered(ordered)
         )
 
         if (observe) {

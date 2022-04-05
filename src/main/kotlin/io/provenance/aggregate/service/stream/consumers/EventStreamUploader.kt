@@ -220,7 +220,7 @@ class EventStreamUploader(
                                          * at the last successful processed block height, so we don't lose any data that
                                          * was in the middle of processing.
                                          */
-                                        val liveHistoricalBlockHeight =
+                                        val liveBlockHeight =
                                             streamBlocks.mapNotNull { block -> block.height.takeIf { !block.historical } }
                                                 .maxOrNull()
 
@@ -231,8 +231,10 @@ class EventStreamUploader(
                                             streamBlocks.mapNotNull { block -> block.height.takeIf { block.historical } }
                                                 .minOrNull()
 
-                                        if (putResponse.sdkHttpResponse().isSuccessful && highestHistoricalBlockHeight != null) {
-                                            dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight)
+                                        if (putResponse.sdkHttpResponse().isSuccessful) {
+                                            // todo: improve this, but we should have at least a live or historical block height to record.
+                                            val blockCheckpoint = highestHistoricalBlockHeight ?: liveBlockHeight
+                                            dynamo.writeMaxHistoricalBlockHeight(blockCheckpoint!!)
                                                 .also {
                                                     if (it.processed > 0) {
                                                         log.info("historical::updating max historical block height to $highestHistoricalBlockHeight")
@@ -244,8 +246,8 @@ class EventStreamUploader(
                                         /**
                                          * Logging the upload result of the block range.
                                          */
-                                        val blockHeightRange = if (liveHistoricalBlockHeight != null) {
-                                            Pair(liveHistoricalBlockHeight, liveHistoricalBlockHeight)
+                                        val blockHeightRange = if (liveBlockHeight != null) {
+                                            Pair(liveBlockHeight, liveBlockHeight)
                                         } else {
                                             Pair(lowestHistoricalBlockHeight, highestHistoricalBlockHeight)
                                         }
