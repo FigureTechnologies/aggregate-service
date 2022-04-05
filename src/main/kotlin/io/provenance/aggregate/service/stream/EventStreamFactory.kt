@@ -6,6 +6,7 @@ import io.provenance.eventstream.coroutines.DispatcherProvider
 import io.provenance.blockchain.stream.api.BlockSource
 import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
 import io.provenance.eventstream.decoder.DecoderAdapter
+import io.provenance.eventstream.defaultLifecycle
 import io.provenance.eventstream.defaultWebSocketChannel
 import io.provenance.eventstream.net.NetAdapter
 import io.provenance.eventstream.stream.BlockStreamFactory
@@ -31,12 +32,12 @@ class EventStreamFactory(
 
     @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
     override fun createSource(options: BlockStreamOptions): BlockSource<StreamBlockImpl> {
-        val throttle = config.eventStream.websocket.throttleDurationMs
-        val lifecycle = LifecycleRegistry(throttle)
+        val throttle = config.eventStream.websocket.throttleDurationMs.milliseconds
+        val lifecycle = defaultLifecycle(throttle)
         val webSocketService = defaultWebSocketChannel(
             moshiNetAdapter.wsAdapter,
             moshiDecoderAdapter.wsDecoder,
-            throttle.milliseconds,
+            throttle,
             lifecycle
         ).withLifecycle(lifecycle)
 
