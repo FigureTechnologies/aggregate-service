@@ -163,6 +163,7 @@ class EventStreamUploader(
 
         return eventStream
             .streamBlocks()
+            .onEach { "block recieved: ${it.height}"}
             .filter { streamBlock ->
                 !streamBlock.blockResult.isNullOrEmpty()
                     .also {
