@@ -122,9 +122,9 @@ fun main(args: Array<String>) {
 
     parser.parse(args)
 
-//    val ddEnabled = runCatching { System.getenv("DD_ENABLED") }.getOrNull() == "true"
-//    val ddHost = ddHostFlag ?: runCatching { System.getenv("DD_AGENT_HOST") }.getOrElse { "localhost" }
-//    val ddTags = ddTagsFlag ?: runCatching { System.getenv("DD_TAGS") }.getOrElse { "" }
+    val ddEnabled = runCatching { System.getenv("DD_ENABLED") }.getOrNull() == "true"
+    val ddHost = ddHostFlag ?: runCatching { System.getenv("DD_AGENT_HOST") }.getOrElse { "localhost" }
+    val ddTags = ddTagsFlag ?: runCatching { System.getenv("DD_TAGS") }.getOrElse { "" }
 
     val environment: Environment =
         envFlag ?: runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
@@ -154,19 +154,19 @@ fun main(args: Array<String>) {
     val aws: AwsClient = AwsClient.create(environment, config.aws.s3, config.aws.dynamodb)
     val repository = RepositoryFactory(config.dbConfig).dbInstance()
     val dynamo = aws.dynamo()
-//    val dogStatsClient = if (ddEnabled) {
-//        log.info("Initializing Datadog client...")
-//        NonBlockingStatsDClientBuilder()
-//            .prefix("aggregate-service")
-//            .hostname(ddHost)
-//            .timeout(5_000)
-//            .enableTelemetry(false)
-//            .constantTags(*ddTags.split(" ").toTypedArray())
-//            .build()
-//    } else {
-//        log.info("Datadog client disabled.")
-//        NoOpStatsDClient()
-//    }
+    val dogStatsClient = if (ddEnabled) {
+        log.info("Initializing Datadog client...")
+        NonBlockingStatsDClientBuilder()
+            .prefix("aggregate-service")
+            .hostname(ddHost)
+            .timeout(5_000)
+            .enableTelemetry(false)
+            .constantTags(*ddTags.split(" ").toTypedArray())
+            .build()
+    } else {
+        log.info("Datadog client disabled.")
+        NoOpStatsDClient()
+    }
 
     val shutDownSignal: Channel<Unit> = installShutdownHook(log)
 
@@ -179,20 +179,23 @@ fun main(args: Array<String>) {
             |    to-height = $toHeight
             |    skip-if-empty = $skipIfEmpty
             |    skip-if-seen = $skipIfSeen
+            |    dd-enabled = $ddEnabled
+            |    dd-host = $ddHost
+            |    dd-tags = $ddTags
             |}
             """.trimMargin("|")
         )
 
         // Update DataDog with the latest historical block height every minute:
-//        launch {
-//            while (true) {
-//                dynamo.getMaxHistoricalBlockHeight()
-//                    .also { log.info("Maximum block height: ${it ?: "--"}") }
-//                    ?.let(dogStatsClient::recordMaxBlockHeight)
-//                    ?.getOrElse { log.error("DD metric failure", it) }
-//                delay(Duration.minutes(1))
-//            }
-//        }
+        launch {
+            while (true) {
+                dynamo.getMaxHistoricalBlockHeight()
+                    .also { log.info("Maximum block height: ${it ?: "--"}") }
+                    ?.let(dogStatsClient::recordMaxBlockHeight)
+                    ?.getOrElse { log.error("DD metric failure", it) }
+                delay(Duration.minutes(1))
+            }
+        }
 
         // This function will be used by the event stream to determine the current maximum historical block height.
         // It will be called at the start of the event stream, as well as any time the event stream has to be restarted.
