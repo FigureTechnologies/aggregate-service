@@ -185,8 +185,8 @@ class EventStreamUploader(
 
                 runBlocking(dispatchers.io()) {
                     launch {
-                        streamBlocks.map {
-                            repository.saveBlock(it)
+                        streamBlocks.map { block ->
+                            repository.saveBlock(block)
                         }
                     }
                 }
