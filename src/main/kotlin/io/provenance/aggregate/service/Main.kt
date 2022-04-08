@@ -224,7 +224,8 @@ fun main(args: Array<String>) {
                     // we need to increment.
                     maxHistoricalHeight += 1
                 }
-                maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
+                log.info("--restart: true, starting block height at: ${maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)} }")
+                maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)
             } else {
                 log.info("--restart: false, starting from block height ${fromHeight?.toLong()}")
                 fromHeight?.toLong()
