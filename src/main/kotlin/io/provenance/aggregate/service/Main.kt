@@ -226,6 +226,7 @@ fun main(args: Array<String>) {
                 }
                 maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
             } else {
+                log.info("--restart: false, starting from block height ${fromHeight?.toLong()}")
                 fromHeight?.toLong()
             }
         }
@@ -238,6 +239,18 @@ fun main(args: Array<String>) {
             withBlockEvents(config.eventStream.filter.blockEvents),
             withTxEvents(config.eventStream.filter.txEvents),
             withOrdered(ordered)
+        )
+
+        log.info(
+            """
+            | BlockStream options => {
+            |    batch size = ${config.eventStream.batch.size}
+            |    from-height = ${fromHeightGetter()}
+            |    to-height = ${toHeight?.toLong()}
+            |    skip-if-empty = ${skipIfEmpty}
+            |    skip-if-seen = ${skipIfSeen}
+            | }
+            """.trimMargin("|")
         )
 
         if (observe) {
