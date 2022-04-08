@@ -148,7 +148,7 @@ fun main(args: Array<String>) {
     val log = "main".logger()
 
     val decoderAdapter = moshiDecoderAdapter()
-    val netAdapter: NetAdapter = okHttpNetAdapter(host = config.wsNode, tls = false)
+    val netAdapter: NetAdapter = okHttpNetAdapter(config.wsNode)
     val tendermintServiceClient = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
     val tendermintService = TendermintBlockFetcher(tendermintServiceClient)
     val aws: AwsClient = AwsClient.create(environment, config.aws.s3, config.aws.dynamodb)

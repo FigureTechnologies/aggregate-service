@@ -58,7 +58,7 @@ object Defaults {
             dynamoBatchGetItems = 100
         )
 
-    val netAdapter: NetAdapter =  okHttpNetAdapter(host = "localhost:26657", tls = false)
+    val netAdapter: NetAdapter =  okHttpNetAdapter("localhost:26657")
 
     val decoderAdapter = moshiDecoderAdapter()
 }
