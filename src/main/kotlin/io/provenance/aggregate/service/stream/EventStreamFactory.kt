@@ -33,7 +33,7 @@ class EventStreamFactory(
     @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
     override fun createSource(options: BlockStreamOptions): BlockSource<StreamBlockImpl> {
         val throttle = config.eventStream.websocket.throttleDurationMs.milliseconds
-        val lifecycle = defaultLifecycle(throttle)
+        val lifecycle = LifecycleRegistry(config.eventStream.websocket.throttleDurationMs)
         val webSocketService = defaultWebSocketChannel(
             moshiNetAdapter.wsAdapter,
             moshiDecoderAdapter.wsDecoder,
