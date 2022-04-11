@@ -24,7 +24,6 @@ dbConfig:
 
 # Event stream-specific configuration options:
 event-stream:
-  ordered: ${EVENT_STREAM_ORDERED}
   # Configuration of the Tendermint API:
   websocket:
     uri: ${EVENT_STREAM_WEBSOCKET_URI}
