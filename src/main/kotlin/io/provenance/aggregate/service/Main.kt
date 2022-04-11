@@ -169,7 +169,7 @@ fun main(args: Array<String>) {
 
     val wsStreamBuilder = configureEventStreamBuilder(config.wsNode)
     val decoderAdapter = moshiDecoderAdapter()
-    val tendermintServiceClient = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
+    val tendermintServiceClient = TendermintServiceOpenApiClient(config.wsNode)
     val fetcher = TendermintBlockFetcher(tendermintServiceClient)
     val aws: AwsClient = AwsClient.create(environment, config.aws.s3, config.aws.dynamodb)
     val repository = RepositoryFactory(config.dbConfig).dbInstance()
@@ -328,6 +328,7 @@ fun main(args: Array<String>) {
             }
 
             EventStreamUploader(
+                eventStream as EventStream,
                 config,
                 aws,
                 decoderAdapter.decoderEngine,
