@@ -318,7 +318,6 @@ fun main(args: Array<String>) {
                     }
                 }
             }
-                .collect()
         } else {
             if (config.upload.extractors.isNotEmpty()) {
                 log.info("upload: adding extractors")
@@ -328,11 +327,8 @@ fun main(args: Array<String>) {
             }
 
             EventStreamUploader(
-                config,
+                eventStream as EventStream,
                 aws,
-                decoderAdapter.decoderEngine,
-                wsStreamBuilder,
-                fetcher,
                 repository,
                 options
             )

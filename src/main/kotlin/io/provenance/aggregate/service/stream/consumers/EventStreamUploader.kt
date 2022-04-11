@@ -53,11 +53,8 @@ import kotlin.time.ExperimentalTime
 @OptIn(FlowPreview::class, ExperimentalTime::class)
 @ExperimentalCoroutinesApi
 class EventStreamUploader(
-    private val config: Config,
+    private val eventStream: EventStream,
     private val aws: AwsClient,
-    private val decoderEngine: DecoderEngine,
-    private val eventStreamBuilder: Scarlet.Builder,
-    private val fetcher: TendermintBlockFetcher,
     private val repository: RepositoryBase,
     private val options: BlockStreamOptions,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
@@ -163,18 +160,7 @@ class EventStreamUploader(
                 }
             }
 
-        val lifecycle = LifecycleRegistry(config.eventStream.websocket.throttleDurationMs)
-        val scarlet: Scarlet = eventStreamBuilder.lifecycle(lifecycle).build()
-        val channel = scarlet.create(WebSocketChannel::class.java)
-        val eventStreamService = channel.withLifecycle(lifecycle)
-
-        return EventStream(
-            eventStreamService,
-            fetcher,
-            decoderEngine,
-            options = options,
-            dispatchers = dispatchers
-        )
+        return eventStream
             .streamBlocks()
             .onEach { "block recieved: ${it.height}"}
             .filter { streamBlock ->
@@ -293,5 +279,6 @@ class EventStreamUploader(
                 emitAll(uploaded.asFlow())
             }
             .flowOn(dispatchers.io())
+
     }
 }
