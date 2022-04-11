@@ -1,5 +1,8 @@
 package io.provenance.aggregate.service.stream.consumers
 
+import com.tinder.scarlet.Scarlet
+import com.tinder.scarlet.lifecycle.LifecycleRegistry
+import io.provenance.aggregate.common.Config
 import io.provenance.aggregate.common.aws.AwsClient
 import io.provenance.aggregate.common.aws.dynamodb.BlockBatch
 import io.provenance.aggregate.common.aws.dynamodb.WriteResult
@@ -19,10 +22,14 @@ import io.provenance.aggregate.service.stream.EventStreamFactory
 import io.provenance.aggregate.service.stream.batch.Batch
 import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
+import io.provenance.eventstream.adapter.json.decoder.DecoderEngine
 import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
 import io.provenance.eventstream.coroutines.DispatcherProvider
 import io.provenance.eventstream.decoder.DecoderAdapter
+import io.provenance.eventstream.stream.WebSocketChannel
+import io.provenance.eventstream.stream.clients.TendermintBlockFetcher
 import io.provenance.eventstream.stream.models.StreamBlock
+import io.provenance.eventstream.stream.withLifecycle
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -46,20 +53,15 @@ import kotlin.time.ExperimentalTime
 @OptIn(FlowPreview::class, ExperimentalTime::class)
 @ExperimentalCoroutinesApi
 class EventStreamUploader(
-    private val eventStream: EventStream,
+    private val config: Config,
     private val aws: AwsClient,
-    private val decoderAdapter: DecoderAdapter,
+    private val decoderEngine: DecoderEngine,
+    private val eventStreamBuilder: Scarlet.Builder,
+    private val fetcher: TendermintBlockFetcher,
     private val repository: RepositoryBase,
     private val options: BlockStreamOptions,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
-    constructor(
-        eventStreamFactory: EventStreamFactory,
-        aws: AwsClient,
-        decoderAdapter: DecoderAdapter,
-        repository: RepositoryBase,
-        options: BlockStreamOptions
-    ) : this(eventStreamFactory.createSource(options) as EventStream, aws, decoderAdapter, repository, options)
 
     companion object {
         const val STREAM_BUFFER_CAPACITY: Int = 256
@@ -161,7 +163,18 @@ class EventStreamUploader(
                 }
             }
 
-        return eventStream
+        val lifecycle = LifecycleRegistry(config.eventStream.websocket.throttleDurationMs)
+        val scarlet: Scarlet = eventStreamBuilder.lifecycle(lifecycle).build()
+        val channel = scarlet.create(WebSocketChannel::class.java)
+        val eventStreamService = channel.withLifecycle(lifecycle)
+
+        return EventStream(
+            eventStreamService,
+            fetcher,
+            decoderEngine,
+            options = options,
+            dispatchers = dispatchers
+        )
             .streamBlocks()
             .onEach { "block recieved: ${it.height}"}
             .filter { streamBlock ->

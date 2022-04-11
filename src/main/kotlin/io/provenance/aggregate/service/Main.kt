@@ -274,34 +274,34 @@ fun main(args: Array<String>) {
         )
 
         if (observe) {
-            log.info("*** Observing blocks and events. No action will be taken. ***")
-            EventStreamViewer(
-                EventStreamFactory(config, decoderAdapter.decoderEngine, wsStreamBuilder, fetcher),
-                options
-            ).consume { b: StreamBlock ->
-                val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
-                println(
-                    if (b.historical) {
-                        text
-                    } else {
-                        green(text)
-                    }
-                )
-                if (verbose) {
-                    for (event in b.blockEvents) {
-                        println("  Block-Event: ${event.eventType}")
-                        for (attr in event.attributes) {
-                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
-                        }
-                    }
-                    for (event in b.txEvents) {
-                        println(" Tx-Event: ${event.eventType}")
-                        for (attr in event.attributes) {
-                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
-                        }
-                    }
-                }
-            }
+//            log.info("*** Observing blocks and events. No action will be taken. ***")
+//            EventStreamViewer(
+//                EventStreamFactory(config, decoderAdapter.decoderEngine, wsStreamBuilder, fetcher),
+//                options
+//            ).consume { b: StreamBlock ->
+//                val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
+//                println(
+//                    if (b.historical) {
+//                        text
+//                    } else {
+//                        green(text)
+//                    }
+//                )
+//                if (verbose) {
+//                    for (event in b.blockEvents) {
+//                        println("  Block-Event: ${event.eventType}")
+//                        for (attr in event.attributes) {
+//                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
+//                        }
+//                    }
+//                    for (event in b.txEvents) {
+//                        println(" Tx-Event: ${event.eventType}")
+//                        for (attr in event.attributes) {
+//                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
+//                        }
+//                    }
+//                }
+//            }
         } else {
             if (config.upload.extractors.isNotEmpty()) {
                 log.info("upload: adding extractors")
@@ -311,9 +311,11 @@ fun main(args: Array<String>) {
             }
 
             EventStreamUploader(
-                EventStreamFactory(config, decoderAdapter.decoderEngine, wsStreamBuilder, fetcher),
+                config,
                 aws,
-                decoderAdapter,
+                decoderAdapter.decoderEngine,
+                wsStreamBuilder,
+                fetcher,
                 repository,
                 options
             )
