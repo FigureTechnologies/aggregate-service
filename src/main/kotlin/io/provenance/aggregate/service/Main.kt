@@ -166,7 +166,7 @@ fun main(args: Array<String>) {
 
     val log = "main".logger()
 
-    val wsStreamBuilder = configureEventStreamBuilder(config.eventStream.websocket.uri)
+    val wsStreamBuilder = configureEventStreamBuilder(config.wsNode)
     val decoderAdapter = moshiDecoderAdapter()
     val tendermintServiceClient = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
     val fetcher = TendermintBlockFetcher(tendermintServiceClient)
