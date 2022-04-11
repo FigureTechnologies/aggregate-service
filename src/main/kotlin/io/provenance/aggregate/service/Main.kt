@@ -233,7 +233,7 @@ fun main(args: Array<String>) {
         // will be chosen as the starting height
 
         val fromHeightGetter: suspend () -> Long? = {
-            var maxHistoricalHeight: Long? = dynamo.getMaxHistoricalBlockHeight()
+            var maxHistoricalHeight: Long? =  dynamo.getMaxHistoricalBlockHeight()
             log.info("Start :: historical max block height = $maxHistoricalHeight")
             if (restart) {
                 if (maxHistoricalHeight == null) {
@@ -327,7 +327,7 @@ fun main(args: Array<String>) {
             }
 
             EventStreamUploader(
-                eventStream as EventStream,
+                netAdapter,
                 aws,
                 repository,
                 options
