@@ -16,7 +16,6 @@ import io.provenance.aggregate.common.extensions.recordMaxBlockHeight
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.service.stream.EventStreamFactory
-import io.provenance.eventstream.stream.BlockStreamOptions
 import io.provenance.eventstream.stream.clients.TendermintBlockFetcher
 import io.provenance.eventstream.stream.clients.TendermintServiceOpenApiClient
 import io.provenance.eventstream.stream.consumers.EventStreamViewer
@@ -26,15 +25,14 @@ import io.provenance.aggregate.repository.factory.RepositoryFactory
 import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
 import io.provenance.eventstream.config.Environment
 import io.provenance.eventstream.decoder.moshiDecoderAdapter
+import io.provenance.eventstream.defaultEventStream
+import io.provenance.eventstream.defaultEventStreamBuilder
 import io.provenance.eventstream.extensions.repeatDecodeBase64
 import io.provenance.eventstream.flow.extensions.cancelOnSignal
-import io.provenance.eventstream.stream.withBatchSize
-import io.provenance.eventstream.stream.withBlockEvents
-import io.provenance.eventstream.stream.withFromHeight
-import io.provenance.eventstream.stream.withOrdered
-import io.provenance.eventstream.stream.withSkipEmptyBlocks
-import io.provenance.eventstream.stream.withToHeight
-import io.provenance.eventstream.stream.withTxEvents
+import io.provenance.eventstream.net.defaultOkHttpClient
+import io.provenance.eventstream.net.okHttpNetAdapter
+import io.provenance.eventstream.stream.*
+import io.provenance.eventstream.stream.clients.BlockFetcher
 import io.provenance.eventstream.utils.colors.green
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -42,6 +40,7 @@ import kotlinx.cli.default
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 import okhttp3.OkHttpClient
 import org.slf4j.Logger
 import java.net.URI
@@ -166,6 +165,8 @@ fun main(args: Array<String>) {
 
     val log = "main".logger()
 
+    val netAdapter = okHttpNetAdapter(config.wsNode)
+
     val wsStreamBuilder = configureEventStreamBuilder(config.wsNode)
     val decoderAdapter = moshiDecoderAdapter()
     val tendermintServiceClient = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
@@ -243,13 +244,21 @@ fun main(args: Array<String>) {
                     // we need to increment.
                     maxHistoricalHeight += 1
                 }
-                log.info("--restart: true, starting block height at: ${maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)} }")
+                log.info(
+                    "--restart: true, starting block height at: ${
+                        maxOf(
+                            maxHistoricalHeight ?: 0,
+                            fromHeight?.toLong() ?: 0
+                        )
+                    } }"
+                )
                 maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)
             } else {
                 log.info("--restart: false, starting from block height ${fromHeight?.toLong()}")
                 fromHeight?.toLong()
             }
         }
+
 
         val options = BlockStreamOptions.create(
             withBatchSize(config.eventStream.batch.size),
@@ -260,7 +269,6 @@ fun main(args: Array<String>) {
             withTxEvents(config.eventStream.filter.txEvents),
             withOrdered(ordered)
         )
-
         log.info(
             """
             | BlockStream options => {
@@ -273,35 +281,44 @@ fun main(args: Array<String>) {
             """.trimMargin("|")
         )
 
+        val esConfig: io.provenance.eventstream.config.Config = io.provenance.eventstream.config.Config(
+            eventStream = config.eventStream,
+            node = config.wsNode
+        )
+        val factory = DefaultBlockStreamFactory(
+            config = esConfig,
+            decoderEngine = decoderAdapter.decoderEngine,
+            eventStreamBuilder = defaultEventStreamBuilder(netAdapter),
+            blockFetcher = fetcher
+        )
+        val eventStream = factory.createSource(options)
+
         if (observe) {
-//            log.info("*** Observing blocks and events. No action will be taken. ***")
-//            EventStreamViewer(
-//                EventStreamFactory(config, decoderAdapter.decoderEngine, wsStreamBuilder, fetcher),
-//                options
-//            ).consume { b: StreamBlock ->
-//                val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
-//                println(
-//                    if (b.historical) {
-//                        text
-//                    } else {
-//                        green(text)
-//                    }
-//                )
-//                if (verbose) {
-//                    for (event in b.blockEvents) {
-//                        println("  Block-Event: ${event.eventType}")
-//                        for (attr in event.attributes) {
-//                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
-//                        }
-//                    }
-//                    for (event in b.txEvents) {
-//                        println(" Tx-Event: ${event.eventType}")
-//                        for (attr in event.attributes) {
-//                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
-//                        }
-//                    }
-//                }
-//            }
+            eventStream.streamBlocks().onEach { b: StreamBlock ->
+                val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
+                println(
+                    if (b.historical) {
+                        text
+                    } else {
+                        green(text)
+                    }
+                )
+                if (verbose) {
+                    for (event in b.blockEvents) {
+                        println("  Block-Event: ${event.eventType}")
+                        for (attr in event.attributes) {
+                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
+                        }
+                    }
+                    for (event in b.txEvents) {
+                        println(" Tx-Event: ${event.eventType}")
+                        for (attr in event.attributes) {
+                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
+                        }
+                    }
+                }
+            }
+                .collect()
         } else {
             if (config.upload.extractors.isNotEmpty()) {
                 log.info("upload: adding extractors")
@@ -333,3 +350,4 @@ fun main(args: Array<String>) {
         }
     }
 }
+

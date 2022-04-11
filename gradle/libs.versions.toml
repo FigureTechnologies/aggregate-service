@@ -1,5 +1,5 @@
 [versions]
-eventStream = "tmp-rob-1"
+eventStream = "0.6.0-rc7"
 kotlinxCore = "1.5.2"
 kotlinxCli = "0.3.3"
 kotlinxDateTime = "0.3.0"
