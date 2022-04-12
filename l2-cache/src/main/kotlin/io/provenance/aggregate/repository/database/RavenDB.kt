@@ -37,7 +37,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
     private fun openSession(): IDocumentSession = store.openSession()
 
     private fun saveBlockMetadata(session: IDocumentSession, block: StreamBlock) =
-        session.store(blockMetadata(block), sha256(UUID.randomUUID().toString()).toHexString())
+        session.store(blockMetadata(block), (block.height ?: 0 ).toString())
             .also {
                 log.info(" Storing data for Block Height = ${block.height}: Block Result Size = ${block.blockResult?.size}: Tx Event Size = ${block.txEvents.size}")
             }
@@ -49,7 +49,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
         txHash: (Int) -> String?
     ) =
         blockTx(blockHeight, blockTxResult, txHash).map {
-            session.store(it)
+            session.store(it, txHash.toString())
         }
 
     private fun saveBlockTxEvents(session: IDocumentSession, blockHeight: Long?, txEvents: List<TxEvent>?) =
