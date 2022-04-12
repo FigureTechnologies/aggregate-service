@@ -19,6 +19,8 @@ import net.ravendb.client.documents.DocumentStore
 import net.ravendb.client.documents.session.IDocumentSession
 import java.util.UUID
 
+import io.provenance.eventstream.stream.models.Event
+
 class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBase {
 
     private val store = DocumentStore(addr, dbName).also { it.conventions.maxNumberOfRequestsPerSession = maxConnections }.initialize()
@@ -94,12 +96,17 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
         } ?: emptyList()
 
     private fun blockTxEvent(blockHeight: Long?, txEvents: List<TxEvent>?): List<TxEvents> =
+
         txEvents?.map { event ->
             TxEvents(
                 txHash = event.txHash,
                 blockHeight = blockHeight,
                 eventType = event.eventType,
-                attributes = event.attributes.map { EventData(it.key?.decodeBase64(), it.value?.decodeBase64(), it.index ?: false) }
+                attributes = event.attributes.toEventsData()
             )
         } ?: emptyList()
+
+    private fun List<Event>.toEventsData(): List<EventData> =
+        this.map { EventData(it.key?.decodeBase64(), it.value?.decodeBase64(), it.index ?: false) }
+
 }
