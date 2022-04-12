@@ -242,13 +242,7 @@ fun main(args: Array<String>) {
                 .transform { emit(it.toStreamBlock()) }
                 .onEach {
                     val text = "Block: ${it.block.header?.height ?: "--"}:${it.block.header?.dateTime()?.toLocalDate()}"
-                    println(
-                        if (it.historical) {
-                            text
-                        } else {
-                            green(text)
-                        }
-                    )
+                    println(green(text))
                     if (verbose) {
                         for (event in it.blockEvents) {
                             println("  Block-Event: ${event.eventType}")
