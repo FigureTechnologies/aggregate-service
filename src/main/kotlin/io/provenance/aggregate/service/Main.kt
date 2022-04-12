@@ -197,7 +197,7 @@ fun main(args: Array<String>) {
         //   Figure out if there's a maximum historical block height that's been seen already.
         //   - If `--restart` is provided and a max height was found, try to start from there.
         //   - If no height exists, `--restart` implies that the caller is interested in historical blocks,
-        //     so issue a warning and start at 0.
+        //     so issue a warning and start at 1.
         //
         // Note: `--restart` can be combined with `--from=HEIGHT`. If both are given, the maximum value
         // will be chosen as the starting height
@@ -207,7 +207,7 @@ fun main(args: Array<String>) {
             log.info("Start :: historical max block height = $maxHistoricalHeight")
             if (restart) {
                 if (maxHistoricalHeight == null) {
-                    log.warn("No historical max block height found; defaulting to 0")
+                    log.warn("No historical max block height found; defaulting to 1")
                 } else {
                     log.info("Restarting from historical max block height: ${maxHistoricalHeight + 1}")
                     // maxHistoricalHeight is last successful processed, to prevent processing this block height again
@@ -216,13 +216,10 @@ fun main(args: Array<String>) {
                 }
                 log.info(
                     "--restart: true, starting block height at: ${
-                        maxOf(
-                            maxHistoricalHeight ?: 0,
-                            fromHeight?.toLong() ?: 0
-                        )
+                        maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
                     } }"
                 )
-                maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)
+                maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
             } else {
                 log.info("--restart: false, starting from block height ${fromHeight?.toLong()}")
                 fromHeight?.toLong()

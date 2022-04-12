@@ -10,6 +10,7 @@ import io.provenance.aggregate.repository.model.TxEvents
 import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
 import io.provenance.eventstream.stream.models.StreamBlock
 import io.provenance.eventstream.stream.models.TxEvent
+import io.provenance.eventstream.stream.models.extensions.hash
 import io.provenance.eventstream.stream.models.extensions.txHashes
 import net.ravendb.client.documents.DocumentStore
 import net.ravendb.client.documents.session.IDocumentSession
@@ -24,7 +25,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
         val session = openSession() // open a new session when preparing to save block
 
         saveBlockMetadata(session, block)
-        saveBlockTx(session, block.height, block.blockResult) { index: Int ->  block.txEvents[index].txHash }
+        saveBlockTx(session, block.height, block.blockResult) { index: Int ->  block.block.data?.txs?.get(index)?.hash() }
         saveBlockTxEvents(session, block.height, block.txEvents)
 
         /**
@@ -48,8 +49,8 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
         blockTxResult: List<BlockResultsResponseResultTxsResults>?,
         txHash: (Int) -> String?
     ) =
-        blockTx(blockHeight, blockTxResult, txHash).map {
-            session.store(it, txHash.toString())
+        blockTx(blockHeight, blockTxResult, txHash).map { tx ->
+            session.store(tx, tx.txHash)
         }
 
     private fun saveBlockTxEvents(session: IDocumentSession, blockHeight: Long?, txEvents: List<TxEvent>?) =
