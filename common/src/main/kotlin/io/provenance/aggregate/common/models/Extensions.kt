@@ -3,6 +3,13 @@ package io.provenance.aggregate.common.models.extensions
 import io.provenance.aggregate.common.extensions.decodeBase64
 import io.provenance.aggregate.common.extensions.hash
 import io.provenance.aggregate.common.models.*
+import io.provenance.eventstream.stream.clients.BlockData
+import io.provenance.eventstream.stream.models.StreamBlockImpl
+import io.provenance.eventstream.stream.models.extensions.blockEvents
+import io.provenance.eventstream.stream.models.extensions.dateTime
+import io.provenance.eventstream.stream.models.extensions.txData
+import io.provenance.eventstream.stream.models.extensions.txErroredEvents
+import io.provenance.eventstream.stream.models.extensions.txEvents
 import tendermint.types.Types.Header as GrpcHeader
 import java.time.Instant
 import tendermint.types.BlockOuterClass.Block as GrpcBlock
@@ -64,6 +71,15 @@ fun BlockResultsResponseResultEvents.toTxEvent(
         eventType = this.type ?: "",
         attributes = this.attributes ?: emptyList()
     )
+
+fun BlockData.toStreamBlock(): StreamBlockImpl {
+    val blockDatetime = block.header?.dateTime()
+    val blockEvents = blockResult.blockEvents(blockDatetime)
+    val blockTxResults = blockResult.txsResults
+    val txEvents = blockResult.txEvents(blockDatetime) { index: Int -> block.txData(index) }
+    val txErrors = blockResult.txErroredEvents(blockDatetime) { index: Int -> block.txData(index) }
+    return StreamBlockImpl(block, blockEvents, blockTxResults, txEvents, txErrors)
+}
 
 /**
  * A utility function which converts a list of key/value event attributes like:

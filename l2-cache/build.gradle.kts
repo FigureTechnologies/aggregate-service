@@ -9,6 +9,7 @@ version = "0.0.1-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    maven { url = uri("https://s01.oss.sonatype.org/content/groups/staging/") }
 }
 
 dependencies {

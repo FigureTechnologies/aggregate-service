@@ -4,68 +4,37 @@ import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.EnvironmentVariablesPropertySource
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.timgroup.statsd.NoOpStatsDClient
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
-import com.tinder.scarlet.Scarlet
-import com.tinder.scarlet.messageadapter.moshi.MoshiMessageAdapter
-import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
-import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
 import io.provenance.aggregate.common.Config
 import io.provenance.aggregate.common.aws.AwsClient
 import io.provenance.aggregate.common.extensions.recordMaxBlockHeight
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.UploadResult
-import io.provenance.aggregate.service.stream.EventStreamFactory
-import io.provenance.eventstream.adapter.json.decoder.MoshiDecoderEngine
-import io.provenance.eventstream.stream.BlockStreamOptions
-import io.provenance.eventstream.stream.clients.TendermintBlockFetcher
-import io.provenance.eventstream.stream.clients.TendermintServiceOpenApiClient
-import io.provenance.eventstream.stream.consumers.EventStreamViewer
-import io.provenance.eventstream.stream.infrastructure.Serializer
-import io.provenance.eventstream.stream.infrastructure.Serializer.moshi
-import io.provenance.eventstream.stream.models.StreamBlock
-import io.provenance.eventstream.stream.models.StreamBlockImplJsonAdapter
+import io.provenance.aggregate.common.models.extensions.toStreamBlock
 import io.provenance.eventstream.stream.models.extensions.dateTime
 import io.provenance.aggregate.repository.factory.RepositoryFactory
 import io.provenance.aggregate.service.stream.consumers.EventStreamUploader
-import io.provenance.eventstream.adapter.json.JSONObjectAdapter
 import io.provenance.eventstream.config.Environment
+import io.provenance.eventstream.decoder.moshiDecoderAdapter
 import io.provenance.eventstream.extensions.repeatDecodeBase64
 import io.provenance.eventstream.flow.extensions.cancelOnSignal
-import io.provenance.eventstream.stream.withBatchSize
-import io.provenance.eventstream.stream.withBlockEvents
-import io.provenance.eventstream.stream.withFromHeight
-import io.provenance.eventstream.stream.withOrdered
-import io.provenance.eventstream.stream.withSkipEmptyBlocks
-import io.provenance.eventstream.stream.withToHeight
-import io.provenance.eventstream.stream.withTxEvents
+import io.provenance.eventstream.net.okHttpNetAdapter
+import io.provenance.eventstream.stream.*
+import io.provenance.eventstream.stream.clients.BlockData
+import io.provenance.eventstream.stream.flows.blockFlow
 import io.provenance.eventstream.utils.colors.green
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.default
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import okhttp3.OkHttpClient
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.transform
 import org.slf4j.Logger
-import java.net.URI
-import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
-
-private fun configureEventStreamBuilder(websocketUri: String): Scarlet.Builder {
-    val node = URI(websocketUri)
-    return Scarlet.Builder()
-        .webSocketFactory(
-            OkHttpClient.Builder()
-                .pingInterval(10, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .build()
-                .newWebSocketFactory("${node.scheme}://${node.host}:${node.port}/websocket")
-        )
-        .addMessageAdapterFactory(MoshiMessageAdapter.Factory())
-        .addStreamAdapterFactory(CoroutinesStreamAdapterFactory())
-}
 
 /**
  * Installs a shutdown a handler to clean up resources when the returned Channel receives its one (and only) element.
@@ -122,6 +91,11 @@ fun main(args: Array<String>) {
     val verbose by parser.option(
         ArgType.Boolean, shortName = "v", fullName = "verbose", description = "Enables verbose output"
     ).default(false)
+    val ordered by parser.option(
+        ArgType.Boolean,
+        fullName = "ordered",
+        description = "Stream from the event stream in order"
+    ).default(true)
     val skipIfEmpty by parser.option(
         ArgType.Choice(listOf(false, true), { it.toBooleanStrict() }),
         fullName = "skip-if-empty",
@@ -166,16 +140,7 @@ fun main(args: Array<String>) {
 
     val log = "main".logger()
 
-    val moshi: MoshiDecoderEngine = Serializer.moshiBuilder
-        .add(KotlinJsonAdapterFactory())
-        .add(JSONObjectAdapter())
-        .add(StreamBlock::class.java, StreamBlockImplJsonAdapter(moshi))
-        .build()
-        .let { MoshiDecoderEngine(it) }
-
-    val wsStreamBuilder = configureEventStreamBuilder(config.eventStream.websocket.uri)
-    val tendermintServiceClient = TendermintServiceOpenApiClient(config.eventStream.rpc.uri)
-    val tendermintService = TendermintBlockFetcher(tendermintServiceClient)
+    val netAdapter = okHttpNetAdapter(config.wsNode)
     val aws: AwsClient = AwsClient.create(environment, config.aws.s3, config.aws.dynamodb)
     val repository = RepositoryFactory(config.dbConfig).dbInstance()
     val dynamo = aws.dynamo()
@@ -238,7 +203,7 @@ fun main(args: Array<String>) {
         // will be chosen as the starting height
 
         val fromHeightGetter: suspend () -> Long? = {
-            var maxHistoricalHeight: Long? = dynamo.getMaxHistoricalBlockHeight()
+            var maxHistoricalHeight: Long? =  dynamo.getMaxHistoricalBlockHeight()
             log.info("Start :: historical max block height = $maxHistoricalHeight")
             if (restart) {
                 if (maxHistoricalHeight == null) {
@@ -249,51 +214,49 @@ fun main(args: Array<String>) {
                     // we need to increment.
                     maxHistoricalHeight += 1
                 }
-                maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
+                log.info(
+                    "--restart: true, starting block height at: ${
+                        maxOf(
+                            maxHistoricalHeight ?: 0,
+                            fromHeight?.toLong() ?: 0
+                        )
+                    } }"
+                )
+                maxOf(maxHistoricalHeight ?: 0, fromHeight?.toLong() ?: 0)
             } else {
+                log.info("--restart: false, starting from block height ${fromHeight?.toLong()}")
                 fromHeight?.toLong()
             }
         }
 
         val options = BlockStreamOptions.create(
-            withBatchSize(config.eventStream.batch.size),
             withFromHeight(fromHeightGetter()),
             withToHeight(toHeight?.toLong()),
             withSkipEmptyBlocks(skipIfEmpty),
-            withBlockEvents(config.eventStream.filter.blockEvents),
-            withTxEvents(config.eventStream.filter.txEvents),
-            withOrdered(config.eventStream.ordered)
+            withOrdered(ordered)
         )
 
+        val blockFlow: Flow<BlockData> = blockFlow(netAdapter, moshiDecoderAdapter(), from = options.fromHeight, to = options.toHeight)
         if (observe) {
-            log.info("*** Observing blocks and events. No action will be taken. ***")
-            EventStreamViewer(
-                EventStreamFactory(config, moshi, wsStreamBuilder, tendermintService),
-                options
-            ).consume { b: StreamBlock ->
-                val text = "Block: ${b.block.header?.height ?: "--"}:${b.block.header?.dateTime()?.toLocalDate()}"
-                println(
-                    if (b.historical) {
-                        text
-                    } else {
-                        green(text)
-                    }
-                )
-                if (verbose) {
-                    for (event in b.blockEvents) {
-                        println("  Block-Event: ${event.eventType}")
-                        for (attr in event.attributes) {
-                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
+            blockFlow
+                .transform { emit(it.toStreamBlock()) }
+                .onEach {
+                    val text = "Block: ${it.block.header?.height ?: "--"}:${it.block.header?.dateTime()?.toLocalDate()}"
+                    println(green(text))
+                    if (verbose) {
+                        for (event in it.blockEvents) {
+                            println("  Block-Event: ${event.eventType}")
+                            for (attr in event.attributes) {
+                                println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
+                            }
+                        }
+                        for (event in it.txEvents) {
+                            println(" Tx-Event: ${event.eventType}")
+                            for (attr in event.attributes) {
+                                println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
+                            }
                         }
                     }
-                    for (event in b.txEvents) {
-                        println(" Tx-Event: ${event.eventType}")
-                        for (attr in event.attributes) {
-                            println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
-                        }
-                    }
-                }
-                println()
             }
         } else {
             if (config.upload.extractors.isNotEmpty()) {
@@ -304,9 +267,8 @@ fun main(args: Array<String>) {
             }
 
             EventStreamUploader(
-                EventStreamFactory(config, moshi, wsStreamBuilder, tendermintService),
+                blockFlow,
                 aws,
-                moshi,
                 repository,
                 options
             )
@@ -324,3 +286,4 @@ fun main(args: Array<String>) {
         }
     }
 }
+

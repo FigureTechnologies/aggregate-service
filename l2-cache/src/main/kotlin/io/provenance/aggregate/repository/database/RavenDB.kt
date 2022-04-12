@@ -7,10 +7,10 @@ import io.provenance.aggregate.repository.RepositoryBase
 import io.provenance.aggregate.repository.model.BlockMetadata
 import io.provenance.aggregate.repository.model.Tx
 import io.provenance.aggregate.repository.model.TxEvents
-import io.provenance.aggregate.repository.model.txHash
 import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
 import io.provenance.eventstream.stream.models.StreamBlock
 import io.provenance.eventstream.stream.models.TxEvent
+import io.provenance.eventstream.stream.models.extensions.txHashes
 import net.ravendb.client.documents.DocumentStore
 import net.ravendb.client.documents.session.IDocumentSession
 import java.util.UUID
@@ -24,7 +24,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
         val session = openSession() // open a new session when preparing to save block
 
         saveBlockMetadata(session, block)
-        saveBlockTx(session, block.height, block.blockResult) { index: Int ->  block.txHash(index) }
+        saveBlockTx(session, block.height, block.blockResult) { index: Int ->  block.txEvents[index].txHash }
         saveBlockTxEvents(session, block.height, block.txEvents)
 
         /**
@@ -65,7 +65,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
     private fun blockMetadata(block: StreamBlock): BlockMetadata =
         BlockMetadata(
             blockHeight = block.height,
-            txHash = block.block.data?.txs,
+            txHash = block.block.txHashes(),
             timestamp = block.block.header?.time,
             numTxs = block.txEvents.size.toLong()
         )
@@ -77,7 +77,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
     ): List<Tx> =
         blockTxResult?.mapIndexed { index, tx ->
             Tx(
-                txHash = sha256(txHash(index)).toHexString(),
+                txHash = txHash(index),
                 blockHeight = blockHeight,
                 code = tx.code?.toLong(),
                 data = tx.data,
@@ -90,7 +90,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
         } ?: emptyList()
 
     private fun blockTxEvent(blockHeight: Long?, txEvents: List<TxEvent>?): List<TxEvents> =
-        txEvents?.mapIndexed { index, event ->
+        txEvents?.map { event ->
             TxEvents(
                 txHash = event.txHash,
                 blockHeight = blockHeight,

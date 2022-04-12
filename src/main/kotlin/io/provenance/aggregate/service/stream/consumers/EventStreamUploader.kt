@@ -10,19 +10,18 @@ import io.provenance.aggregate.common.aws.s3.client.S3Client
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.BatchId
 import io.provenance.aggregate.common.models.UploadResult
-import io.provenance.eventstream.adapter.json.decoder.DecoderEngine
+import io.provenance.aggregate.common.models.extensions.toStreamBlock
 import io.provenance.eventstream.stream.BlockStreamOptions
-import io.provenance.eventstream.stream.EventStream
-import io.provenance.eventstream.stream.models.extensions.dateTime
 import io.provenance.aggregate.repository.RepositoryBase
 import io.provenance.aggregate.service.flow.extensions.chunked
-import io.provenance.aggregate.service.stream.EventStreamFactory
 import io.provenance.aggregate.service.stream.batch.Batch
 import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
 import io.provenance.eventstream.coroutines.DispatcherProvider
+import io.provenance.eventstream.stream.clients.BlockData
 import io.provenance.eventstream.stream.models.StreamBlock
+import io.provenance.eventstream.stream.models.extensions.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -38,7 +37,7 @@ import kotlin.time.ExperimentalTime
  *
  * @property The event stream which provides blocks to this consumer.
  * @property aws The client used to interact with AWS.
- * @property moshi The JSON serializer/deserializer used by this consumer.
+ * @property decoderAdapter The JSON serializer/deserializer used by this consumer.
  * @property options Options used to configure this consumer.
  * @property dispatchers The coroutine dispatchers used to run asynchronous tasks in this consumer.
  * @p
@@ -46,20 +45,12 @@ import kotlin.time.ExperimentalTime
 @OptIn(FlowPreview::class, ExperimentalTime::class)
 @ExperimentalCoroutinesApi
 class EventStreamUploader(
-    private val eventStream: EventStream,
+    private val blockFlow: Flow<BlockData>,
     private val aws: AwsClient,
-    private val moshi: DecoderEngine,
     private val repository: RepositoryBase,
     private val options: BlockStreamOptions,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
-    constructor(
-        eventStreamFactory: EventStreamFactory,
-        aws: AwsClient,
-        moshi: DecoderEngine,
-        repository: RepositoryBase,
-        options: BlockStreamOptions
-    ) : this(eventStreamFactory.createSource(options) as EventStream, aws, moshi, repository, options)
 
     companion object {
         const val STREAM_BUFFER_CAPACITY: Int = 256
@@ -161,19 +152,17 @@ class EventStreamUploader(
                 }
             }
 
-        return eventStream
-            .streamBlocks()
+        return blockFlow
+            .transform { emit(it.toStreamBlock()) }
             .filter { streamBlock ->
-                !streamBlock.blockResult.isNullOrEmpty()
-                    .also {
-                        log.info(
-                            if (streamBlock.blockResult.isNullOrEmpty())
-                                "Skipping empty ${if (streamBlock.historical) "historical" else "live"} block: ${streamBlock.height}"
-                            else
-                                "buffering ${if (streamBlock.historical) "historical" else "live"} " +
-                                        "block #${streamBlock.block.header?.height} for upload with ${streamBlock.txEvents.size} tx events"
-                        )
-                    }
+                !streamBlock.blockResult.isNullOrEmpty().also {
+                    log.info(
+                        if(streamBlock.blockResult.isNullOrEmpty())
+                            "Skipping empty block: ${streamBlock.height}"
+                        else
+                            "Buffering block: ${streamBlock.height} Tx Result Size: ${streamBlock.blockResult!!.size} Tx Event Size: ${streamBlock.txEvents.size}"
+                    )
+                }
             }
             .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = BufferOverflow.SUSPEND)
             .flowOn(dispatchers.io())
@@ -184,8 +173,8 @@ class EventStreamUploader(
 
                 runBlocking(dispatchers.io()) {
                     launch {
-                        streamBlocks.map {
-                            repository.saveBlock(it)
+                        streamBlocks.map { block ->
+                            repository.saveBlock(block)
                         }
                     }
                 }
@@ -220,34 +209,17 @@ class EventStreamUploader(
                                          * at the last successful processed block height, so we don't lose any data that
                                          * was in the middle of processing.
                                          */
-                                        val liveHistoricalBlockHeight =
-                                            streamBlocks.mapNotNull { block -> block.height.takeIf { !block.historical } }
-                                                .maxOrNull()
+                                        val highestBlockHeight = streamBlocks.last().height
+                                        val lowestBlockHeight = streamBlocks.first().height
 
-                                        val highestHistoricalBlockHeight =
-                                            streamBlocks.mapNotNull { block -> block.height.takeIf { block.historical } }
-                                                .maxOrNull()
-                                        val lowestHistoricalBlockHeight =
-                                            streamBlocks.mapNotNull { block -> block.height.takeIf { block.historical } }
-                                                .minOrNull()
-
-                                        if (putResponse.sdkHttpResponse().isSuccessful && highestHistoricalBlockHeight != null) {
-                                            dynamo.writeMaxHistoricalBlockHeight(highestHistoricalBlockHeight)
+                                        if (putResponse.sdkHttpResponse().isSuccessful) {
+                                            dynamo.writeMaxHistoricalBlockHeight(highestBlockHeight!!)
                                                 .also {
                                                     if (it.processed > 0) {
-                                                        log.info("historical::updating max historical block height to $highestHistoricalBlockHeight")
+                                                        log.info("Checkpoint::Updating max block height to = $highestBlockHeight")
                                                     }
                                                 }
                                             log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
-                                        }
-
-                                        /**
-                                         * Logging the upload result of the block range.
-                                         */
-                                        val blockHeightRange = if (liveHistoricalBlockHeight != null) {
-                                            Pair(liveHistoricalBlockHeight, liveHistoricalBlockHeight)
-                                        } else {
-                                            Pair(lowestHistoricalBlockHeight, highestHistoricalBlockHeight)
                                         }
 
                                         UploadResult(
@@ -255,7 +227,7 @@ class EventStreamUploader(
                                             batchSize = streamBlocks.size,
                                             eTag = putResponse.eTag(),
                                             s3Key = key,
-                                            blockHeightRange = blockHeightRange
+                                            blockHeightRange = Pair(lowestBlockHeight, highestBlockHeight)
                                         )
                                     } else {
                                         null

@@ -10,6 +10,9 @@ import io.provenance.aggregate.common.aws.s3.S3Bucket
 import io.provenance.aggregate.common.models.BlockResponse
 import io.provenance.aggregate.common.models.BlockResultsResponse
 import io.provenance.aggregate.common.models.BlockchainResponse
+import io.provenance.eventstream.decoder.moshiDecoderAdapter
+import io.provenance.eventstream.net.NetAdapter
+import io.provenance.eventstream.net.okHttpNetAdapter
 
 object Defaults {
 
@@ -54,4 +57,8 @@ object Defaults {
             serviceMetadataTable = DynamoTable(DYNAMODB_SERVICE_METADATA_TABLE),
             dynamoBatchGetItems = 100
         )
+
+    val netAdapter: NetAdapter =  okHttpNetAdapter("localhost:26657")
+
+    val decoderAdapter = moshiDecoderAdapter()
 }
