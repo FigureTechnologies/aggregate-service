@@ -1,9 +1,6 @@
 package io.provenance.aggregate.repository.database
 
-import io.provenance.aggregate.common.extensions.decodeBase64
-import io.provenance.aggregate.common.extensions.toHexString
 import io.provenance.aggregate.common.logger
-import io.provenance.aggregate.common.utils.sha256
 import io.provenance.aggregate.repository.RepositoryBase
 import io.provenance.aggregate.repository.model.*
 import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
@@ -11,12 +8,8 @@ import io.provenance.eventstream.stream.models.StreamBlock
 import io.provenance.eventstream.stream.models.TxEvent
 import io.provenance.eventstream.stream.models.extensions.hash
 import io.provenance.eventstream.stream.models.extensions.txHashes
-import io.provenance.eventstream.stream.models.toDecodedMap
 import net.ravendb.client.documents.DocumentStore
 import net.ravendb.client.documents.session.IDocumentSession
-import java.util.UUID
-
-import io.provenance.eventstream.stream.models.Event
 
 class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBase {
 
@@ -99,7 +92,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
                 txHash = event.txHash,
                 blockHeight = blockHeight,
                 eventType = event.eventType,
-                attributes = event.attributes.toEventsData()
+                attributes = event.attributes.toDecodedAttributes()
             )
         } ?: emptyList()
 }

@@ -6,7 +6,7 @@ import io.provenance.eventstream.stream.models.StreamBlock
 
 fun StreamBlock.txHash(index: Int): String? = this.block.data?.txs?.get(index)
 
-fun List<Event>.toEventsData(): List<EventData> =
+fun List<Event>.toDecodedAttributes(): List<EventData> =
     this.map { EventData(it.key?.decodeBase64(), it.value?.decodeBase64(), it.index ?: false) }
 
 
