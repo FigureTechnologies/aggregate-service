@@ -49,7 +49,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
         txHash: (Int) -> String?
     ) =
         blockTx(blockHeight, blockTxResult, txHash).map {
-            session.store(it, txHash.toString())
+            session.store(it, it.txHash)
         }
 
     private fun saveBlockTxEvents(session: IDocumentSession, blockHeight: Long?, txEvents: List<TxEvent>?) =
