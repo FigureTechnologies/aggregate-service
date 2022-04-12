@@ -13,8 +13,6 @@ aws:
     dynamoBatchGetItems: ${DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS}
 
 ws_node: ${WS_NODE}
-# address that collects fees
-feeCollector: ${FEE_COLLECTOR}
 
 dbConfig:
   addr: ${DB_URI}
@@ -26,10 +24,7 @@ dbConfig:
 event-stream:
   # Configuration of the Tendermint API:
   websocket:
-    uri: ${EVENT_STREAM_WEBSOCKET_URI}
     throttle-duration-ms: 0
-  rpc:
-    uri: ${EVENT_STREAM_RPC_URI}
   batch:
     # Controls the maximum number of blocks that will be bundled into a batch for processing.
     size: ${BATCH_SIZE}

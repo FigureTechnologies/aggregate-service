@@ -1,8 +1,5 @@
 package io.provenance.aggregate.service.stream.consumers
 
-import com.tinder.scarlet.Scarlet
-import com.tinder.scarlet.lifecycle.LifecycleRegistry
-import io.provenance.aggregate.common.Config
 import io.provenance.aggregate.common.aws.AwsClient
 import io.provenance.aggregate.common.aws.dynamodb.BlockBatch
 import io.provenance.aggregate.common.aws.dynamodb.WriteResult
@@ -13,28 +10,18 @@ import io.provenance.aggregate.common.aws.s3.client.S3Client
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.BatchId
 import io.provenance.aggregate.common.models.UploadResult
+import io.provenance.aggregate.common.models.extensions.toStreamBlock
 import io.provenance.eventstream.stream.BlockStreamOptions
-import io.provenance.eventstream.stream.EventStream
 import io.provenance.aggregate.repository.RepositoryBase
 import io.provenance.aggregate.service.flow.extensions.chunked
-import io.provenance.aggregate.service.stream.EventStreamFactory
 import io.provenance.aggregate.service.stream.batch.Batch
 import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.aggregate.service.stream.extractors.OutputType
-import io.provenance.eventstream.adapter.json.decoder.DecoderEngine
 import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
 import io.provenance.eventstream.coroutines.DispatcherProvider
-import io.provenance.eventstream.decoder.DecoderAdapter
-import io.provenance.eventstream.decoder.moshiDecoderAdapter
-import io.provenance.eventstream.net.NetAdapter
-import io.provenance.eventstream.stream.WebSocketChannel
 import io.provenance.eventstream.stream.clients.BlockData
-import io.provenance.eventstream.stream.clients.TendermintBlockFetcher
-import io.provenance.eventstream.stream.flows.blockFlow
 import io.provenance.eventstream.stream.models.StreamBlock
-import io.provenance.eventstream.stream.models.StreamBlockImpl
 import io.provenance.eventstream.stream.models.extensions.*
-import io.provenance.eventstream.stream.withLifecycle
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -58,7 +45,7 @@ import kotlin.time.ExperimentalTime
 @OptIn(FlowPreview::class, ExperimentalTime::class)
 @ExperimentalCoroutinesApi
 class EventStreamUploader(
-    private val netAdapter: NetAdapter,
+    private val blockFlow: Flow<BlockData>,
     private val aws: AwsClient,
     private val repository: RepositoryBase,
     private val options: BlockStreamOptions,
@@ -165,18 +152,17 @@ class EventStreamUploader(
                 }
             }
 
-        return blockFlow(netAdapter, moshiDecoderAdapter(), from = options.fromHeight, to = options.toHeight)
-            .onEach { "block recieved: ${it.height}"}
+        return blockFlow
+            .onEach { "block received: ${it.height}"}
             .transform { emit(it.toStreamBlock()) }
             .filter { streamBlock ->
                 !streamBlock.blockResult.isNullOrEmpty()
                     .also {
                         log.info(
                             if (streamBlock.blockResult.isNullOrEmpty())
-                                "Skipping empty ${if (streamBlock.historical) "historical" else "live"} block: ${streamBlock.height}"
+                                "Skipping empty block: ${streamBlock.height}"
                             else
-                                "buffering ${if (streamBlock.historical) "historical" else "live"} " +
-                                        "block #${streamBlock.block.header?.height} for upload with ${streamBlock.txEvents.size} tx events"
+                                "buffering block #${streamBlock.block.header?.height} for upload with ${streamBlock.txEvents.size} tx events"
                         )
                     }
             }
@@ -285,14 +271,5 @@ class EventStreamUploader(
             }
             .flowOn(dispatchers.io())
 
-    }
-
-    private fun BlockData.toStreamBlock(): StreamBlockImpl {
-        val blockDatetime = block.header?.dateTime()
-        val blockEvents = blockResult.blockEvents(blockDatetime)
-        val blockTxResults = blockResult.txsResults
-        val txEvents = blockResult.txEvents(blockDatetime) { index: Int -> block.txData(index) }
-        val txErrors = blockResult.txErroredEvents(blockDatetime) { index: Int -> block.txData(index) }
-        return StreamBlockImpl(block, blockEvents, blockTxResults, txEvents, txErrors)
     }
 }

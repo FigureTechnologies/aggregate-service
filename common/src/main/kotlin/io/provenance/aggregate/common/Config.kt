@@ -35,10 +35,8 @@ data class UploadConfig(
 data class Config (
     val aws: AwsConfig,
     val wsNode: String,
-    @ConfigAlias("event-stream") val eventStream: EventStreamConfig,
     val upload: UploadConfig = UploadConfig.empty(),
-    val dbConfig: DBConfig,
-    val feeCollector: String
+    val dbConfig: DBConfig
 )
 
 data class DBConfig(
