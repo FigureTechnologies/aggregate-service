@@ -108,3 +108,96 @@ to the transfer of a marker between accounts on the network.
 | administrator   | string  | false     |
 | to_address      | string  | false     |
 | from_address    | string  | false     |
+
+
+tx_coin_transfer
+------------------
+
+### Name
+
+`tx_coin_transfer.csv`
+
+### Description
+
+Records instances of the Provenance `transfer` transaction event. This event corresponds to the transfer of coins between accounts on the network.
+
+### Structure
+
+
+| Column          | Type    | Nullable? |
+|-----------------| ------- |-----------|
+| hash            | string  | false     |
+| event_type      | string  | false     |
+| block_height    | integer | false     |
+| block_timestamp | string  | true      |
+| tx_hash         | string  | true      |
+| recipient       | string  | true      |
+| sender          | string  | true      |
+| amount          | string  | true      |
+| denom           | string  | true      |
+
+tx_errors
+------------------
+
+### Name
+
+`tx_errors.csv`
+
+### Description
+
+Records instances of errors during any Provenance `transfer` transaction event. 
+
+### Structure
+
+| Column          | Type    | Nullable? |
+|-----------------| ------- |-----------|
+| hash            | string  | false     |
+| block_height    | string  | false     |
+| block_timestamp | integer | false     |
+| error_code      | string  | true      |
+| info            | string  | true      |
+
+tx_fees
+------------------
+
+### Name
+
+`tx_fees.csv`
+
+### Description
+
+Records fees incurred during any Provenance `transfer` transaction event. 
+
+### Structure
+
+| Column          | Type    | Nullable? |
+|-----------------|---------|-----------|
+| hash            | string  | false     |
+| tx_hash         | string  | false     |
+| block_height    | integer | false     |
+| block_timestamp | string  | true      |
+| fee             | string  | true      |
+| fee_denom       | string  | true      |
+| sender          | string  | true      |
+
+nycb_usdf_balances
+------------------
+
+### Name
+
+`nycb_usdf_balances.csv`
+
+### Description
+
+Records NYCB USDF transfers 
+
+### Structure
+
+
+| Column    | Type    | Nullable? |
+|-----------|---------|-----------|
+| account   | string  | false     |
+| date      | string  | false     |
+| balance   | integer | true      |
+| timestamp | string  | true      |
+| height    | string  | true      |

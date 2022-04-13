@@ -1,8 +1,26 @@
-# aggregate-service
+# Aggregate-Service
+
+---
+
+[![Latest Release][release-badge]][release-latest]
+[![Apache 2.0 License][license-badge]][license-url]
+[![LOC][loc-badge]][loc-report]
+
+[release-badge]: https://img.shields.io/github/v/tag/provenance-io/aggregate-service.svg
+[release-latest]: https://github.com/provenance-io/aggregate-service/releases/latest
+[license-badge]: https://img.shields.io/github/license/provenance-io/aggregate-service.svg
+[license-url]: https://github.com/provenance-io/aggregate-service/blob/main/LICENSE
+[loc-badge]: https://tokei.rs/b1/github/provenance-io/aggregate-service
+[loc-report]: https://github.com/provenance-io/aggregate-service
+
+---
 
 The purpose of this service is to retrieve block data over time from the Provenance 
 blockchain so that we can compute aggregated data at a reasonable rate to perform 
 business decision queries.
+
+The aggregator service makes use of the [Provenance Event Stream Library](https://github.com/provenance-io/event-stream) 
+to stream in ordered blocks and transform the block's data into the business data needs.
 
 ## Local Setup
 
@@ -61,8 +79,13 @@ $ make localstack-status
 ```bash
 $ make localstack-stop
 ```
+---
+### 4.A Use the node public IP
 
-### 4. Port-forwarding for Provenance/Tendermint API
+In the [local.env.properties](hhttps://github.com/provenance-io/aggregate-service/blob/a0257f85f203cc65f3a63eeee3d3332dedec133c/src/main/resources/local.env.properties#L8) you could set the public IP address of the
+query node that you wish to stream from.
+
+### 4.B Port-forwarding for Provenance/Tendermint API
 
 Port `26657` is expected to be open for RPC and web-socket traffic, which will
 require port-forwarding to the Provenance Kubernetes cluster.
@@ -105,7 +128,24 @@ This can be accomplished easily using the internal Figure command line tool, `fi
    
 Traffic on `localhost:26657` will now be forwarded to the Provenance cluster
 
-### 5. Running
+---
+
+### 5. Block Caching
+
+The aggregate service also supports the ability to cache block data within a local NoSQL database if a cloud data warehouse is not desired.
+
+The aggregator currently supports [RavenDB](https://ravendb.net/) but can support others if necessary.
+
+To run RavenDB locally:
+```bash
+$ docker run -p 8080:8080 ravendb/ravendb:ubuntu-latest
+```
+Once ravenDB is running could access its GUI interface to set up the database at http://localhost:8080, then you could make changes to the [local.env.properties](https://github.com/provenance-io/aggregate-service/blob/main/src/main/resources/local.env.properties) to support the desired configurations. 
+
+
+---
+
+### 6. Running
 
 The service can be run locally:
 
@@ -123,16 +163,26 @@ $ make run-local ARGS="3017000"
 
 To run the containerized service:
 
-> _TODO_
+- pull the image from to get the latest version:
+```
+$ docker pull ghcr.io/provenance-io/aggregate-service:latest
+```
+---
 
-## Deployment
+### 6. Deployment
 
-### Serverless
+#### Github Actions
 
-We utilize `serverless` for our AWS infrastructure deployment via github actions: https://serverless.com.
+The aggregator CI/CD process uses Github Actions to build the docker container and deploy the image onto [GHCR](https://github.com/features/packages) (Github Container Registry) from where the docker container can be pulled from any deployment environment.
+
+#### Serverless
+
+We utilize `serverless` for our AWS infrastructure deployment via github actions: https://serverless.com. Sample serverless yaml could be found [here](https://github.com/provenance-io/aggregate-service/blob/main/serverless_example.yml).
 
 Install the serverless package to test and develop with new configurations:
 
 ```bash
 $ npm install -g serverless
 ```
+
+
