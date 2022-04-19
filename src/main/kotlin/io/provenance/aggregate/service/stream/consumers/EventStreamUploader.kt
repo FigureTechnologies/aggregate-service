@@ -49,6 +49,7 @@ class EventStreamUploader(
     private val aws: AwsClient,
     private val repository: RepositoryBase,
     private val options: BlockStreamOptions,
+    private val hrp: String,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
 
@@ -153,7 +154,7 @@ class EventStreamUploader(
             }
 
         return blockFlow
-            .transform { emit(it.toStreamBlock()) }
+            .transform { emit(it.toStreamBlock(hrp)) }
             .filter { streamBlock ->
                 !streamBlock.blockResult.isNullOrEmpty().also {
                     log.info(

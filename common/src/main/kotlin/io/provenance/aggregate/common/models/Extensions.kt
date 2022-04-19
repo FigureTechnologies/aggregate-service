@@ -78,18 +78,18 @@ fun io.provenance.eventstream.stream.models.BlockResultsResponseResult.txEvents(
         }
     } ?: emptyList()
 
-fun String.toSignerAddr(): List<String> {
+fun String.toSignerAddr(hrp: String): List<String> {
     val tx = TxOuterClass.Tx.parseFrom(BaseEncoding.base64().decode(this)) ?: return mutableListOf()
     return tx.authInfo.signerInfosList.map {
-        Keys.PubKey.parseFrom(it.publicKey.value).key.toByteArray().sha256hash160().toBech32("tp").address.value
+        Keys.PubKey.parseFrom(it.publicKey.value).key.toByteArray().sha256hash160().toBech32(hrp).address.value
     }
 }
 
-fun io.provenance.eventstream.stream.models.BlockResultsResponseResult.txErroredEvents(block: io.provenance.eventstream.stream.models.Block, blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxError> =
+fun io.provenance.eventstream.stream.models.BlockResultsResponseResult.txErroredEvents(block: io.provenance.eventstream.stream.models.Block, hrp: String, blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxError> =
     run {
         txsResults?.mapIndexed { index: Int, tx: io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults ->
             if (tx.code?.toInt() != 0) {
-                val signerAddr = block.data?.txs?.get(index)?.toSignerAddr() ?: mutableListOf()
+                val signerAddr = block.data?.txs?.get(index)?.toSignerAddr(hrp) ?: mutableListOf()
                 tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, txHash(index)?.fee, signerAddr)
             } else {
                 null
@@ -139,12 +139,12 @@ fun io.provenance.eventstream.stream.models.BlockResultsResponseResult.blockEven
     }
 } ?: emptyList()
 
-fun BlockData.toStreamBlock(): StreamBlockImpl {
+fun BlockData.toStreamBlock(hrp: String): StreamBlockImpl {
     val blockDatetime = block.header?.dateTime()
     val blockEvents = blockResult.blockEvents(blockDatetime)
     val blockTxResults = blockResult.txsResults
     val txEvents = blockResult.txEvents(blockDatetime) { index: Int -> block.txData(index) }
-    val txErrors = blockResult.txErroredEvents(block, blockDatetime) { index: Int -> block.txData(index) }
+    val txErrors = blockResult.txErroredEvents(block, hrp, blockDatetime) { index: Int -> block.txData(index) }
     return StreamBlockImpl(block, blockEvents, blockTxResults, txEvents, txErrors)
 }
 
