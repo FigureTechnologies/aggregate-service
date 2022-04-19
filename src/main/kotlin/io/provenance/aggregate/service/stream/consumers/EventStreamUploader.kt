@@ -22,8 +22,6 @@ import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
 import io.provenance.eventstream.coroutines.DispatcherProvider
 import io.provenance.eventstream.stream.clients.BlockData
-//import io.provenance.eventstream.stream.models.StreamBlock
-//import io.provenance.eventstream.stream.models.extensions.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -173,13 +171,13 @@ class EventStreamUploader(
                 log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")
                 val batch: Batch = batchBlueprint.build()
 
-//                runBlocking(dispatchers.io()) {
-//                    launch {
-//                        streamBlocks.map { block ->
-//                            repository.saveBlock(block)
-//                        }
-//                    }
-//                }
+                runBlocking(dispatchers.io()) {
+                    launch {
+                        streamBlocks.map { block ->
+                            repository.saveBlock(block)
+                        }
+                    }
+                }
 
                 // Use the earliest block date to generate the S3 key prefix the data files will be stored under:
                 val earliestDate: OffsetDateTime? =

@@ -1,6 +1,7 @@
 package io.provenance.aggregate.repository
 
-import io.provenance.eventstream.stream.models.StreamBlock
+import io.provenance.aggregate.common.models.StreamBlock
+
 
 interface RepositoryBase {
     fun saveBlock(block: StreamBlock)
