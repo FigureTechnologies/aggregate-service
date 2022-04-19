@@ -12,7 +12,6 @@ version = project.property("version")?.takeIf { it != "unspecified" } ?: "1.0-SN
 
 repositories {
     mavenCentral()
-    mavenLocal()
     maven { url = uri("https://javadoc.jitpack.io") }
     maven { url = uri("https://s01.oss.sonatype.org/content/groups/staging/") }
 }

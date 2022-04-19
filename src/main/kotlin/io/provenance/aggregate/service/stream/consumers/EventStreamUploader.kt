@@ -9,7 +9,9 @@ import io.provenance.aggregate.common.aws.s3.StreamableObject
 import io.provenance.aggregate.common.aws.s3.client.S3Client
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.BatchId
+import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.UploadResult
+import io.provenance.aggregate.common.models.extensions.dateTime
 import io.provenance.aggregate.common.models.extensions.toStreamBlock
 import io.provenance.eventstream.stream.BlockStreamOptions
 import io.provenance.aggregate.repository.RepositoryBase
@@ -20,8 +22,8 @@ import io.provenance.aggregate.service.stream.extractors.OutputType
 import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
 import io.provenance.eventstream.coroutines.DispatcherProvider
 import io.provenance.eventstream.stream.clients.BlockData
-import io.provenance.eventstream.stream.models.StreamBlock
-import io.provenance.eventstream.stream.models.extensions.*
+//import io.provenance.eventstream.stream.models.StreamBlock
+//import io.provenance.eventstream.stream.models.extensions.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*

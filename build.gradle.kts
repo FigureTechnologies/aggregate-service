@@ -14,7 +14,6 @@ val TENDERMINT_OPENAPI_YAML = "$rootDir/src/main/resources/tendermint-v0.34.12-r
 
 repositories {
     mavenCentral()
-    mavenLocal()
     maven(url = "https://s01.oss.sonatype.org/content/groups/staging/")
 }
 
