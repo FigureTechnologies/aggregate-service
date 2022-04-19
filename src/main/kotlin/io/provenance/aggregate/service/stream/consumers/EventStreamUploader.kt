@@ -171,13 +171,13 @@ class EventStreamUploader(
                 log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")
                 val batch: Batch = batchBlueprint.build()
 
-                runBlocking(dispatchers.io()) {
-                    launch {
-                        streamBlocks.map { block ->
-                            repository.saveBlock(block)
-                        }
-                    }
-                }
+//                runBlocking(dispatchers.io()) {
+//                    launch {
+//                        streamBlocks.map { block ->
+//                            repository.saveBlock(block)
+//                        }
+//                    }
+//                }
 
                 // Use the earliest block date to generate the S3 key prefix the data files will be stored under:
                 val earliestDate: OffsetDateTime? =

@@ -14,16 +14,19 @@ class TxError: CSVFileExtractor(
         "block_height",
         "block_timestamp",
         "error_code",
-        "info"
-    )
+        "info",
+        "signer_addr"
+    ),
 ) {
     override suspend fun extract(block: StreamBlock) {
         for(error in block.txErrors) {
             syncWriteRecord(
+                error.txHash,
                 error.blockHeight,
                 error.blockDateTime?.toISOString(),
                 error.code,
                 error.info,
+                error.signerAddr,
                 includeHash = true
             )
         }

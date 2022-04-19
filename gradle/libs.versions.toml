@@ -1,5 +1,5 @@
 [versions]
-eventStream = "0.6.0-rc7"
+eventStream = "1.0-SNAPSHOT"
 kotlinxCore = "1.5.2"
 kotlinxCli = "0.3.3"
 kotlinxDateTime = "0.3.0"
@@ -25,6 +25,7 @@ kotlinSerialization = "1.2.2"
 snowflake = "3.13.8"
 dbUtils = "1.7"
 ravendb = "5.2.3"
+hdwallet = "0.1.15"
 
 pluginProtobuf = "0.18.7"
 pluginNexusPublishPlugin = "1.1.0"
@@ -94,6 +95,7 @@ snowflake = { module = "net.snowflake:snowflake-jdbc", version.ref = "snowflake"
 commons-dbutils = { module = "commons-dbutils:commons-dbutils", version.ref = "dbUtils"}
 
 raven-db = { module = "net.ravendb:ravendb", version.ref = "ravendb" }
+hdwallet = { module = "io.provenance.hdwallet:hdwallet", version.ref = "hdwallet"}
 
 [plugins]
 kapt = { id = "org.jetbrains.kotlin.kapt" }
