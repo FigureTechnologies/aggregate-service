@@ -28,7 +28,7 @@ class TxError: CSVFileExtractor(
                 error.blockDateTime?.toISOString(),
                 error.code,
                 error.info,
-                error.signerAddr,
+                error.fee.signerAddr,
                 error.fee.denom,
                 error.fee.fee,
                 includeHash = true

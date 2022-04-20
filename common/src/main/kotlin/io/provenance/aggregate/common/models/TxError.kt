@@ -14,10 +14,4 @@ data class TxError(
     val info: String,
     val txHash: String,
     val fee: Fee,
-    val signerAddr: List<String>
-)
-
-data class Fee(
-    val fee: Long? = 0L,
-    val denom: String? = ""
 )

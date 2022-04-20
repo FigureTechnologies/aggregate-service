@@ -15,6 +15,7 @@ import io.provenance.eventstream.stream.models.BlockResultsResponse
 import io.provenance.eventstream.stream.clients.BlockData
 import io.provenance.hdwallet.bech32.toBech32
 import io.provenance.hdwallet.common.hashing.sha256hash160
+import okio.internal.commonToUtf8String
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import tendermint.types.Types.Header as GrpcHeader
@@ -53,16 +54,28 @@ fun String.hash(): String = sha256(BaseEncoding.base64().decode(this)).toHexStri
 
 // === Date/time methods ===============================================================================================
 
-fun Block.txData(index: Int): TxInfo? {
+fun Block.txData(index: Int, hrp: String): TxInfo? {
     val tx = this.data?.txs?.get(index)
 
     if (tx != null) {
         val feeInfo = TxOuterClass.Tx.parseFrom(BaseEncoding.base64().decode(tx)).authInfo.fee
         val amount = feeInfo.amountList.getOrNull(0)?.amount?.toLong()
         val denom = feeInfo.amountList.getOrNull(0)?.denom
+        val signerAddr = this.data?.txs?.get(index)?.toSignerAddr(hrp) ?: mutableListOf()
+
+        var feeIncurringAddr = ""
+        if (feeInfo.granter != "") {
+            feeIncurringAddr = feeInfo.granter
+        } else if (feeInfo.payer != "") {
+            feeIncurringAddr = feeInfo.payer
+        } else {
+            feeIncurringAddr = signerAddr[0]
+        }
+
+
         return TxInfo(
             this.data?.txs?.get(index)?.hash(),
-            Fee(amount, denom)
+            Fee(amount, denom, signerAddr, feeIncurringAddr)
         )
     }
     return null
@@ -89,13 +102,12 @@ fun String.toSignerAddr(hrp: String): List<String> {
     }
 }
 
-fun BlockResultsResponseResult.txErroredEvents(block: Block, hrp: String, blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxError> =
+fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxError> =
         txsResults?.filter { it.code?.toInt() ?: 0 != 0 }?.mapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
-            val signerAddr = block.data?.txs?.get(index)?.toSignerAddr(hrp) ?: mutableListOf()
-            tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, txHash(index)?.fee ?: Fee(), signerAddr)
+            tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, txHash(index)?.fee ?: Fee())
         }?.filterNotNull() ?: emptyList()
 
-fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?, txHash: String?, fee: Fee, signerAddr: List<String>): TxError? =
+fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?, txHash: String?, fee: Fee): TxError? =
     TxError(
         blockHeight = blockHeight,
         blockDateTime = blockDateTime,
@@ -103,7 +115,6 @@ fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDa
         info = this.log ?: "",
         txHash = txHash ?: "",
         fee = fee,
-        signerAddr = signerAddr,
     )
 
 fun BlockResultsResponseResultEvents.toTxEvent(
@@ -138,8 +149,8 @@ fun BlockData.toStreamBlock(hrp: String): StreamBlockImpl {
     val blockDatetime = block.header?.dateTime()
     val blockEvents = blockResult.blockEvents(blockDatetime)
     val blockTxResults = blockResult.txsResults
-    val txEvents = blockResult.txEvents(blockDatetime) { index: Int -> block.txData(index) }
-    val txErrors = blockResult.txErroredEvents(block, hrp, blockDatetime) { index: Int -> block.txData(index) }
+    val txEvents = blockResult.txEvents(blockDatetime) { index: Int -> block.txData(index, hrp) }
+    val txErrors = blockResult.txErroredEvents(blockDatetime) { index: Int -> block.txData(index, hrp) }
     return StreamBlockImpl(block, blockEvents, blockTxResults, txEvents, txErrors)
 }
 
