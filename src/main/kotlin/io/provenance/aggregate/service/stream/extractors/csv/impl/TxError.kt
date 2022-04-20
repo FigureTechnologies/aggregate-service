@@ -15,7 +15,9 @@ class TxError: CSVFileExtractor(
         "block_timestamp",
         "error_code",
         "info",
-        "signer_addr"
+        "signer_addr",
+        "fee_denom",
+        "fee"
     ),
 ) {
     override suspend fun extract(block: StreamBlock) {
@@ -27,6 +29,8 @@ class TxError: CSVFileExtractor(
                 error.code,
                 error.info,
                 error.signerAddr,
+                error.fee.denom,
+                error.fee.fee,
                 includeHash = true
             )
         }

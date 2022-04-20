@@ -1,7 +1,6 @@
 package io.provenance.aggregate.common.models
 
 import com.squareup.moshi.JsonClass
-//import io.provenance.eventstream.stream.models.Event
 import java.time.OffsetDateTime
 
 /**

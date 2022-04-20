@@ -13,7 +13,11 @@ data class TxError(
     val code: Long,
     val info: String,
     val txHash: String,
-    val fee: Long,
-    val signerAddr: List<String>,
-    val denom: String
+    val fee: Fee,
+    val signerAddr: List<String>
+)
+
+data class Fee(
+    val fee: Long? = 0L,
+    val denom: String? = ""
 )

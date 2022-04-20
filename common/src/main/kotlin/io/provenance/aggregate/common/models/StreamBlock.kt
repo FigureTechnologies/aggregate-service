@@ -1,11 +1,13 @@
 package io.provenance.aggregate.common.models
 
 import com.squareup.moshi.JsonClass
+import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
+import io.provenance.eventstream.stream.models.Block
 
 interface StreamBlock {
-    val block: io.provenance.eventstream.stream.models.Block
+    val block: Block
     val blockEvents: List<BlockEvent>
-    val blockResult: List<io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults>?
+    val blockResult: List<BlockResultsResponseResultTxsResults>?
     val txEvents: List<TxEvent>
     val txErrors: List<TxError>
     val historical: Boolean
@@ -18,9 +20,9 @@ interface StreamBlock {
  */
 @JsonClass(generateAdapter = true)
 data class StreamBlockImpl(
-    override val block: io.provenance.eventstream.stream.models.Block,
+    override val block: Block,
     override val blockEvents: List<BlockEvent>,
-    override val blockResult: List<io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults>?,
+    override val blockResult: List<BlockResultsResponseResultTxsResults>?,
     override val txEvents: List<TxEvent>,
     override val txErrors: List<TxError>,
     override val historical: Boolean = false

@@ -34,8 +34,8 @@ class TxFees: CSVFileExtractor(
                                     event.txHash,
                                     event.blockHeight,
                                     event.blockDateTime,
-                                    event.fee,
-                                    event.denom,
+                                    event.fee.fee,
+                                    event.fee.denom,
                                     record.sender, // wallet addr that is paying the fee collector
                                     includeHash = true
                                 )

@@ -6,6 +6,12 @@ import cosmos.tx.v1beta1.TxOuterClass
 import io.provenance.aggregate.common.extensions.decodeBase64
 import io.provenance.aggregate.common.extensions.hash
 import io.provenance.aggregate.common.models.*
+import io.provenance.eventstream.stream.models.Block
+import io.provenance.eventstream.stream.models.BlockHeader
+import io.provenance.eventstream.stream.models.BlockResultsResponseResult
+import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
+import io.provenance.eventstream.stream.models.BlockResultsResponseResultEvents
+import io.provenance.eventstream.stream.models.BlockResultsResponse
 import io.provenance.eventstream.stream.clients.BlockData
 import io.provenance.hdwallet.bech32.toBech32
 import io.provenance.hdwallet.common.hashing.sha256hash160
@@ -47,7 +53,7 @@ fun String.hash(): String = sha256(BaseEncoding.base64().decode(this)).toHexStri
 
 // === Date/time methods ===============================================================================================
 
-fun io.provenance.eventstream.stream.models.Block.txData(index: Int): TxInfo? {
+fun Block.txData(index: Int): TxInfo? {
     val tx = this.data?.txs?.get(index)
 
     if (tx != null) {
@@ -56,7 +62,7 @@ fun io.provenance.eventstream.stream.models.Block.txData(index: Int): TxInfo? {
         val denom = feeInfo.amountList.getOrNull(0)?.denom
         return TxInfo(
             this.data?.txs?.get(index)?.hash(),
-            Pair(amount, denom)
+            Fee(amount, denom)
         )
     }
     return null
@@ -64,19 +70,17 @@ fun io.provenance.eventstream.stream.models.Block.txData(index: Int): TxInfo? {
 
 fun Block.txHashes(): List<String> = this.data?.txs?.map { it.hash() } ?: emptyList()
 
-fun io.provenance.eventstream.stream.models.Block.dateTime() = this.header?.dateTime()
+fun Block.dateTime() = this.header?.dateTime()
 
-fun io.provenance.eventstream.stream.models.BlockHeader.dateTime(): OffsetDateTime? =
+fun BlockHeader.dateTime(): OffsetDateTime? =
     runCatching { OffsetDateTime.parse(this.time, DateTimeFormatter.ISO_DATE_TIME) }.getOrNull()
 
-fun io.provenance.eventstream.stream.models.BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxEvent> =
-    run {
-        txsResults?.flatMapIndexed { index: Int, tx: io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults ->
+fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxEvent> =
+        txsResults?.flatMapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
             tx.events
-                ?.map { it.toTxEvent(height, blockDateTime, txHash(index)?.txHash, txHash(index)?.fee) }
+                ?.map { it.toTxEvent(height, blockDateTime, txHash(index)?.txHash, txHash(index)?.fee ?: Fee()) }
                 ?: emptyList()
-        }
-    } ?: emptyList()
+        } ?: emptyList()
 
 fun String.toSignerAddr(hrp: String): List<String> {
     val tx = TxOuterClass.Tx.parseFrom(BaseEncoding.base64().decode(this)) ?: return mutableListOf()
@@ -85,35 +89,28 @@ fun String.toSignerAddr(hrp: String): List<String> {
     }
 }
 
-fun io.provenance.eventstream.stream.models.BlockResultsResponseResult.txErroredEvents(block: io.provenance.eventstream.stream.models.Block, hrp: String, blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxError> =
-    run {
-        txsResults?.mapIndexed { index: Int, tx: io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults ->
-            if (tx.code?.toInt() != 0) {
-                val signerAddr = block.data?.txs?.get(index)?.toSignerAddr(hrp) ?: mutableListOf()
-                tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, txHash(index)?.fee, signerAddr)
-            } else {
-                null
-            }
-        }?.filterNotNull()
-    } ?: emptyList()
+fun BlockResultsResponseResult.txErroredEvents(block: Block, hrp: String, blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxError> =
+        txsResults?.filter { it.code?.toInt() ?: 0 != 0 }?.mapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
+            val signerAddr = block.data?.txs?.get(index)?.toSignerAddr(hrp) ?: mutableListOf()
+            tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, txHash(index)?.fee ?: Fee(), signerAddr)
+        }?.filterNotNull() ?: emptyList()
 
-fun io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?, txHash: String?, fee: Pair<Long?, String?>?, signerAddr: List<String>): TxError? =
+fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?, txHash: String?, fee: Fee, signerAddr: List<String>): TxError? =
     TxError(
         blockHeight = blockHeight,
         blockDateTime = blockDateTime,
         code = this.code?.toLong() ?: 0L,
         info = this.log ?: "",
         txHash = txHash ?: "",
-        fee = fee?.first ?: 0L,
+        fee = fee,
         signerAddr = signerAddr,
-        denom = fee?.second ?: ""
     )
 
-fun io.provenance.eventstream.stream.models.BlockResultsResponseResultEvents.toTxEvent(
+fun BlockResultsResponseResultEvents.toTxEvent(
     blockHeight: Long,
     blockDateTime: OffsetDateTime?,
     txHash: String?,
-    fee: Pair<Long?, String?>?
+    fee: Fee
 ): TxEvent =
     TxEvent(
         blockHeight = blockHeight,
@@ -121,23 +118,21 @@ fun io.provenance.eventstream.stream.models.BlockResultsResponseResultEvents.toT
         txHash = txHash ?: "",
         eventType = this.type ?: "",
         attributes = this.attributes?.map { event -> Event(event.key,event.value, event.index) } ?: emptyList(),
-        fee = fee?.first,
-        denom = fee?.second
+        fee = fee
     )
 
-fun io.provenance.eventstream.stream.models.BlockResultsResponse.txEvents(blockDate: OffsetDateTime, txHash: (index: Int) -> TxInfo): List<TxEvent> =
+fun BlockResultsResponse.txEvents(blockDate: OffsetDateTime, txHash: (index: Int) -> TxInfo): List<TxEvent> =
     this.result.txEvents(blockDate, txHash)
 
-fun io.provenance.eventstream.stream.models.BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List<BlockEvent> = run {
-    beginBlockEvents?.map { e: io.provenance.eventstream.stream.models.BlockResultsResponseResultEvents ->
+fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List<BlockEvent> =
+    beginBlockEvents?.map { e: BlockResultsResponseResultEvents ->
         BlockEvent(
             blockHeight = height,
             blockDateTime = blockDateTime,
             eventType = e.type ?: "",
             attributes = e.attributes?.map { event -> Event(event.key,event.value, event.index) } ?: emptyList()
         )
-    }
-} ?: emptyList()
+    } ?: emptyList()
 
 fun BlockData.toStreamBlock(hrp: String): StreamBlockImpl {
     val blockDatetime = block.header?.dateTime()
