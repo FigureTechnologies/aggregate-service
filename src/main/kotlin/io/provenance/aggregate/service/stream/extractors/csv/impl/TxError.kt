@@ -1,8 +1,8 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.extensions.toISOString
+import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
-import io.provenance.eventstream.stream.models.StreamBlock
 
 /**
  * Extract data related to errored transfers that collected a fee.
@@ -14,16 +14,23 @@ class TxError: CSVFileExtractor(
         "block_height",
         "block_timestamp",
         "error_code",
-        "info"
-    )
+        "info",
+        "signer_addr",
+        "fee_denom",
+        "fee"
+    ),
 ) {
     override suspend fun extract(block: StreamBlock) {
         for(error in block.txErrors) {
             syncWriteRecord(
+                error.txHash,
                 error.blockHeight,
                 error.blockDateTime?.toISOString(),
                 error.code,
                 error.info,
+                error.fee.signerAddr,
+                error.fee.denom,
+                error.fee.fee,
                 includeHash = true
             )
         }

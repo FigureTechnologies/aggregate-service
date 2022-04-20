@@ -1,11 +1,11 @@
 package io.provenance.aggregate.repository.database
 
 import io.provenance.aggregate.common.logger
+import io.provenance.aggregate.common.models.StreamBlock
+import io.provenance.aggregate.common.models.TxEvent
 import io.provenance.aggregate.repository.RepositoryBase
 import io.provenance.aggregate.repository.model.*
 import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
-import io.provenance.eventstream.stream.models.StreamBlock
-import io.provenance.eventstream.stream.models.TxEvent
 import io.provenance.eventstream.stream.models.extensions.hash
 import io.provenance.eventstream.stream.models.extensions.txHashes
 import net.ravendb.client.documents.DocumentStore

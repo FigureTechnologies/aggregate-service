@@ -34,6 +34,7 @@ dependencies {
     implementation(libs.bundles.aws)
     implementation(libs.localstack)
     implementation(libs.bundles.eventstream)
+    implementation(libs.bundles.hdwallet)
 }
 
 sourceSets {

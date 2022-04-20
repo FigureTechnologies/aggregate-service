@@ -3,7 +3,7 @@ package io.provenance.aggregate.common.aws.dynamodb.client
 import io.provenance.aggregate.common.aws.dynamodb.BlockBatch
 import io.provenance.aggregate.common.aws.dynamodb.BlockStorageMetadata
 import io.provenance.aggregate.common.aws.dynamodb.WriteResult
-import io.provenance.eventstream.stream.models.StreamBlock
+import io.provenance.aggregate.common.models.StreamBlock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.fold
 import okhttp3.internal.toImmutableMap

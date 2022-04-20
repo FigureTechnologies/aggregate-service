@@ -1,9 +1,9 @@
 package io.provenance.aggregate.service.stream.extractors.csv.impl
 
 import io.provenance.aggregate.common.models.AmountDenom
+import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import io.provenance.aggregate.service.stream.models.provenance.cosmos.Tx
-import io.provenance.eventstream.stream.models.StreamBlock
 
 class TxFees: CSVFileExtractor(
     name = "tx_fees",
@@ -34,8 +34,8 @@ class TxFees: CSVFileExtractor(
                                     event.txHash,
                                     event.blockHeight,
                                     event.blockDateTime,
-                                    event.fee,
-                                    event.denom,
+                                    event.fee.fee,
+                                    event.fee.denom,
                                     record.sender, // wallet addr that is paying the fee collector
                                     includeHash = true
                                 )

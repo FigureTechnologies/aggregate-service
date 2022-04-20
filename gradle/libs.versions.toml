@@ -25,6 +25,7 @@ kotlinSerialization = "1.2.2"
 snowflake = "3.13.8"
 dbUtils = "1.7"
 ravendb = "5.2.3"
+hdWallet = "0.1.15"
 
 pluginProtobuf = "0.18.7"
 pluginNexusPublishPlugin = "1.1.0"
@@ -94,6 +95,8 @@ snowflake = { module = "net.snowflake:snowflake-jdbc", version.ref = "snowflake"
 commons-dbutils = { module = "commons-dbutils:commons-dbutils", version.ref = "dbUtils"}
 
 raven-db = { module = "net.ravendb:ravendb", version.ref = "ravendb" }
+hdwallet-bech32 = { module = "io.provenance.hdwallet:hdwallet-bech32", version.ref = "hdWallet"}
+hdwallet-common = { module = "io.provenance.hdwallet:hdwallet-common", version.ref = "hdWallet"}
 
 [plugins]
 kapt = { id = "org.jetbrains.kotlin.kapt" }
@@ -102,6 +105,7 @@ protobuf = { id = "com.google.protobuf", version.ref = "pluginProtobuf" }
 openapi-generator = { id = "org.openapi.generator", version.ref = "pluginOpenAPI" }
 
 [bundles]
+hdwallet = ["hdwallet-bech32", "hdwallet-common"]
 eventstream = ["es-model", "es-api", "es-core", "es-kakfa", "es-cli"]
 kotlin = ["kotlin-cli", "kotlin-datetime", "kotlin-core", "kotlin-jdk8coroutines", "kotlin-reactivecoroutines", "kotlin-stdlib", "kotlin-reflect"]
 junit = ["junit-pioneer", "junit-jupiter", "commons-text"]

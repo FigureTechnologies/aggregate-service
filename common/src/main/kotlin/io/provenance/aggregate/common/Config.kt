@@ -35,6 +35,7 @@ data class UploadConfig(
 data class Config (
     val aws: AwsConfig,
     val wsNode: String,
+    val hrp: String,
     val upload: UploadConfig = UploadConfig.empty(),
     val dbConfig: DBConfig
 )

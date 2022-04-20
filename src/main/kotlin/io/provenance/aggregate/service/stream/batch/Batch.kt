@@ -2,9 +2,9 @@ package io.provenance.aggregate.service.stream.batch
 
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.BatchId
+import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.service.stream.extractors.Extractor
 import io.provenance.eventstream.coroutines.DispatcherProvider
-import io.provenance.eventstream.stream.models.StreamBlock
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
