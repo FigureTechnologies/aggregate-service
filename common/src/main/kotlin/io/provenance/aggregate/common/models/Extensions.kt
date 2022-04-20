@@ -62,13 +62,16 @@ fun Block.txData(index: Int, hrp: String): TxInfo? {
         val denom = feeInfo.amountList.getOrNull(0)?.denom
         val signerAddr = this.data?.txs?.get(index)?.toSignerAddr(hrp) ?: mutableListOf()
 
-        var feeIncurringAddr = ""
-        if (feeInfo.granter != "") {
-            feeIncurringAddr = feeInfo.granter
-        } else if (feeInfo.payer != "") {
-            feeIncurringAddr = feeInfo.payer
-        } else {
-            feeIncurringAddr = signerAddr[0]
+        val feeIncurringAddr = when {
+            feeInfo.granter != "" -> {
+                feeInfo.granter
+            }
+            feeInfo.payer != "" -> {
+                feeInfo.payer
+            }
+            else -> {
+                signerAddr[0]
+            }
         }
 
 
