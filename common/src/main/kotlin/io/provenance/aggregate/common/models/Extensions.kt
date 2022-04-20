@@ -15,7 +15,6 @@ import io.provenance.eventstream.stream.models.BlockResultsResponse
 import io.provenance.eventstream.stream.clients.BlockData
 import io.provenance.hdwallet.bech32.toBech32
 import io.provenance.hdwallet.common.hashing.sha256hash160
-import okio.internal.commonToUtf8String
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import tendermint.types.Types.Header as GrpcHeader
