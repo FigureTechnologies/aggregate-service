@@ -22,7 +22,7 @@ import io.provenance.eventstream.flow.extensions.cancelOnSignal
 import io.provenance.eventstream.net.okHttpNetAdapter
 import io.provenance.eventstream.stream.*
 import io.provenance.eventstream.stream.clients.BlockData
-import io.provenance.eventstream.stream.flows.blockFlow
+import io.provenance.eventstream.stream.flows.blockDataFlow
 import io.provenance.eventstream.utils.colors.green
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -233,7 +233,7 @@ fun main(args: Array<String>) {
             withOrdered(ordered)
         )
 
-        val blockFlow: Flow<BlockData> = blockFlow(netAdapter, moshiDecoderAdapter(), from = options.fromHeight, to = options.toHeight)
+        val blockFlow: Flow<BlockData> = blockDataFlow(netAdapter, moshiDecoderAdapter(), from = options.fromHeight, to = options.toHeight)
         if (observe) {
             blockFlow
                 .transform { emit(it.toStreamBlock(config.hrp)) }
