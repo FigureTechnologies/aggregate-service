@@ -11,6 +11,7 @@ class TxError: CSVFileExtractor(
     name = "tx_errors",
     headers = listOf(
         "hash",
+        "tx_hash",
         "block_height",
         "block_timestamp",
         "error_code",
