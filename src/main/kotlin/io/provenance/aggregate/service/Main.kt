@@ -1,9 +1,10 @@
 package io.provenance.aggregate.service
 
 import com.sksamuel.hoplite.ConfigLoader
-import com.sksamuel.hoplite.EnvironmentVariablesPropertySource
+import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
+import com.sksamuel.hoplite.sources.EnvironmentVariablesPropertySource
 import com.timgroup.statsd.NoOpStatsDClient
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
 import io.provenance.aggregate.common.Config
@@ -125,7 +126,7 @@ fun main(args: Array<String>) {
                 error("Not a valid environment: ${System.getenv("ENVIRONMENT")}")
             }
 
-    val config: Config = ConfigLoader.Builder()
+    val config: Config = ConfigLoaderBuilder.default()
         .addSource(EnvironmentVariablesPropertySource(useUnderscoresAsSeparator = true, allowUppercaseNames = true))
         .apply {
             // If in the local environment, override the ${...} envvar values in `application.properties` with
