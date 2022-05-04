@@ -15,7 +15,6 @@ class TxError: CSVFileExtractor(
         "block_height",
         "block_timestamp",
         "error_code",
-        "info",
         "signer_addr",
         "fee",
         "fee_denom"
@@ -28,7 +27,6 @@ class TxError: CSVFileExtractor(
                 error.blockHeight,
                 error.blockDateTime?.toISOString(),
                 error.code,
-                error.info,
                 error.fee.signerAddr,
                 error.fee.fee,
                 error.fee.denom,
