@@ -1,6 +1,8 @@
 package io.provenance.aggregate.common.models
 
 import com.squareup.moshi.JsonClass
+import io.provenance.aggregate.common.models.block.BlockEvent
+import io.provenance.aggregate.common.models.tx.TxEvent
 import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
 import io.provenance.eventstream.stream.models.Block
 
@@ -9,7 +11,6 @@ interface StreamBlock {
     val blockEvents: List<BlockEvent>
     val blockResult: List<BlockResultsResponseResultTxsResults>?
     val txEvents: List<TxEvent>
-    val txErrors: List<TxError>
     val historical: Boolean
     val height: Long? get() = block.header?.height
 }
@@ -24,6 +25,5 @@ data class StreamBlockImpl(
     override val blockEvents: List<BlockEvent>,
     override val blockResult: List<BlockResultsResponseResultTxsResults>?,
     override val txEvents: List<TxEvent>,
-    override val txErrors: List<TxError>,
     override val historical: Boolean = false
 ) : StreamBlock

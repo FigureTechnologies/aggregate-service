@@ -2,9 +2,12 @@ package io.provenance.aggregate.repository.database
 
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.StreamBlock
-import io.provenance.aggregate.common.models.TxEvent
+import io.provenance.aggregate.common.models.tx.TxEvent
 import io.provenance.aggregate.repository.RepositoryBase
-import io.provenance.aggregate.repository.model.*
+import io.provenance.aggregate.repository.model.BlockMetadata
+import io.provenance.aggregate.repository.model.Tx
+import io.provenance.aggregate.repository.model.TxEvents
+import io.provenance.aggregate.repository.model.toDecodedAttributes
 import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
 import io.provenance.eventstream.stream.models.extensions.hash
 import io.provenance.eventstream.stream.models.extensions.txHashes
@@ -48,7 +51,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
             session.store(tx, tx.txHash)
         }
 
-    private fun saveBlockTxEvents(session: IDocumentSession, blockHeight: Long?, txEvents: List<TxEvent>?) =
+    private fun saveBlockTxEvents(session: IDocumentSession, blockHeight: Long?, txEvents: List<TxEvent>) =
         blockTxEvent(blockHeight, txEvents).map {
             session.store(it)
         }

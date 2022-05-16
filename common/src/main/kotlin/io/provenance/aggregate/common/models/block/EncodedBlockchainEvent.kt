@@ -1,6 +1,6 @@
-package io.provenance.aggregate.common.models
+package io.provenance.aggregate.common.models.block
 
-import io.provenance.aggregate.common.models.extensions.toDecodedMap
+import io.provenance.eventstream.stream.models.Event
 import java.util.Base64
 
 /**
@@ -38,7 +38,7 @@ interface EncodedBlockchainEvent {
     /**
      * The type of the event, e.g. "message", "reward", "provenance.metadata.v1.EventRecordCreated", etc.
      */
-    val eventType: String
+    val eventType: String?
 
     /**
      * A list of attributes, as defined `provenance/attribute/v1/attribute.proto`.
@@ -108,6 +108,6 @@ interface EncodedBlockchainEvent {
  *     "scope_addr"   to "InNjb3BlMXF6bTN4YWd4NzZ1eXZnNGs3eXZ4Yzd1aG51Z3F6ZW1tbTci"
  *   }
  */
-fun List<io.provenance.eventstream.stream.models.Event>.toDecodedMap(): Map<String, String?> = associate { e ->
+fun List<Event>.toDecodedMap(): Map<String, String?> = associate { e ->
     Base64.getDecoder().decode(e.key).decodeToString() to e.value
 }
