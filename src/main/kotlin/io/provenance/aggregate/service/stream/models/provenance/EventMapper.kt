@@ -1,7 +1,7 @@
 package io.provenance.aggregate.service.stream.models.provenance
 
 import io.provenance.aggregate.common.logger
-import io.provenance.aggregate.common.models.EncodedBlockchainEvent
+import io.provenance.aggregate.common.models.block.EncodedBlockchainEvent
 import org.slf4j.Logger
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -32,7 +32,7 @@ class EventMapper<T> private constructor(val mapping: Map<String, KFunction<T>>)
      * look up and potentially create a new instance of the class mapped to that event with the [MappedProvenanceEvent]
      * annotation.
      */
-    fun fromEvent(event: String, attributes: AttributeMap): T? {
+    fun fromEvent(event: String?, attributes: AttributeMap): T? {
         return runCatching {
             mapping[event]?.call(attributes)
         }.getOrElse { e ->

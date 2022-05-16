@@ -1,8 +1,8 @@
 package io.provenance.aggregate.repository.model
 
 import io.provenance.aggregate.common.extensions.decodeBase64
-import io.provenance.aggregate.common.models.Event
 import io.provenance.aggregate.common.models.StreamBlock
+import io.provenance.eventstream.stream.models.Event
 
 fun StreamBlock.txHash(index: Int): String? = this.block.data?.txs?.get(index)
 

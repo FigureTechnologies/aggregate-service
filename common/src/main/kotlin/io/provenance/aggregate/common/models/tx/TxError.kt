@@ -1,6 +1,7 @@
-package io.provenance.aggregate.common.models
+package io.provenance.aggregate.common.models.tx
 
 import com.squareup.moshi.JsonClass
+import io.provenance.aggregate.common.models.Fee
 import java.time.OffsetDateTime
 
 /**
