@@ -19,8 +19,4 @@ class NoOpDynamoClient : IDynamoClient {
 
     override suspend fun trackBlocks(batch: BlockBatch, blocks: Iterable<StreamBlock>): WriteResult =
         WriteResult.empty()
-
-//    override suspend fun getMaxHistoricalBlockHeight(): Long? = null
-//
-//    override suspend fun writeMaxHistoricalBlockHeight(blockHeight: Long): WriteResult = WriteResult.empty()
 }
