@@ -40,14 +40,7 @@ suspend fun Data.output(environment: Environment, jobName: String, output: Outpu
     is S3Output -> {
         val config = AwsConfig(
             region = System.getenv("AWS_REGION"),
-            S3Config(S3Bucket(output.bucket)),
-            DynamoConfig(
-                region = null,
-                DynamoTable(""),
-                DynamoTable(""),
-                DynamoTable(""),
-                dynamoBatchGetItems = 0
-            )
+            S3Config(S3Bucket(output.bucket))
         )
         val client = AwsClient.create(environment, config.s3)
         val outputFile = Files.createTempFile("", "staging_file.csv")
