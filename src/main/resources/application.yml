@@ -5,12 +5,7 @@ aws:
   # S3 configuration options:
   s3:
     bucket: ${AWS_S3_BUCKET_NAME}
-  # DynamoDB configuration options:
-  dynamodb:
-    service-metadata-table: ${AWS_DYNAMODB_SERVICE_METADATA_TABLE_NAME}
-    block-batch-table: ${AWS_DYNAMODB_BLOCK_BATCH_TABLE_NAME}
-    block-metadata-table: ${AWS_DYNAMODB_BLOCK_METADATA_TABLE_NAME}
-    dynamoBatchGetItems: ${DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS}
+
 
 ws_node: ${WS_NODE}
 
@@ -19,6 +14,12 @@ dbConfig:
   dbName: ${DB_DATABASE}
   dbType: ${DB_TYPE}
   dbMaxConnections: ${DB_MAX_CONNECTIONS}
+  # DynamoDB configuration options:
+  dynamodb:
+    service-metadata-table: ${AWS_DYNAMODB_SERVICE_METADATA_TABLE_NAME}
+    block-batch-table: ${AWS_DYNAMODB_BLOCK_BATCH_TABLE_NAME}
+    block-metadata-table: ${AWS_DYNAMODB_BLOCK_METADATA_TABLE_NAME}
+    dynamoBatchGetItems: ${DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS}
 
 hrp: ${HRP}
 # Event stream-specific configuration options:

@@ -90,7 +90,7 @@ object Builders {
     object AwsInterfaceBuilder {
         fun build(): AwsClient = MockAwsClient
             .Builder()
-            .build(Defaults.s3Config, Defaults.dynamoConfig)
+            .build(Defaults.s3Config)
     }
 
     fun defaultAws(): AwsInterfaceBuilder = AwsInterfaceBuilder

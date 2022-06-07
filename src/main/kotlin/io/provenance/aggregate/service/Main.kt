@@ -1,6 +1,5 @@
 package io.provenance.aggregate.service
 
-import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
@@ -142,9 +141,8 @@ fun main(args: Array<String>) {
     val log = "main".logger()
 
     val netAdapter = okHttpNetAdapter(config.wsNode)
-    val aws: AwsClient = AwsClient.create(environment, config.aws.s3, config.aws.dynamodb)
+    val aws: AwsClient = AwsClient.create(environment, config.aws.s3)
     val repository = RepositoryFactory(config.dbConfig).dbInstance()
-    val dynamo = aws.dynamo()
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
         NonBlockingStatsDClientBuilder()
@@ -180,7 +178,7 @@ fun main(args: Array<String>) {
         // Update DataDog with the latest historical block height every minute:
         launch {
             while (true) {
-                dynamo.getMaxHistoricalBlockHeight()
+                repository?.getBlockCheckpoint()
                     .also { log.info("Maximum block height: ${it ?: "--"}") }
                     ?.let(dogStatsClient::recordMaxBlockHeight)
                     ?.getOrElse { log.error("DD metric failure", it) }
@@ -204,7 +202,7 @@ fun main(args: Array<String>) {
         // will be chosen as the starting height
 
         val fromHeightGetter: suspend () -> Long? = {
-            var maxHistoricalHeight: Long? =  dynamo.getMaxHistoricalBlockHeight()
+            var maxHistoricalHeight: Long? =  repository?.getBlockCheckpoint()
             log.info("Start :: historical max block height = $maxHistoricalHeight")
             if (restart) {
                 if (maxHistoricalHeight == null) {

@@ -1,4 +1,4 @@
-package io.provenance.aggregate.common.aws.dynamodb
+package io.provenance.aggregate.repository.database.dynamo
 
 /**
  * Represents the result of a DynamoDB batch write operation.

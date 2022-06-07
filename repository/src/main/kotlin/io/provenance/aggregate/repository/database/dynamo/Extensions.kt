@@ -1,6 +1,5 @@
-package io.provenance.aggregate.common.aws.dynamodb.extensions
+package io.provenance.aggregate.repository.database.dynamo
 
-import io.provenance.aggregate.common.aws.dynamodb.BlockStorageMetadata
 import io.provenance.aggregate.common.models.BatchId
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.utils.timestamp

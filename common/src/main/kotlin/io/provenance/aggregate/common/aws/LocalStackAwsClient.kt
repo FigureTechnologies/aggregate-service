@@ -12,8 +12,8 @@ import java.net.URI
  * @property s3Client The AWS SDK S3 async client to use.
  * @property bucket The S3 bucket to write results to.
  */
-open class LocalStackAwsClient(s3Config: S3Config, dynamoConfig: DynamoConfig) :
-    AwsClient(s3Config, dynamoConfig) {
+open class LocalStackAwsClient(s3Config: S3Config) :
+    AwsClient(s3Config) {
 
     companion object {
         const val LOCALSTACK_ACCESS_TOKEN = "test"

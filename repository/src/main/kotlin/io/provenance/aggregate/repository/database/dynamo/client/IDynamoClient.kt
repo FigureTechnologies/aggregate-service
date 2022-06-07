@@ -1,9 +1,9 @@
-package io.provenance.aggregate.common.aws.dynamodb.client
+package io.provenance.aggregate.repository.database.dynamo.client
 
-import io.provenance.aggregate.common.aws.dynamodb.BlockBatch
-import io.provenance.aggregate.common.aws.dynamodb.BlockStorageMetadata
-import io.provenance.aggregate.common.aws.dynamodb.WriteResult
+import io.provenance.aggregate.repository.database.dynamo.WriteResult
 import io.provenance.aggregate.common.models.StreamBlock
+import io.provenance.aggregate.repository.database.dynamo.BlockBatch
+import io.provenance.aggregate.repository.database.dynamo.BlockStorageMetadata
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.fold
 import okhttp3.internal.toImmutableMap
@@ -11,7 +11,7 @@ import okhttp3.internal.toImmutableMap
 /**
  * A service-specific client for interacting with AWS DynamoDB.
  */
-interface DynamoClient {
+interface IDynamoClient {
 
     /**
      * Given a block height, fetch any storage metadata associated with it.
@@ -50,18 +50,4 @@ interface DynamoClient {
      */
     suspend fun trackBlocks(batch: BlockBatch, blocks: Iterable<StreamBlock>): WriteResult
 
-    /**
-     * Fetch the maximum block height recorded for a block.
-     *
-     * @return The maximum block height, if it exists.
-     */
-    suspend fun getMaxHistoricalBlockHeight(): Long?
-
-    /**
-     * Record the highest block seen.
-     *
-     * @property The maximum height of the block to record.
-     * @return the result of the write operation
-     */
-    suspend fun writeMaxHistoricalBlockHeight(blockHeight: Long): WriteResult
 }

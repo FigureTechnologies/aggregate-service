@@ -1,4 +1,4 @@
-package io.provenance.aggregate.common.aws.dynamodb
+package io.provenance.aggregate.common
 
 /**
  * A value wrapper around a string that represents a DynamoDB table name.

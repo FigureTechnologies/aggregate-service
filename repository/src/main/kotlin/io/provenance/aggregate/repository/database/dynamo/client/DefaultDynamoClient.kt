@@ -1,13 +1,18 @@
-package io.provenance.aggregate.common.aws.dynamodb.client
+package io.provenance.aggregate.repository.database.dynamo.client
 
-import io.provenance.aggregate.common.aws.dynamodb.*
-import io.provenance.aggregate.common.aws.dynamodb.extensions.toBlockStorageMetadata
+import io.provenance.aggregate.common.DynamoTable
+import io.provenance.aggregate.repository.database.dynamo.toBlockStorageMetadata
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.BatchId
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.utils.DelayShim
 import io.provenance.aggregate.common.utils.backoff
 import io.provenance.aggregate.common.utils.timestamp
+import io.provenance.aggregate.repository.RepositoryBase
+import io.provenance.aggregate.repository.database.dynamo.BlockBatch
+import io.provenance.aggregate.repository.database.dynamo.BlockStorageMetadata
+import io.provenance.aggregate.repository.database.dynamo.WriteResult
+import io.provenance.aggregate.repository.database.dynamo.client.DefaultDynamoClient.ServiceMetadata.Props
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
@@ -39,7 +44,7 @@ open class DefaultDynamoClient(
     private val blockBatchTable: DynamoTable,
     private val blockMetadataTable: DynamoTable,
     private val serviceMetadataTable: DynamoTable
-) : DynamoClient, DelayShim {
+) : IDynamoClient, DelayShim, RepositoryBase {
 
     companion object {
         const val DYNAMODB_MAX_TRANSACTION_RETRIES: Int = 5
@@ -180,7 +185,7 @@ open class DefaultDynamoClient(
 
         // Update the max block height as well:
         val updateHeightResult =
-            foundMaxHistoricalHeight?.let { writeMaxHistoricalBlockHeight(it) } ?: WriteResult.empty()
+            foundMaxHistoricalHeight?.let { writeBlockCheckpoint(it) } ?: WriteResult.empty()
 
         return WriteResult.ok(totalProcessed.getAcquire()) + updateHeightResult
     }
@@ -190,7 +195,7 @@ open class DefaultDynamoClient(
      *
      * @return The maximum historical block height, if any.
      */
-    override suspend fun getMaxHistoricalBlockHeight(): Long? =
+    override suspend fun getBlockCheckpoint(): Long? =
         runCatching {
             dynamoClient.getItem(
                 GetItemRequest
@@ -198,7 +203,7 @@ open class DefaultDynamoClient(
                     .tableName(serviceMetadataTable.name)
                     .key(
                         mapOf(
-                            "Property" to AttributeValue.builder().s(ServiceMetadata.Props.MAX_HISTORICAL_BLOCK_HEIGHT)
+                            "Property" to AttributeValue.builder().s(Props.MAX_HISTORICAL_BLOCK_HEIGHT)
                                 .build()
                         )
                     )
@@ -217,7 +222,7 @@ open class DefaultDynamoClient(
         request: UpdateItemRequest.Builder
     ): UpdateItemRequest.Builder {
         val propertyAttr =
-            AttributeValue.builder().s(ServiceMetadata.Props.MAX_HISTORICAL_BLOCK_HEIGHT).build()
+            AttributeValue.builder().s(Props.MAX_HISTORICAL_BLOCK_HEIGHT).build()
         val blockHeightAttr = AttributeValue.builder().n(blockHeight.toString()).build()
         val updatedAtAttr = AttributeValue.builder().s(timestamp()).build()
         return request
@@ -243,6 +248,10 @@ open class DefaultDynamoClient(
             .returnValues("UPDATED_NEW")
     }
 
+    override suspend fun saveBlock(block: StreamBlock) {
+        TODO("Add dynamo implementation for block data for L2 Caching")
+    }
+
     /**
      * Unconditionally overwrite the entry where the partition key "Property" is equal to the name value of
      * `ServiceMetadata.Properties.MAX_HISTORICAL_BLOCK_HEIGHT` * with attribute "Value" set to the string-ified
@@ -251,7 +260,7 @@ open class DefaultDynamoClient(
      * @property blockHeight The height to record
      * @return The result of storing [blockHeight]
      */
-    override suspend fun writeMaxHistoricalBlockHeight(blockHeight: Long): WriteResult {
+    override suspend fun writeBlockCheckpoint(blockHeight: Long): WriteResult {
         return try {
             val response: UpdateItemResponse = dynamoClient.updateItem { request: UpdateItemRequest.Builder ->
                 updateMaxHistoricalBlockHeight(blockHeight, request)

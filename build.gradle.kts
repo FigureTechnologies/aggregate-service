@@ -19,7 +19,7 @@ repositories {
 
 dependencies {
     implementation(projects.common)
-    implementation(projects.l2Cache)
+    implementation(projects.repository)
 
     implementation(libs.bundles.eventstream)
     implementation(libs.bundles.kotlin)

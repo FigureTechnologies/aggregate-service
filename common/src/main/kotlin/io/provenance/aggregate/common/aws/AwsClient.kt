@@ -2,8 +2,6 @@ package io.provenance.aggregate.common.aws
 
 import io.provenance.aggregate.common.DynamoConfig
 import io.provenance.aggregate.common.S3Config
-import io.provenance.aggregate.common.aws.dynamodb.client.DefaultDynamoClient
-import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.common.aws.s3.client.DefaultS3Client
 import io.provenance.aggregate.common.aws.s3.client.S3Client
 import io.provenance.aggregate.common.logger
@@ -14,7 +12,6 @@ import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsPro
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.S3Configuration
 import java.net.URI
@@ -29,16 +26,16 @@ import java.time.Duration as JavaDuration
  * @property region The AWS region to use. If omitted [Region.US_EAST_1] will be used.
  */
 @OptIn(ExperimentalTime::class)
-abstract class AwsClient(val s3Config: S3Config, val dynamoConfig: DynamoConfig, val region: String? = null) {
+abstract class AwsClient(val s3Config: S3Config, val region: String? = null) {
 
     companion object {
         val DEFAULT_REGION: Region = Region.US_EAST_1
 
-        fun create(environment: Environment, s3Config: S3Config, dynamoConfig: DynamoConfig): AwsClient {
+        fun create(environment: Environment, s3Config: S3Config): AwsClient {
             return when (environment) {
-                Environment.local -> LocalStackAwsClient(s3Config, dynamoConfig)
-                Environment.development -> DefaultAwsClient(s3Config, dynamoConfig)
-                Environment.production -> DefaultAwsClient(s3Config, dynamoConfig)
+                Environment.local -> LocalStackAwsClient(s3Config)
+                Environment.development -> DefaultAwsClient(s3Config)
+                Environment.production -> DefaultAwsClient(s3Config)
             }
         }
     }
@@ -82,10 +79,6 @@ abstract class AwsClient(val s3Config: S3Config, val dynamoConfig: DynamoConfig,
         createS3Client()
     }
 
-    val dynamoClient: DynamoDbAsyncClient by lazy {
-        createDynamoDbClient()
-    }
-
     private fun createNettyClient(): SdkAsyncHttpClient {
         return NettyNioAsyncHttpClient.builder()
             .writeTimeout(getS3WriteTimeout())
@@ -118,22 +111,6 @@ abstract class AwsClient(val s3Config: S3Config, val dynamoConfig: DynamoConfig,
             .build()
     }
 
-    private fun createDynamoDbClient(): DynamoDbAsyncClient {
-        val override = getEndpointOverride()
-        val httpClient = createNettyClient()
-        return DynamoDbAsyncClient.builder()
-            .credentialsProvider(getCredentialsProvider())
-            .region(getRegion())
-            .httpClient(httpClient)
-            .apply {
-                if (override != null) {
-                    log.info("Using endpoint override: $override")
-                    endpointOverride(override)
-                }
-            }
-            .build()
-    }
-
     /**
      * Returns a client for interacting with AWS S3.
      */
@@ -141,15 +118,4 @@ abstract class AwsClient(val s3Config: S3Config, val dynamoConfig: DynamoConfig,
         return DefaultS3Client(s3Client, s3Config.bucket)
     }
 
-    /**
-     * Returns a client for interacting with AWS DynamoDB.
-     */
-    open fun dynamo(): DynamoClient {
-        return DefaultDynamoClient(
-            dynamoClient,
-            dynamoConfig.blockBatchTable,
-            dynamoConfig.blockMetadataTable,
-            dynamoConfig.serviceMetadataTable
-        )
-    }
 }
