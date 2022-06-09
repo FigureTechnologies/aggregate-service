@@ -178,7 +178,7 @@ fun main(args: Array<String>) {
         // Update DataDog with the latest historical block height every minute:
         launch {
             while (true) {
-                repository?.getBlockCheckpoint()
+                repository.getBlockCheckpoint()
                     .also { log.info("Maximum block height: ${it ?: "--"}") }
                     ?.let(dogStatsClient::recordMaxBlockHeight)
                     ?.getOrElse { log.error("DD metric failure", it) }
@@ -202,7 +202,7 @@ fun main(args: Array<String>) {
         // will be chosen as the starting height
 
         val fromHeightGetter: suspend () -> Long? = {
-            var maxHistoricalHeight: Long? =  repository?.getBlockCheckpoint()
+            var maxHistoricalHeight: Long? =  repository.getBlockCheckpoint()
             log.info("Start :: historical max block height = $maxHistoricalHeight")
             if (restart) {
                 if (maxHistoricalHeight == null) {

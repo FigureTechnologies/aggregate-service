@@ -3,7 +3,6 @@ package io.provenance.aggregate.common
 import com.sksamuel.hoplite.ConfigAlias
 import io.provenance.aggregate.common.aws.s3.S3Bucket
 
-
 data class S3Config(
     val bucket: S3Bucket
 )
@@ -41,6 +40,6 @@ data class DBConfig(
     val addr: String,
     val dbName: String,
     val dbMaxConnections: Int,
-    val dbType: String,
+    val dbType: DbTypes,
     val dynamodb: DynamoConfig
 )
