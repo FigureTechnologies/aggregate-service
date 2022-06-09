@@ -13,4 +13,4 @@ pluginManagement {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-include("augment", "common", "l2-cache")
+include("augment", "common", "repository")

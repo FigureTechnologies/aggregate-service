@@ -22,15 +22,15 @@ aws = "2.17.127"
 localstack = "0.2.14"
 grpc = "1.41.0"
 kotlinSerialization = "1.2.2"
-snowflake = "3.13.8"
+snowflake = "3.13.19"
 dbUtils = "1.7"
 ravendb = "5.2.3"
 hdWallet = "0.1.15"
+jacksonModule = "2.11.0"
 
 pluginProtobuf = "0.18.7"
 pluginNexusPublishPlugin = "1.1.0"
 pluginOpenAPI = "5.2.1"
-
 
 [libraries]
 es-model = { module = "io.provenance.eventstream:es-api-model", version.ref = "eventStream" }
@@ -57,6 +57,7 @@ junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version.ref = "jun
 commons-lang = { module = "org.apache.commons:commons-lang3", version.ref = "commonslang" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commonsio" }
 commons-csv = { module = "org.apache.commons:commons-csv", version.ref = "commonscsv" }
+jackson-module = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jacksonModule" }
 
 scarlet-core = { module = "com.tinder.scarlet:scarlet", version.ref = "scarlet" }
 scarlet-stream = { module = "com.tinder.scarlet:stream-adapter-coroutines", version.ref = "scarlet" }

@@ -8,5 +8,4 @@ data class TxEvents(
     val attributes: List<EventData>?,
 )
 
-
 data class EventData(val key: String?, val value: String?, val index: Boolean)

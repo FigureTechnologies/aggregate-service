@@ -1,6 +1,7 @@
-package io.provenance.aggregate.common.aws.dynamodb
+package io.provenance.aggregate.repository.database.dynamo
 
 import io.provenance.aggregate.common.utils.timestamp
+import io.provenance.aggregate.repository.database.dynamo.BlockStorageMetadata.Builder
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbImmutable
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey
@@ -27,7 +28,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
  * @constructor Invoked by the AWS SDK, instantiating the inner builder class [BlockStorageMetadata.Builder] as part of
  * construction.
  */
-@DynamoDbImmutable(builder = BlockStorageMetadata.Builder::class)
+@DynamoDbImmutable(builder = Builder::class)
 class BlockStorageMetadata(
     @get:DynamoDbAttribute(value = "BlockHeight")  // AWS conventions dictate upper-case camelCase
     @get:DynamoDbPartitionKey val blockHeight: Long,

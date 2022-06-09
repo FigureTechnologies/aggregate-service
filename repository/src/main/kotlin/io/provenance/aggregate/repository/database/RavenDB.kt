@@ -1,12 +1,16 @@
 package io.provenance.aggregate.repository.database
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.StreamBlock
 import io.provenance.aggregate.common.models.tx.TxEvent
 import io.provenance.aggregate.repository.RepositoryBase
-import io.provenance.aggregate.repository.model.BlockMetadata
-import io.provenance.aggregate.repository.model.Tx
+import io.provenance.aggregate.repository.database.dynamo.WriteResult
+import io.provenance.aggregate.repository.model.l2cache.BlockMetadata
+import io.provenance.aggregate.repository.model.l2cache.Tx
 import io.provenance.aggregate.repository.model.TxEvents
+import io.provenance.aggregate.repository.model.checkpoint.BlockHeightCheckpoint
 import io.provenance.aggregate.repository.model.toDecodedAttributes
 import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
 import io.provenance.eventstream.stream.models.extensions.hash
@@ -16,10 +20,32 @@ import net.ravendb.client.documents.session.IDocumentSession
 
 class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBase {
 
+    companion object {
+        const val CHECKPOINT_ID = "BlockHeightCheckpoint"
+    }
+
     private val store = DocumentStore(addr, dbName).also { it.conventions.maxNumberOfRequestsPerSession = maxConnections }.initialize()
     private val log = logger()
 
-    override fun saveBlock(block: StreamBlock) {
+    override suspend fun writeBlockCheckpoint(blockHeight: Long): WriteResult {
+        val session = openSession()
+        val height = session.load(BlockHeightCheckpoint::class.java, CHECKPOINT_ID)
+        if(height == null) {
+            val checkpoint = BlockHeightCheckpoint(
+                blockHeight = blockHeight,
+            )
+            session.store(checkpoint, CHECKPOINT_ID)
+        } else {
+            height.blockHeight = blockHeight
+        }
+        saveChanges(session)
+
+        return WriteResult.empty()
+    }
+
+    override suspend fun getBlockCheckpoint(): Long? = openSession().load(BlockHeightCheckpoint::class.java, CHECKPOINT_ID)?.blockHeight
+
+    override suspend fun saveBlock(block: StreamBlock) {
         val session = openSession() // open a new session when preparing to save block
 
         saveBlockMetadata(session, block)
@@ -33,7 +59,13 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
         saveChanges(session) // close session when done saving block data
     }
 
-    private fun openSession(): IDocumentSession = store.openSession()
+    private fun openSession(): IDocumentSession {
+        val mapper = jacksonObjectMapper().apply {
+            configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        }
+        store.conventions.entityMapper = mapper
+        return store.openSession()
+    }
 
     private fun saveBlockMetadata(session: IDocumentSession, block: StreamBlock) =
         session.store(blockMetadata(block), (block.height ?: 0 ).toString())
@@ -89,7 +121,6 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
         } ?: emptyList()
 
     private fun blockTxEvent(blockHeight: Long?, txEvents: List<TxEvent>?): List<TxEvents> =
-
         txEvents?.map { event ->
             TxEvents(
                 txHash = event.txHash,

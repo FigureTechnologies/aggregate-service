@@ -1,9 +1,7 @@
 package io.provenance.aggregate.service.stream.consumers
 
 import io.provenance.aggregate.common.aws.AwsClient
-import io.provenance.aggregate.common.aws.dynamodb.BlockBatch
-import io.provenance.aggregate.common.aws.dynamodb.WriteResult
-import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
+import io.provenance.aggregate.repository.database.dynamo.BlockBatch
 import io.provenance.aggregate.common.aws.s3.S3Key
 import io.provenance.aggregate.common.aws.s3.StreamableObject
 import io.provenance.aggregate.common.aws.s3.client.S3Client
@@ -47,7 +45,7 @@ import kotlin.time.ExperimentalTime
 class EventStreamUploader(
     private val blockFlow: Flow<BlockData>,
     private val aws: AwsClient,
-    private val repository: RepositoryBase,
+    private val repository: RepositoryBase?,
     private val options: BlockStreamOptions,
     private val hrp: String,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
@@ -142,7 +140,6 @@ class EventStreamUploader(
      */
     suspend fun upload(onEachBlock: (StreamBlock) -> Unit = {}): Flow<UploadResult> {
         val s3: S3Client = aws.s3()
-        val dynamo: DynamoClient = aws.dynamo()
 
         val batchBlueprint: Batch.Builder = Batch.Builder()
             .dispatchers(dispatchers)
@@ -206,11 +203,9 @@ class EventStreamUploader(
                                         val lowestBlockHeight = streamBlocks.first().height
 
                                         if (putResponse.sdkHttpResponse().isSuccessful) {
-                                            dynamo.writeMaxHistoricalBlockHeight(highestBlockHeight!!)
+                                            repository?.writeBlockCheckpoint(highestBlockHeight!!)
                                                 .also {
-                                                    if (it.processed > 0) {
-                                                        log.info("Checkpoint::Updating max block height to = $highestBlockHeight")
-                                                    }
+                                                    log.info("Checkpoint::Updating max block height to = $highestBlockHeight")
                                                 }
                                             log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
                                         }
@@ -236,8 +231,6 @@ class EventStreamUploader(
                 // Mark the blocks as having been processed:
                 val s3Keys = uploaded.map { it.s3Key }
                 val blockBatch = BlockBatch(batch.id, aws.s3Config.bucket, s3Keys)
-                val writeResult: WriteResult = dynamo.trackBlocks(blockBatch, streamBlocks)
-                log.info("track block batch result: $writeResult")
 
                 //  At this point, signal success by emitting results:
                 emitAll(uploaded.asFlow())

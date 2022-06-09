@@ -1,9 +1,10 @@
-package io.provenance.aggregate.common.aws.dynamodb
+package io.provenance.aggregate.repository.database.dynamo
 
 import io.provenance.aggregate.common.aws.s3.S3Bucket
 import io.provenance.aggregate.common.aws.s3.S3Key
 import io.provenance.aggregate.common.models.BatchId
 import io.provenance.aggregate.common.utils.timestamp
+import io.provenance.aggregate.repository.database.dynamo.BlockBatch.Builder
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbImmutable
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey
@@ -20,7 +21,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
  * @constructor Invoked by the AWS SDK, instantiating the inner builder class [BlockBatch.Builder] as part of
  * construction.
  */
-@DynamoDbImmutable(builder = BlockBatch.Builder::class)
+@DynamoDbImmutable(builder = Builder::class)
 class BlockBatch(
     @get:DynamoDbAttribute(value = "BatchId")
     @get:DynamoDbPartitionKey val batchId: String,

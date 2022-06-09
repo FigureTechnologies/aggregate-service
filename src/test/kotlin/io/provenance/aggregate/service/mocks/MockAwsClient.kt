@@ -1,14 +1,13 @@
 package io.provenance.aggregate.service.test.mocks
 
-import io.provenance.aggregate.common.DynamoConfig
 import io.provenance.aggregate.common.S3Config
 import io.provenance.aggregate.common.aws.LocalStackAwsClient
-import io.provenance.aggregate.common.aws.dynamodb.client.DynamoClient
 import io.provenance.aggregate.common.aws.s3.client.S3Client
+import io.provenance.aggregate.repository.database.dynamo.client.DynamoClient
 import io.provenance.aggregate.service.test.utils.Defaults
 
-open class MockAwsClient protected constructor(s3Config: S3Config, dynamoConfig: DynamoConfig) :
-    LocalStackAwsClient(s3Config, dynamoConfig) {
+open class MockAwsClient protected constructor(s3Config: S3Config) :
+    LocalStackAwsClient(s3Config) {
 
     class Builder() {
         var s3Impl: S3Client? = null
@@ -18,21 +17,11 @@ open class MockAwsClient protected constructor(s3Config: S3Config, dynamoConfig:
         fun <I : DynamoClient> dynamoImplementation(impl: I) = apply { dynamoImpl = impl }
 
         fun build(
-            s3Config: S3Config = Defaults.s3Config,
-            dynamoConfig: DynamoConfig = Defaults.dynamoConfig
+            s3Config: S3Config = Defaults.s3Config
         ): MockAwsClient {
-            return object : MockAwsClient(s3Config, dynamoConfig) {
+            return object : MockAwsClient(s3Config) {
                 override fun s3(): S3Client {
                     return s3Impl ?: LocalStackS3(s3Client, s3Config.bucket)
-                }
-
-                override fun dynamo(): DynamoClient {
-                    return dynamoImpl ?: LocalStackDynamoClient(
-                        dynamoClient,
-                        dynamoConfig.blockBatchTable,
-                        dynamoConfig.blockMetadataTable,
-                        dynamoConfig.serviceMetadataTable
-                    )
                 }
             }
         }

@@ -1,4 +1,4 @@
-package io.provenance.aggregate.repository.model
+package io.provenance.aggregate.repository.model.l2cache
 
 data class BlockMetadata(
     val blockHeight: Long?,
