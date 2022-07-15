@@ -13,4 +13,6 @@ pluginManagement {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-include("augment", "common", "repository")
+include("augment", "common", "repository", "service")
+include("job")
+include("job")
