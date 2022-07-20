@@ -1,7 +1,7 @@
 package com.provenance.aggregator.api.com.provenance.aggregator.api.cache
 
 import com.google.gson.Gson
-import com.provenance.aggregator.api.com.provenance.aggregator.api.config.DbConfig
+import com.provenance.aggregator.api.com.provenance.aggregator.api.config.CacheConfig
 import com.provenance.aggregator.api.com.provenance.aggregator.api.model.Response
 import com.provenance.aggregator.api.com.provenance.aggregator.api.model.TxCoinTransferData
 import com.provenance.aggregator.api.com.provenance.aggregator.api.model.TxDailyTotal
@@ -18,11 +18,11 @@ import java.time.format.DateTimeFormatter
 
 class CacheService(
     private val sf: SnowflakeJDBC,
-    private val config: DbConfig
+    private val config: CacheConfig
 ): RavenDB(
-    config.addr,
-    config.dbName,
-    config.dbMaxConnections
+    config.cacheAddr,
+    config.cacheName,
+    config.cacheMaxConnections
 ) {
 
     private val log = logger()

@@ -2,7 +2,7 @@ package com.provenance.aggregator.api.route
 
 import com.provenance.aggregator.api.com.provenance.aggregator.api.cache.CacheService
 import com.provenance.aggregator.api.com.provenance.aggregator.api.cache.json
-import com.provenance.aggregator.api.com.provenance.aggregator.api.config.DbConfig
+import com.provenance.aggregator.api.com.provenance.aggregator.api.config.CacheConfig
 import com.provenance.aggregator.api.snowflake.SnowflakeJDBC
 import io.ktor.http.HttpStatusCode.Companion
 import io.ktor.server.application.Application
@@ -17,7 +17,7 @@ import java.time.format.DateTimeFormatter
 
 import java.util.Properties
 
-fun Application.configureRouting(properties: Properties, dbUri: String, dbConfig: DbConfig) {
+fun Application.configureRouting(properties: Properties, dbUri: String, dbConfig: CacheConfig) {
 
     val cacheService = CacheService(SnowflakeJDBC(properties, dbUri), dbConfig)
 

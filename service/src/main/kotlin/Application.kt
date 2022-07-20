@@ -1,6 +1,6 @@
 package com.provenance.aggregator.api
 
-import com.provenance.aggregator.api.com.provenance.aggregator.api.config.DbConfig
+import com.provenance.aggregator.api.com.provenance.aggregator.api.config.CacheConfig
 import com.provenance.aggregator.api.route.configureRouting
 import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.PropertySource
@@ -14,7 +14,7 @@ import java.util.Properties
 
 fun unwrapEnvOrError(variable: String): String = requireNotNull(System.getenv(variable)) { "Missing $variable" }
 
-fun loadConfig(): DbConfig {
+fun loadConfig(): CacheConfig {
     val environment: Environment =
         runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
             .getOrElse {
