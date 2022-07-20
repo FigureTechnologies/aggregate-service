@@ -20,9 +20,9 @@ class CacheService(
     private val sf: SnowflakeJDBC,
     private val config: CacheConfig
 ): RavenDB(
-    config.cacheAddr,
+    config.addr,
     config.cacheName,
-    config.cacheMaxConnections
+    config.dbMaxConnections
 ) {
 
     private val log = logger()
