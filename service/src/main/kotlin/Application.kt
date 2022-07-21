@@ -47,7 +47,7 @@ fun main() {
 
     val dbUri = "jdbc:snowflake://${unwrapEnvOrError("DB_HOST")}.snowflakecomputing.com"
 
-    embeddedServer(Netty, port=8081) {
+    embeddedServer(Netty, port=80) {
        configureRouting(properties, dbUri, loadConfig())
     }.start(wait = true)
 }
