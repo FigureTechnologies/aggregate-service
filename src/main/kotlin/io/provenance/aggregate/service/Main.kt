@@ -1,11 +1,17 @@
 package io.provenance.aggregate.service
 
+import com.provenance.aggregator.api.config.CacheConfig
+import com.provenance.aggregator.api.route.configureRouting
+import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.PropertySource
+import com.sksamuel.hoplite.addEnvironmentSource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
 import com.sksamuel.hoplite.sources.EnvironmentVariablesPropertySource
 import com.timgroup.statsd.NoOpStatsDClient
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
 import io.provenance.aggregate.common.Config
 import io.provenance.aggregate.common.aws.AwsClient
 import io.provenance.aggregate.common.extensions.recordMaxBlockHeight
@@ -30,10 +36,10 @@ import kotlinx.cli.default
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.transform
 import org.slf4j.Logger
+import java.util.Properties
 import kotlin.time.Duration
 
 /**
@@ -52,6 +58,8 @@ private fun installShutdownHook(log: Logger): Channel<Unit> {
     })
     return signal
 }
+
+fun unwrapEnvOrError(variable: String): String = requireNotNull(System.getenv(variable)) { "Missing $variable" }
 
 @OptIn(FlowPreview::class, kotlin.time.ExperimentalTime::class)
 @ExperimentalCoroutinesApi
@@ -118,6 +126,18 @@ fun main(args: Array<String>) {
     val ddEnabled = runCatching { System.getenv("DD_ENABLED") }.getOrNull() == "true"
     val ddHost = ddHostFlag ?: runCatching { System.getenv("DD_AGENT_HOST") }.getOrElse { "localhost" }
     val ddTags = ddTagsFlag ?: runCatching { System.getenv("DD_TAGS") }.getOrElse { "" }
+
+    val properties = Properties().apply {
+        put("user", unwrapEnvOrError("DW_USER"))
+        put("password", unwrapEnvOrError("DW_PASSWORD"))
+        put("warehouse", unwrapEnvOrError("DW_WAREHOUSE"))
+        put("db", unwrapEnvOrError("DW_DATABASE"))
+        put("schema", unwrapEnvOrError("DW_SCHEMA"))
+        put("networkTimeout", "30")
+        put("queryTimeout", "30")
+    }
+
+    val dwUri = "jdbc:snowflake://${unwrapEnvOrError("DW_HOST")}.snowflakecomputing.com"
 
     val environment: Environment =
         envFlag ?: runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
@@ -231,6 +251,13 @@ fun main(args: Array<String>) {
             withSkipEmptyBlocks(skipIfEmpty),
             withOrdered(ordered)
         )
+
+        // start api
+        async {
+            embeddedServer(Netty, port=80) {
+                configureRouting(properties, dwUri, config.dbConfig)
+            }.start(wait = true)
+        }
 
         val blockFlow: Flow<BlockData> = blockDataFlow(netAdapter, moshiDecoderAdapter(), from = options.fromHeight, to = options.toHeight)
         if (observe) {

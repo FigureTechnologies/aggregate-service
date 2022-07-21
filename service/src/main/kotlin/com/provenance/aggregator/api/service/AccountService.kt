@@ -1,6 +1,6 @@
 package com.provenance.aggregator.api.service
 
-import com.provenance.aggregator.api.com.provenance.aggregator.api.model.TxCoinTransferData
+import com.provenance.aggregator.api.model.TxCoinTransferData
 
 class AccountService{
 

@@ -1,6 +1,6 @@
 package com.provenance.aggregator.api.snowflake
 
-import com.provenance.aggregator.api.com.provenance.aggregator.api.model.TxCoinTransferData
+import com.provenance.aggregator.api.model.TxCoinTransferData
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
 import java.sql.DriverManager

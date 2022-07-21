@@ -1,4 +1,4 @@
-package com.provenance.aggregator.api.com.provenance.aggregator.api.snowflake
+package com.provenance.aggregator.api.snowflake
 
 class QueryBuilder(
     val statement: String,

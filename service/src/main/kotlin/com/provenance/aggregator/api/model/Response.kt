@@ -1,4 +1,4 @@
-package com.provenance.aggregator.api.com.provenance.aggregator.api.model
+package com.provenance.aggregator.api.model
 
 import io.ktor.http.HttpStatusCode
 

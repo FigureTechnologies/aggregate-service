@@ -1,4 +1,4 @@
-package com.provenance.aggregator.api.com.provenance.aggregator.api.config
+package com.provenance.aggregator.api.config
 
 import io.provenance.aggregate.common.DbTypes
 

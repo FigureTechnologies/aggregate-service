@@ -39,6 +39,7 @@ data class Config (
 data class DBConfig(
     val addr: String,
     val dbName: String,
+    val cacheName: String,
     val dbMaxConnections: Int,
     val dbType: DbTypes,
     val dynamodb: DynamoConfig

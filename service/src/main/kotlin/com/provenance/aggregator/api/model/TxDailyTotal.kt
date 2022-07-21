@@ -1,6 +1,4 @@
-package com.provenance.aggregator.api.com.provenance.aggregator.api.model
-
-import java.time.OffsetDateTime
+package com.provenance.aggregator.api.model
 
 data class TxDailyTotal(
     val addr: String,

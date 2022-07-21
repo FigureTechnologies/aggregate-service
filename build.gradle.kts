@@ -20,6 +20,10 @@ repositories {
 dependencies {
     implementation(projects.common)
     implementation(projects.repository)
+    implementation(projects.service)
+
+    implementation(libs.ktor.core)
+    implementation(libs.ktor.netty)
 
     implementation(libs.bundles.eventstream)
     implementation(libs.bundles.kotlin)
@@ -92,7 +96,6 @@ tasks.withType<Jar> {
     from({
         configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }
     })
-
 
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
 }

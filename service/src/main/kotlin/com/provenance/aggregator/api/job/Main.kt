@@ -1,4 +1,4 @@
-package com.provenance.aggregator.api.com.provenance.aggregator.api.job
+package com.provenance.aggregator.api.job
 
 import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.PropertySource

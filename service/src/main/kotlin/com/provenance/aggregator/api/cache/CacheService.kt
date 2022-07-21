@@ -1,13 +1,13 @@
-package com.provenance.aggregator.api.com.provenance.aggregator.api.cache
+package com.provenance.aggregator.api.cache
 
 import com.google.gson.Gson
-import com.provenance.aggregator.api.com.provenance.aggregator.api.config.CacheConfig
-import com.provenance.aggregator.api.com.provenance.aggregator.api.model.Response
-import com.provenance.aggregator.api.com.provenance.aggregator.api.model.TxCoinTransferData
-import com.provenance.aggregator.api.com.provenance.aggregator.api.model.TxDailyTotal
+import com.provenance.aggregator.api.model.Response
+import com.provenance.aggregator.api.model.TxCoinTransferData
+import com.provenance.aggregator.api.model.TxDailyTotal
 import com.provenance.aggregator.api.service.AccountService
 import com.provenance.aggregator.api.snowflake.SnowflakeJDBC
 import io.ktor.http.HttpStatusCode
+import io.provenance.aggregate.common.DBConfig
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.repository.database.ravendb.RavenDB
 import net.ravendb.client.Constants
@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter
 
 class CacheService(
     private val sf: SnowflakeJDBC,
-    private val config: CacheConfig
+    private val config: DBConfig
 ): RavenDB(
     config.addr,
     config.cacheName,
