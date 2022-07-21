@@ -90,7 +90,7 @@ tasks.withType<Jar> {
     manifest {
         attributes["Main-Class"] = "io.provenance.aggregate.service.MainKt"
     }
-
+    isZip64 = true
     from(sourceSets.main.get().output)
     dependsOn(configurations.runtimeClasspath)
     from({
