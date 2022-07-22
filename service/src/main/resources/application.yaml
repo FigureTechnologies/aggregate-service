@@ -1,4 +1,4 @@
 addr: ${DB_URI}
-cacheName: ${CACHE_TABLE}
+cacheTable: ${CACHE_TABLE}
 dbType: ${DB_TYPE}
 dbMaxConnections: ${DB_MAX_CONNECTIONS}

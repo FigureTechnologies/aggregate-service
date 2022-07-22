@@ -21,7 +21,7 @@ class CacheService(
     private val config: DBConfig
 ): RavenDB(
     config.addr,
-    config.cacheName,
+    config.cacheTable,
     config.dbMaxConnections
 ) {
 
