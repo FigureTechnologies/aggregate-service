@@ -80,8 +80,8 @@ class CacheService(
     private fun loadFromDataWarehouse(address: String, queryDate: OffsetDateTime) = sf.executeQuery(address, queryDate)
 
     private fun configureEviction(txData: TxCoinTransferData, session: IDocumentSession) {
-        //Evict data after 7 days
-        val expiry = DateTime.now().plusDays(7)
+        //Evict data after 30 days
+        val expiry = DateTime.now().plusDays(30)
         session.advanced().getMetadataFor(txData)[Constants.Documents.Metadata.EXPIRES] = expiry
     }
 }
