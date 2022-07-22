@@ -1,11 +1,8 @@
 package io.provenance.aggregate.service
 
-import com.provenance.aggregator.api.config.CacheConfig
 import com.provenance.aggregator.api.route.configureRouting
-import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.PropertySource
-import com.sksamuel.hoplite.addEnvironmentSource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
 import com.sksamuel.hoplite.sources.EnvironmentVariablesPropertySource
 import com.timgroup.statsd.NoOpStatsDClient
@@ -15,6 +12,7 @@ import io.ktor.server.netty.Netty
 import io.provenance.aggregate.common.Config
 import io.provenance.aggregate.common.aws.AwsClient
 import io.provenance.aggregate.common.extensions.recordMaxBlockHeight
+import io.provenance.aggregate.common.extensions.unwrapEnvOrError
 import io.provenance.aggregate.common.logger
 import io.provenance.aggregate.common.models.UploadResult
 import io.provenance.aggregate.common.models.extensions.toStreamBlock
@@ -58,8 +56,6 @@ private fun installShutdownHook(log: Logger): Channel<Unit> {
     })
     return signal
 }
-
-fun unwrapEnvOrError(variable: String): String = requireNotNull(System.getenv(variable)) { "Missing $variable" }
 
 @OptIn(FlowPreview::class, kotlin.time.ExperimentalTime::class)
 @ExperimentalCoroutinesApi

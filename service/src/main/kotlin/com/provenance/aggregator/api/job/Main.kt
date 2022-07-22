@@ -3,6 +3,7 @@ package com.provenance.aggregator.api.job
 import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.addEnvironmentSource
+import io.provenance.aggregate.common.extensions.unwrapEnvOrError
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -27,7 +28,7 @@ fun main() {
     val client = OkHttpClient()
 
     addresses.addrs.map {
-        val url = "http://localhost:8081/address/${it.key}?date=${OffsetDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}"
+        val url = "https://${unwrapEnvOrError("API_HOST")}/address/${it.key}?date=${OffsetDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}"
 
         val request = Request.Builder()
             .url(url)
