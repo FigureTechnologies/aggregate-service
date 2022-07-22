@@ -129,10 +129,10 @@ jobs:
       - name: Build Project
         run: ./gradlew service:build -Pversion=$VERSION
 
-      - name: Upload service-job artifact
+      - name: Upload aggregator-service-job artifact
         uses: actions/upload-artifact@v2
         with:
-          name: service-job
+          name: aggregator-service-job
           path: service/build/libs/*.jar
 
   docker_api_job_build:
@@ -152,7 +152,7 @@ jobs:
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/augment-job
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/aggregator-service-job
 
           DOCKER_TAGS=$IMAGE_ID:$VERSION
 
