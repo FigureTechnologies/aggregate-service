@@ -12,6 +12,8 @@ import kotlin.reflect.KProperty
 
 // === String methods ==================================================================================================
 
+fun unwrapEnvOrError(variable: String): String = requireNotNull(System.getenv(variable)) { "Missing $variable" }
+
 /**
  * Remove surrounding quotation marks from a string.
  */

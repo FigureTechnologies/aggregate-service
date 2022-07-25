@@ -36,15 +36,15 @@ fun main(args: Array<String>) {
     log.info("Job config - ${Json.encodeToString(Job.serializer(), job)}")
 
     val properties = Properties().apply {
-        put("user", unwrapEnvOrError("DB_USER"))
-        put("password", unwrapEnvOrError("DB_PASSWORD"))
-        put("warehouse", unwrapEnvOrError("DB_WAREHOUSE"))
-        put("db", unwrapEnvOrError("DB_DATABASE"))
-        put("schema", unwrapEnvOrError("DB_SCHEMA"))
+        put("user", unwrapEnvOrError("DW_USER"))
+        put("password", unwrapEnvOrError("DW_PASSWORD"))
+        put("warehouse", unwrapEnvOrError("DW_WAREHOUSE"))
+        put("db", unwrapEnvOrError("DW_DATABASE"))
+        put("schema", unwrapEnvOrError("DW_SCHEMA"))
         put("networkTimeout", "30")
         put("queryTimeout", "30")
     }
-    val dbConnection = DriverManager.getConnection("jdbc:snowflake://${unwrapEnvOrError("DB_HOST")}.snowflakecomputing.com", properties)
+    val dbConnection = DriverManager.getConnection("jdbc:snowflake://${unwrapEnvOrError("DW_HOST")}.snowflakecomputing.com", properties)
 
     val provenanceUri = URI(unwrapEnvOrError("PROVENANCE_GRPC_URL"))
     val channel = ManagedChannelBuilder

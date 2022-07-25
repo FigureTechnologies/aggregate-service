@@ -1,0 +1,51 @@
+addrs:
+  pb1kquvh9mqkzn6qkslcswm64aefcgn69w6rq8nf4: Accounting Wallet
+  pb1xvd4k9jg5h0d4dhzr4z0txtwe9p5zxf58xcmxd: Origination - Figure
+  pb1yvmg7c0hmhunrr6mrh5vz3mu4g2z06l5y842xz: Origination - Homebridge
+  pb174pdevzaulwrm68ly2d37jpe2d02glftdyvnr5: Origination - Homepoint
+  pb1g7n9qcd7zzpafv0zx8u6gdqvj34aalqapygrks: Origination - SynergyOne
+  pb1q4jdcwg350cqsdzn6jy8fxln9mx5rg7dm5mzs7: P8E Service Account
+  pb1x3v3kgvg4p5l007gjnmckgfmvw87tvd8z7clu4: Figure Validator 1 Operator Account
+  pb1d7yum2cxwkhmmuxa096prlv5gawjxw0ghau5h6: Figure Validator 2 Operator Account
+  pb157vsjx6f3pvd0gszvh6q6emc04trpznw0yt7um: Figure Validator 3 Operator Account
+  pb16xt2xdmunjmye2y2yjrxmc05s7r2yzhtt0ypnh: Figure Validator 4 Operator Account
+  pb1438hks7r47p22z2pqxv9eax369fq7vza20we85: Engineering Gas Pumper 1
+  pb1j542zhlsuwva0gyylu88qmhj5heg5a28arywhe: Engineering Gas Pumper 2
+  pb1szqxndh3nyxsukk90j8j0ev2dr8jhacd0894jn: Engineering Gas Pumper 3
+  pb1zsherr3eat6gvq9ptg3m0n3dj33xf2mwevk3ca: Portfolio Manager - Service Account
+  pb175gx39t90xyg88fx0jqwrfp5ppusaekrl0cggk: Figure Marketplace - Service Account
+  pb1evdjjcagllgyf23pzf7e2gkvfuakegsnv49yhj: Blank
+  pb1qhqw7ra3hq63uj2ca72afdlwhe6cynhep46new: Figure Secondary transaction account (grants)
+  pb1l00u2u8vzd6wvxxtsn0kel3gn870g39v4vx2fn: Figure Secondary holding account
+  pb1g2m2vp59amxd0hp5502e22hp0yprujd23z4qah: Omnibus Figure Pay
+  pb13p3fe2ydk7p6q9th5gl5ha4vmnz3ztpheqmkvz: Omnibus FTI Service Account
+  pb1949aeejayfs4srtl8sc672h2m03xarz46unz4q: Adnales service account (grants)
+  pb1v2km7r7fsuvsqk48fx743727p3d4tq6q80pdq7: Provenance Name Admin
+  pb1um2l2ldslc6r39kc5qzrddx6zydgpvny6aya7k: Passport - Service Account
+  pb1c4nq3c0qf0p4ufn64d4vnxvj3zx7ycsl88t9w6: Market Maker
+  pb1yqrsjmk7dwqjeru8t5y7xhlyqquxes25sm46z7: Provenance Foundation
+  pb18nzv4gyw6smf5uuealhkn0gl0c4n4e42xre2ym: Figure IBC Relay Service Account
+  pb1yxzcfkxkn7jymyzrdp9cc9eta3qelw8f4kcny9: Figure Tech US-East Validator
+  pb18jjl8wpgfre5han4akyxj4lhvy0v9t9xfq2w82: Figure Tech US-West Validator
+  pb1zza9vjvdpw2gwwml9wss3afsa600qw2vcathe8: Figure Governance wallet
+  pb1x45alqymesclp6yfzjsjsl5juzly8nfdtsunja: ATS Attribute Wallet
+  pb1mcyukv73v57jm2cq48p6y666kqjed8suyphshq: USDF.cc > NYCB.dcc > cash wallet
+  pb128fzvu8lgh92k7wywfnk5m4zx0feljh5czw9rq: Holder wallet (these transactions signed by mkvz)
+  pb1qhkfgluxwhalwps6y8fehxa7trqlhka2tjglk5: DCC Governance account / Contract Maintenance
+  pb1pr5ekk8nndfmla093q5yrrmzhgg2zcsj4kdqhe: Pay System Fee Payer Acct
+  pb1vm73d2qtvs86e2dguxt40tjzhv37r36h40wtqg: Omnibus Figure Lending
+  pb1u9t9ung76wzw88jhr0pa5szvl6ystdfe200hp3: Flomni Holder wallet (these transactions signed by 9jvt)
+  pb1gnrl9cx8f7yll5jgky6u5e5s99e294th8cqgpp: DCC Purchaser wallet
+  pb19yqkp7emc6e272uqy7dlcdty7ashuejyxtkyqp: USDF Marker Purchasing wallet
+  pb1gs9m84kyw7jd2ha0393v8dgu9pmkql95afvqe3: HomePoint Fee Payer Acct
+  pb1tq82hx5v7kekt7y58yu7t06yqwy28vejhm8e2s: HomePoint Purchasing Acct
+  pb1pg7gy8nnkuxdzz8dypt5vapkz92cl8lax7qjvg: Synergy Fee Payer Acct
+  pb12h0zwkjl04jdvzaxldxsm2nswztt6zw6h0v5vf: Synergy Purchasing Acct
+  pb1gqy3rsjha8kfazfsam4wd5tj342j8ad2kn5cq4: Figure Lending Purchasing Acct
+  pb13dfvqt7zyp69z3el72qsu6z3f0egh9xfng9jvt: Figure Lending Fee Payer Acct
+  pb193ndd83lql2aml4hq7kc9urm6sk74sgjwm6c8d: Loan Boarding Hash Purchas Acct
+  pb1jlkx797ys6h9dadtlehgapp5lpzne89c2rprs3: HomeBridge Fee Payer Acct
+  pb1dkaxcrcktjkf6gh0awqwm72v9cd240m03t02qs: HomeBridge Purchasing Acct
+  pb15mkw2s7pkkcdhueyv62ya3p8s3dpt83d0wufjs: Figure Pay Funding Account
+  pb1hf29xmfarhra7aj9ht40paaje4lkv4xu7y84rg: Figure Pay Incentive Funding Account
+  pb1jdhhd54zy6g3sg2agwuh503mdwm50e8es6d2l4: Main Hash Treasury Account

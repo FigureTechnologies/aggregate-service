@@ -1,4 +1,4 @@
-package io.provenance.aggregate.repository.database
+package io.provenance.aggregate.repository.database.ravendb
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -18,7 +18,7 @@ import io.provenance.eventstream.stream.models.extensions.txHashes
 import net.ravendb.client.documents.DocumentStore
 import net.ravendb.client.documents.session.IDocumentSession
 
-class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBase {
+open class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBase {
 
     companion object {
         const val CHECKPOINT_ID = "BlockHeightCheckpoint"
@@ -59,7 +59,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
         saveChanges(session) // close session when done saving block data
     }
 
-    private fun openSession(): IDocumentSession {
+    protected fun openSession(): IDocumentSession {
         val mapper = jacksonObjectMapper().apply {
             configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         }
@@ -88,7 +88,7 @@ class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBa
             session.store(it)
         }
 
-    private fun saveChanges(session: IDocumentSession) {
+    protected fun saveChanges(session: IDocumentSession) {
         session.saveChanges()
         session.close()
     }
