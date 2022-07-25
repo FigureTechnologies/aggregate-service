@@ -1,6 +1,7 @@
 package com.provenance.aggregator.api.snowflake
 
 import com.provenance.aggregator.api.model.TxCoinTransferData
+import io.provenance.aggregate.common.logger
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
 import java.sql.DriverManager
@@ -11,6 +12,7 @@ class SnowflakeJDBC(
     properties: Properties,
     dbUri: String
 ) {
+    private val log = logger()
 
     private val conn = DriverManager.getConnection(dbUri, properties)
 
@@ -23,6 +25,10 @@ class SnowflakeJDBC(
                 "AND SENDER='$addr';"
 
         val resultData = QueryRunner().query(conn, queryStmt, MapListHandler()).toList()
+
+        log.info("Snowflake queried ${resultData.size} results - closing connection").also {
+            conn.close()
+        }
 
         return resultData.map { result ->
             TxCoinTransferData(
@@ -38,5 +44,4 @@ class SnowflakeJDBC(
             )
         }
     }
-
 }

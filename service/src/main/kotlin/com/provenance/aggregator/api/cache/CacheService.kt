@@ -15,9 +15,11 @@ import net.ravendb.client.documents.session.IDocumentSession
 import net.snowflake.client.jdbc.internal.joda.time.DateTime
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Properties
 
 class CacheService(
-    private val sf: SnowflakeJDBC,
+    private val properties: Properties,
+    private val dwUri: String,
     private val config: DBConfig
 ): RavenDB(
     config.addr,
@@ -77,7 +79,11 @@ class CacheService(
         }
     }
 
-    private fun loadFromDataWarehouse(address: String, queryDate: OffsetDateTime) = sf.executeQuery(address, queryDate)
+    /**
+     * Reauthenticate with Snowflake every time we query to Snowflake
+     */
+    private fun loadFromDataWarehouse(address: String, queryDate: OffsetDateTime) =
+        SnowflakeJDBC(properties, dwUri).executeQuery(address, queryDate)
 
     private fun configureEviction(txData: TxCoinTransferData, session: IDocumentSession) {
         //Evict data after 30 days

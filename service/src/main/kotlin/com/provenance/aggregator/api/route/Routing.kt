@@ -17,9 +17,9 @@ import java.time.format.DateTimeFormatter
 
 import java.util.Properties
 
-fun Application.configureRouting(properties: Properties, dbUri: String, dbConfig: DBConfig) {
+fun Application.configureRouting(properties: Properties, dwUri: String, dbConfig: DBConfig) {
 
-    val cacheService = CacheService(SnowflakeJDBC(properties, dbUri), dbConfig)
+    val cacheService = CacheService(properties, dwUri, dbConfig)
 
     routing {
         get("/address/{addr?}") {
