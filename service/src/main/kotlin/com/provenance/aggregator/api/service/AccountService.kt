@@ -4,15 +4,21 @@ import com.provenance.aggregator.api.model.TxCoinTransferData
 
 class AccountService{
 
-    fun calcDailyTransactionHash(txList: List<TxCoinTransferData>): Long {
-        var totalHashAmt: Long = 0;
-        txList.map {
-            totalHashAmt = if(totalHashAmt.toInt() == 0) {
+    fun calcDailyNetTxns(inResult: List<TxCoinTransferData>, outResult: List<TxCoinTransferData>): Long =
+        calcTotalAmt(inResult) - calcTotalAmt(outResult)
+
+
+    private fun calcTotalAmt(result: List<TxCoinTransferData>): Long {
+        var totalAmt: Long = 0;
+
+        result.map {
+            totalAmt = if(totalAmt.toInt() == 0) {
                 it.amount.toLong()
             } else {
-                totalHashAmt + it.amount.toLong()
+                totalAmt + it.amount.toLong()
             }
         }
-        return totalHashAmt
+
+        return totalAmt
     }
 }
