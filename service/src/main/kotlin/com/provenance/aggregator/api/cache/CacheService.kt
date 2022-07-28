@@ -30,7 +30,7 @@ class CacheService(
     private val log = logger()
     private val accountService = AccountService()
 
-    fun getTx(addr: String, date: OffsetDateTime): Response {
+    fun getTx(addr: String, date: OffsetDateTime, denom: String): Response {
         val session = openSession()
 
         val recordIn = session.query(TxCoinTransferData::class.java)
@@ -58,9 +58,9 @@ class CacheService(
                 cacheTxCoinTransferDataSet(session, outResult)
 
                 // calc the daily transaction in hash
-                val calcResults = accountService.calcDailyNetTxns(inResult, outResult)
+                val calcResults = accountService.calcDailyNetTxns(inResult, outResult, denom)
                 return Response(
-                    TxDailyTotal(addr, date.toString(), calcResults).json(),
+                    TxDailyTotal(addr, date.toString(), calcResults, denom).json(),
                     HttpStatusCode.OK
                 ).also { log.info(it.toString()) }
             } else {
@@ -73,7 +73,7 @@ class CacheService(
         }else {
             log.info("Found data from ravendb: in=${recordIn.size} out=${recordOut.size}")
             return Response(
-                TxDailyTotal(addr, date.toString(), accountService.calcDailyNetTxns(recordIn, recordOut)).json(),
+                TxDailyTotal(addr, date.toString(), accountService.calcDailyNetTxns(recordIn, recordOut, denom), denom).json(),
                 HttpStatusCode.OK
             ).also {
                 log.info(it.toString())
