@@ -24,11 +24,19 @@ fun Application.configureRouting(properties: Properties, dwUri: String, dbConfig
     routing {
         get("/address/{addr?}") {
             val address = call.parameters["addr"].toString()
+
             val date = if(call.request.queryParameters["date"] == null) {
                 call.respond(Companion.BadRequest, "date cannot be null".json())
                 null
             } else {
                 call.request.queryParameters["date"].toString()
+            }
+
+            val denom = if(call.request.queryParameters["denom"] == null) {
+                call.respond(Companion.BadRequest, "denom type needed".json())
+                null
+            } else {
+                call.request.queryParameters["denom"].toString()
             }
 
             try {
@@ -38,7 +46,7 @@ fun Application.configureRouting(properties: Properties, dwUri: String, dbConfig
                 )
 
                 //check the cache table for the specific address requested
-                val response = cacheService.getTx(address, queryDate)
+                val response = cacheService.getTx(address, queryDate, denom!!)
                 call.respond(response.statusCode, response.message)
             } catch (e: Exception) {
                 call.respond(Companion.BadRequest, e.message!!.json())

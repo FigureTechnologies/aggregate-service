@@ -4,5 +4,5 @@ data class TxDailyTotal(
     val addr: String,
     val date: String,
     val total: Long,
-    val denom: String = "nhash"
+    val denom: String
 )
