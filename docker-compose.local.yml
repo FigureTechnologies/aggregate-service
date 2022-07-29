@@ -7,7 +7,7 @@ version: "3.8"
 services:
   localstack:
     container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
-    image: localstack/localstack
+    image: localstack/localstack-full
     network_mode: bridge
     ports:
       - "127.0.0.1:53:53"
@@ -18,7 +18,7 @@ services:
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID-test}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY-test}
-      - SERVICES=${SERVICES-s3,dynamodb}
+      - SERVICES=${SERVICES-s3,dynamodb,sqs}
       - DEBUG=${DEBUG- }
       - DATA_DIR=${DATA_DIR- }
       - LAMBDA_EXECUTOR=${LAMBDA_EXECUTOR- }
@@ -31,14 +31,14 @@ services:
       - "${TMPDIR:-/tmp/localstack}:/tmp/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
 
-        # Enable using initialization scripts (maps /docker-entrypoint-initaws.d => /opt/code/localstack/, read-only)
+      # Enable using initialization scripts (maps /docker-entrypoint-initaws.d => /opt/code/localstack/, read-only)
       - "./aws/localstack-init:/docker-entrypoint-initaws.d:ro"
 
-        # Expose ./aws/bin/ => /opt/code/localstack/__scripts__ (read-only)
+      # Expose ./aws/bin/ => /opt/code/localstack/__scripts__ (read-only)
       - "./aws/bin:/opt/code/localstack/__scripts__:ro"
 
-        # Expose ./aws/config/ => /opt/code/localstack/__config__ (read-only)
+      # Expose ./aws/config/ => /opt/code/localstack/__config__ (read-only)
       - "./aws/config:/opt/code/localstack/__config__:ro"
 
-        # Expose ./src/main/resources/ => /opt/code/localstack/__resources__/ (read-only)
+      # Expose ./src/main/resources/ => /opt/code/localstack/__resources__/ (read-only)
       - "./src/main/resources:/opt/code/localstack/__resources__:ro"
