@@ -20,6 +20,10 @@ repositories {
 dependencies {
     implementation(projects.common)
     implementation(projects.repository)
+    implementation(projects.service)
+
+    implementation(libs.ktor.core)
+    implementation(libs.ktor.netty)
 
     implementation(libs.bundles.eventstream)
     implementation(libs.bundles.kotlin)
@@ -86,13 +90,12 @@ tasks.withType<Jar> {
     manifest {
         attributes["Main-Class"] = "io.provenance.aggregate.service.MainKt"
     }
-
+    isZip64 = true
     from(sourceSets.main.get().output)
     dependsOn(configurations.runtimeClasspath)
     from({
         configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }
     })
-
 
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
 }
