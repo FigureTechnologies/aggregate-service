@@ -1,0 +1,348 @@
+{
+  "block": {
+    "header": {
+      "version": {
+        "block": "11"
+      },
+      "chainId": "pio-testnet-1",
+      "height": 3126940,
+      "time": "2021-08-30T17:55:21.25391625Z",
+      "lastBlockId": {
+        "hash": "11213C30F1C3F90C8EAD762C4C6FB2A8F6561D9CA8376C4BBD2066C26E287D3E",
+        "parts": {
+          "total": 1,
+          "hash": "B1C3234D50B89549AAECFBE0EA32E652C1A835D41C104A7F24CDBC53FB5414E6"
+        }
+      },
+      "lastCommitHash": "04AB7DC1C1C0B366C64282298690171110D03EE680014695D55B40718EACE663",
+      "dataHash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "validatorsHash": "1EF3558687DA45929024B645755C7282A9D7FD81E2AA0DE612FA48C842D1DE27",
+      "nextValidatorsHash": "1EF3558687DA45929024B645755C7282A9D7FD81E2AA0DE612FA48C842D1DE27",
+      "consensusHash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
+      "appHash": "8C66A410BD8A44FE11C9DAAF434187B3690CAA77A4D5302253D0FE47425A1E6C",
+      "lastResultsHash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "evidenceHash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "proposerAddress": "E354428AB16927EBBC3AC4036D8D25B59A47495B"
+    },
+    "data": {
+      "txs": []
+    },
+    "evidence": {
+      "evidence": []
+    },
+    "lastCommit": {
+      "height": 3126939,
+      "round": 0,
+      "blockId": {
+        "hash": "11213C30F1C3F90C8EAD762C4C6FB2A8F6561D9CA8376C4BBD2066C26E287D3E",
+        "parts": {
+          "total": 1,
+          "hash": "B1C3234D50B89549AAECFBE0EA32E652C1A835D41C104A7F24CDBC53FB5414E6"
+        }
+      },
+      "signatures": [
+        {
+          "blockIdFlag": 2,
+          "timestamp": "2021-08-30T17:55:21.250317261Z",
+          "validatorAddress": "E354428AB16927EBBC3AC4036D8D25B59A47495B",
+          "signature": "dgx/vYWrzLUnwE9m9xH28QDdZ65IZ/Xe1bCNyc8e8kysHQ450LKAd+ZFBMSL98ea4uncdn9XMbtnWeyn48WSAQ\u003d\u003d"
+        },
+        {
+          "blockIdFlag": 2,
+          "timestamp": "2021-08-30T17:55:21.25391625Z",
+          "validatorAddress": "CF53B691AFA2EB28C3D2AE118EF8F88FC48459BC",
+          "signature": "g0CkJw3ycH8Z70QPfsNeeMMBficxqzLOa1zEoaxr3UzUfuHM/0zEyGVnYB3BTGAn5sxa/dCEKeKJ8NFj22b8Aw\u003d\u003d"
+        },
+        {
+          "blockIdFlag": 2,
+          "timestamp": "2021-08-30T17:55:21.265397717Z",
+          "validatorAddress": "4CC7186D6C520A9EF696A6A0D6802564593D7380",
+          "signature": "vHNK5VRY79S09juCFEbHA06vNAZM9W8MHHeD2WcWHbGWR3sXZF7GbDiqDnE6z4109geD4UqfPoomLifQiyn7Aw\u003d\u003d"
+        },
+        {
+          "blockIdFlag": 2,
+          "timestamp": "2021-08-30T17:55:21.283436718Z",
+          "validatorAddress": "7100D18B251B4AB281A26BF64C81B20BABD77390",
+          "signature": "zupmW4+LRS4OEtoU1AGIc+bzlijEen1VCKttecVEIJyEYkHcDb4HR3m6tmnb8P6PARVNJj6UZgOxLrth4JUVBg\u003d\u003d"
+        },
+        {
+          "blockIdFlag": 2,
+          "timestamp": "2021-08-30T17:55:21.507664Z",
+          "validatorAddress": "B7F42C3F3AB75C5C49B96F49484B81D566BD129B",
+          "signature": "ZmASdrLUnsjoQXg4EZR2s6CizH1QEsILR94BaMhMC8pG240vDZP1pcaJzE00GXvru1bxFEkY5iiHPQjesRl3Dg\u003d\u003d"
+        }
+      ]
+    }
+  },
+  "blockResult": {
+    "height": 3126940,
+    "beginBlockEvents": [
+      {
+        "type": "transfer",
+        "attributes": [
+          {
+            "key": "cmVjaXBpZW50",
+            "value": "dHAxN3hwZnZha20yYW1nOTYyeWxzNmY4NHoza2VsbDhjNWwydWRmeXQ\u003d",
+            "index": false
+          },
+          {
+            "key": "c2VuZGVy",
+            "value": "dHAxbTNoMzB3bHZzZjhsbHJ1eHRwdWtkdnN5MGttMmt1bThqNWYzZ2s\u003d",
+            "index": false
+          },
+          {
+            "key": "YW1vdW50",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "message",
+        "attributes": [
+          {
+            "key": "c2VuZGVy",
+            "value": "dHAxbTNoMzB3bHZzZjhsbHJ1eHRwdWtkdnN5MGttMmt1bThqNWYzZ2s\u003d",
+            "index": true
+          }
+        ]
+      },
+      {
+        "type": "mint",
+        "attributes": [
+          {
+            "key": "Ym9uZGVkX3JhdGlv",
+            "value": "MC4wNjc4NzIyNTAyMDUzMDUwNzg\u003d",
+            "index": false
+          },
+          {
+            "key": "aW5mbGF0aW9u",
+            "value": "MC4wMDAwMDAwMDAwMDAwMDAwMDA\u003d",
+            "index": false
+          },
+          {
+            "key": "YW5udWFsX3Byb3Zpc2lvbnM\u003d",
+            "value": "MC4wMDAwMDAwMDAwMDAwMDAwMDA\u003d",
+            "index": false
+          },
+          {
+            "key": "YW1vdW50",
+            "value": "MA\u003d\u003d",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "transfer",
+        "attributes": [
+          {
+            "key": "cmVjaXBpZW50",
+            "value": "dHAxanY2NXMzZ3JxZjZ2NmpsM2RwNHQ2Yzl0OXJrOTljZDhhNjI0eGY\u003d",
+            "index": false
+          },
+          {
+            "key": "c2VuZGVy",
+            "value": "dHAxN3hwZnZha20yYW1nOTYyeWxzNmY4NHoza2VsbDhjNWwydWRmeXQ\u003d",
+            "index": false
+          },
+          {
+            "key": "YW1vdW50",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "message",
+        "attributes": [
+          {
+            "key": "c2VuZGVy",
+            "value": "dHAxN3hwZnZha20yYW1nOTYyeWxzNmY4NHoza2VsbDhjNWwydWRmeXQ\u003d",
+            "index": true
+          }
+        ]
+      },
+      {
+        "type": "proposer_reward",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMTZoeXJ2dzI5MDVma3lqcDY2dDQ2aHVhNnRoY3R1NWQ1MjVkd3gz",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "commission",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMTZoeXJ2dzI5MDVma3lqcDY2dDQ2aHVhNnRoY3R1NWQ1MjVkd3gz",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "rewards",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMTZoeXJ2dzI5MDVma3lqcDY2dDQ2aHVhNnRoY3R1NWQ1MjVkd3gz",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "commission",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMXRncTZjcHU2aG1zcnZrdmR1ODJqOTl0c3h4dzdxcWFqbjg0M2Zl",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "rewards",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMXRncTZjcHU2aG1zcnZrdmR1ODJqOTl0c3h4dzdxcWFqbjg0M2Zl",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "commission",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMXgyOTltNzJoNm44OHNzd2cycDlmcDhsdmtocnRxc3Z2djNyeHNk",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "rewards",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMXgyOTltNzJoNm44OHNzd2cycDlmcDhsdmtocnRxc3Z2djNyeHNk",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "commission",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMTZoeXJ2dzI5MDVma3lqcDY2dDQ2aHVhNnRoY3R1NWQ1MjVkd3gz",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "rewards",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMTZoeXJ2dzI5MDVma3lqcDY2dDQ2aHVhNnRoY3R1NWQ1MjVkd3gz",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "commission",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMXM5YzJhc3F0cDRmNnI1azRqc2c5N3A1eWVrcWM2cmhxbDlyY3Jw",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "rewards",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMXM5YzJhc3F0cDRmNnI1azRqc2c5N3A1eWVrcWM2cmhxbDlyY3Jw",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "commission",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMXB5bDczazhhangzM3gzN203cDJyejMzNzhlcXE2dGFjcjkyMHBt",
+            "index": false
+          }
+        ]
+      },
+      {
+        "type": "rewards",
+        "attributes": [
+          {
+            "key": "YW1vdW50",
+            "index": false
+          },
+          {
+            "key": "dmFsaWRhdG9y",
+            "value": "dHB2YWxvcGVyMXB5bDczazhhangzM3gzN203cDJyejMzNzhlcXE2dGFjcjkyMHBt",
+            "index": false
+          }
+        ]
+      }
+    ]
+  },
+  "height": 3126940
+}

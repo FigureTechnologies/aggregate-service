@@ -155,7 +155,7 @@ class EventStreamUploader(
             .filter { streamBlock ->
                 !streamBlock.blockResult.isNullOrEmpty().also {
                     log.info(
-                        if(streamBlock.blockResult.isNullOrEmpty())
+                        if (streamBlock.blockResult.isNullOrEmpty())
                             "Skipping empty block: ${streamBlock.height}"
                         else
                             "Buffering block: ${streamBlock.height} Tx Result Size: ${streamBlock.blockResult!!.size} Tx Event Size: ${streamBlock.txEvents.size}"

@@ -1,5 +1,6 @@
 package io.provenance.aggregate.service.test.utils
 
+import com.google.gson.Gson
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.provenance.aggregate.common.DynamoConfig
@@ -13,52 +14,35 @@ import io.provenance.aggregate.common.models.BlockchainResponse
 import io.provenance.eventstream.decoder.moshiDecoderAdapter
 import io.provenance.eventstream.net.NetAdapter
 import io.provenance.eventstream.net.okHttpNetAdapter
+import io.provenance.eventstream.stream.clients.BlockData
+import io.reactivex.rxkotlin.toFlowable
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
 
 object Defaults {
 
-    val moshi: Moshi = newMoshi()
-
-    fun newMoshi(): Moshi = Moshi.Builder()
-        .add(KotlinJsonAdapterFactory())
-        .add(JSONObjectAdapter())
-        .build()
-
-    val templates = newTemplate()
-
-    fun newTemplate(): Template = Template(moshi)
-
-    fun blockResponses(): Array<BlockResponse> =
+    fun blockData(): Flow<BlockData> =
         heights
-            .map { templates.unsafeReadAs(BlockResponse::class.java, "block/${it}.json") }
-            .toTypedArray()
-
-    fun blockResultsResponses(): Array<BlockResultsResponse> =
-        heights
-            .map { templates.unsafeReadAs(BlockResultsResponse::class.java, "block_results/${it}.json") }
-            .toTypedArray()
-
-    fun blockchainResponses(): Array<BlockchainResponse> =
-        heightChunks
-            .map { (minHeight, maxHeight) ->
-                templates.unsafeReadAs(
-                    BlockchainResponse::class.java,
-                    "blockchain/${minHeight}-${maxHeight}.json"
-                )
+            .map {
+                val reader = File("src/test/resources/templates/block_data/${it}.json").bufferedReader()
+                Gson().fromJson(reader, BlockData::class.java)
             }
-            .toTypedArray()
+            .asFlow()
+
+    fun blockDataIncorrectFormatLive(): Flow<BlockData> =
+        heights
+            .map {
+                var path = "src/test/resources/templates/block_data/${it}.json"
+                if (it >= MIN_LIVE_BLOCK_HEIGHT) {
+                    path = "src/test/resources/templates/incorrect_structure/${it}.json"
+                }
+                val reader = File(path).bufferedReader()
+                Gson().fromJson(reader, BlockData::class.java)
+            }
+            .asFlow()
 
     val s3Config: S3Config = S3Config(bucket = S3Bucket(S3_BUCKET))
-
-    val dynamoConfig: DynamoConfig =
-        DynamoConfig(
-            region = S3_REGION,
-            blockMetadataTable = DynamoTable(DYNAMODB_BLOCK_METADATA_TABLE),
-            blockBatchTable = DynamoTable(DYNAMODB_BLOCK_BATCH_TABLE),
-            serviceMetadataTable = DynamoTable(DYNAMODB_SERVICE_METADATA_TABLE),
-            dynamoBatchGetItems = 100
-        )
-
-    val netAdapter: NetAdapter =  okHttpNetAdapter("localhost:26657")
-
-    val decoderAdapter = moshiDecoderAdapter()
 }

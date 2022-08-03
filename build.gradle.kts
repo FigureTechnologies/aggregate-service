@@ -4,6 +4,7 @@ plugins {
     id("org.openapi.generator") version "5.2.1"
     application
     idea
+    jacoco
 }
 
 group = "io.provenance.tech.aggregate"
@@ -15,6 +16,7 @@ val TENDERMINT_OPENAPI_YAML = "$rootDir/src/main/resources/tendermint-v0.34.12-r
 repositories {
     mavenCentral()
     maven(url = "https://s01.oss.sonatype.org/content/groups/staging/")
+    maven { url = uri("https://jitpack.io") }
 }
 
 dependencies {
@@ -29,6 +31,7 @@ dependencies {
     implementation(libs.bundles.kotlin)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.kotlin.testcoroutines)
+    testImplementation(libs.bundles.mockk)
     implementation(libs.bundles.apache.commons)
     implementation(libs.bundles.scarlet)
     implementation(libs.datadog)
@@ -80,9 +83,6 @@ tasks.compileTestKotlin {
     }
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
 
 tasks.withType<Jar> {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -98,4 +98,23 @@ tasks.withType<Jar> {
     })
 
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+}
+
+tasks.jacocoTestReport {
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+    dependsOn(tasks.test)
+    classDirectories.setFrom(
+        sourceSets.main.get().output.asFileTree.matching {
+            exclude("io/provenance/aggregate/service/MainKt*")
+            exclude("io/provenance/aggregate/service/stream/models/*")
+        }
+    )
+}
+
+tasks.test {
+    useJUnitPlatform()
+    finalizedBy("jacocoTestReport")
 }
