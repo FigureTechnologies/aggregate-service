@@ -4,6 +4,7 @@ plugins {
     id("org.openapi.generator") version "5.2.1"
     application
     idea
+    jacoco
 }
 
 group = "io.provenance.tech.aggregate"
@@ -29,6 +30,7 @@ dependencies {
     implementation(libs.bundles.kotlin)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.kotlin.testcoroutines)
+    testImplementation(libs.bundles.mockk)
     implementation(libs.bundles.apache.commons)
     implementation(libs.bundles.scarlet)
     implementation(libs.datadog)
@@ -80,9 +82,6 @@ tasks.compileTestKotlin {
     }
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
 
 tasks.withType<Jar> {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -98,4 +97,23 @@ tasks.withType<Jar> {
     })
 
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+}
+
+tasks.jacocoTestReport {
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+    dependsOn(tasks.test)
+    classDirectories.setFrom(
+        sourceSets.main.get().output.asFileTree.matching {
+            exclude("io/provenance/aggregate/service/MainKt*")
+            exclude("io/provenance/aggregate/service/stream/models/*")
+        }
+    )
+}
+
+tasks.test {
+    useJUnitPlatform()
+    finalizedBy("jacocoTestReport")
 }
