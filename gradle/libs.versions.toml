@@ -29,9 +29,10 @@ dbUtils = "1.7"
 ravendb = "5.2.3"
 hdWallet = "0.1.15"
 jacksonModule = "2.11.0"
-ktor = "2.0.2"
+ktor = "1.6.8" # A handful of plugins don't support ktor 2.0 yet due diligence before upgrading.
 okhttp = "4.10.0"
 kodein = "7.10.0"
+swaggerKtor="0.3-beta.3"
 
 pluginProtobuf = "0.18.7"
 pluginNexusPublishPlugin = "1.1.0"
@@ -56,11 +57,15 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref =
 kotlin-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinSerialization"}
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test" }
 
-ktor-core = { module = "io.ktor:ktor-server-core-jvm", version.ref="ktor" }
-ktor-netty = { module = "io.ktor:ktor-server-netty-jvm", version.ref="ktor" }
+ktor-jackson = { module = "io.ktor:ktor-jackson", version.ref="ktor" }
+ktor-gson = { module = "io.ktor:ktor-gson", version.ref="ktor" }
+ktor-core = { module = "io.ktor:ktor-server-core", version.ref="ktor" }
+ktor-netty = { module = "io.ktor:ktor-server-netty", version.ref="ktor" }
 ktor-status = { module = "io.ktor:ktor-server-status-pages-jvm", version.ref="ktor" }
 ktor-headers = { module = "io.ktor:ktor-server-default-headers-jvm", version.ref="ktor" }
 kodein = { module = "org.kodein.di:kodein-di-jvm", version.ref="kodein"}
+
+ktor-swagger = { module = "com.github.papsign:Ktor-OpenAPI-Generator", version.ref="swaggerKtor"}
 
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 commons-text = { module = "org.apache.commons:commons-text", version.ref = "commonsText" }
