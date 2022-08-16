@@ -4,7 +4,6 @@ import com.papsign.ktor.openapigen.OpenAPIGen
 import com.papsign.ktor.openapigen.openAPIGen
 import com.papsign.ktor.openapigen.route.apiRouting
 import com.papsign.ktor.openapigen.route.route
-import com.papsign.ktor.openapigen.route.tag
 import com.provenance.aggregator.api.cache.CacheService
 import com.provenance.aggregator.api.route.v1.feeRoute
 import com.provenance.aggregator.api.route.v1.txRoute
@@ -34,11 +33,11 @@ fun Application.configureRouting(properties: Properties, dwUri: String, dbConfig
     }
     install(OpenAPIGen) {
         info {
-            version = "0.0.1"
+            version = "1.0.0"
             title = "Aggregate-Service-API"
         }
 
-        server("http://localhost:8081") {
+        server("http://localhost:8080") {
             description = "Aggregator-API Server"
         }
     }
