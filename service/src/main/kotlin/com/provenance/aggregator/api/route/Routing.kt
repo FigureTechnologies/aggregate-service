@@ -1,58 +1,69 @@
 package com.provenance.aggregator.api.route
 
+import com.papsign.ktor.openapigen.OpenAPIGen
+import com.papsign.ktor.openapigen.openAPIGen
+import com.papsign.ktor.openapigen.route.apiRouting
+import com.papsign.ktor.openapigen.route.route
+import com.papsign.ktor.openapigen.route.tag
 import com.provenance.aggregator.api.cache.CacheService
-import com.provenance.aggregator.api.cache.json
-import com.provenance.aggregator.api.snowflake.SnowflakeJDBC
-import io.ktor.http.HttpStatusCode.Companion
-import io.ktor.server.application.Application
-import io.ktor.server.application.call
-import io.ktor.server.response.respond
-import io.ktor.server.routing.get
-import io.ktor.server.routing.routing
+import com.provenance.aggregator.api.route.v1.feeRoute
+import com.provenance.aggregator.api.route.v1.txRoute
+import io.ktor.application.Application
+import io.ktor.application.application
+import io.ktor.application.call
+import io.ktor.application.install
+import io.ktor.features.ContentNegotiation
+import io.ktor.jackson.jackson
+import io.ktor.response.respond
+import io.ktor.response.respondRedirect
+import io.ktor.routing.get
+import io.ktor.routing.routing
 import io.provenance.aggregate.common.DBConfig
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-
 import java.util.Properties
 
-fun Application.configureRouting(properties: Properties, dwUri: String, dbConfig: DBConfig) {
+private const val OPEN_API_JSON_PATH="/openapi.json"
 
+fun Application.configureRouting(properties: Properties, dwUri: String, dbConfig: DBConfig) {
     val cacheService = CacheService(properties, dwUri, dbConfig)
+    install(ContentNegotiation) {
+        jackson()
+    }
+    install(OpenAPIGen) {
+        info {
+            version = "0.0.1"
+            title = "Aggregate-Service-API"
+        }
+
+        server("http://localhost:8081") {
+            description = "Aggregator-API Server"
+        }
+    }
 
     routing {
-        get("/address/{addr?}") {
-            val address = call.parameters["addr"].toString()
+        get(OPEN_API_JSON_PATH) {
+            call.respond(application.openAPIGen.api)
+        }
 
-            val date = if(call.request.queryParameters["date"] == null) {
-                call.respond(Companion.BadRequest, "date cannot be null".json())
-                null
-            } else {
-                call.request.queryParameters["date"].toString()
-            }
+        get("/") {
+            call.respondRedirect("/swagger-ui/index.html?url=$OPEN_API_JSON_PATH", true)
+        }
+    }
 
-            val denom = if(call.request.queryParameters["denom"] == null) {
-                call.respond(Companion.BadRequest, "denom type needed".json())
-                null
-            } else {
-                call.request.queryParameters["denom"].toString()
-            }
-
-            try {
-                val queryDate = OffsetDateTime.of(
-                    LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay(),
-                    ZoneOffset.UTC
-                )
-
-                //check the cache table for the specific address requested
-                val response = cacheService.getTx(address, queryDate, denom!!)
-                call.respond(response.statusCode, response.message)
-            } catch (e: Exception) {
-                call.respond(Companion.BadRequest, e.message!!.json())
-            }
+    apiRouting {
+        route("v1") {
+            txRoute(cacheService)
+            feeRoute(cacheService)
         }
     }
 }
+
+fun String.toOffsetDateTime(): OffsetDateTime = OffsetDateTime.of(
+    LocalDate.parse(this, DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay(),
+    ZoneOffset.UTC
+)
 
 

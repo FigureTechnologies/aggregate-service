@@ -28,8 +28,8 @@ fun main() {
     val client = OkHttpClient()
 
     addresses.addrs.map {
-        val url = "https://${unwrapEnvOrError("API_HOST")}/address/${it.key}?date=${OffsetDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}" +
-                "&denom=nhash"
+        val url = "https://${unwrapEnvOrError("API_HOST")}/transaction/${it.key}?startDate=${OffsetDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}" +
+                "endDate=${OffsetDateTime.now().plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE)}&denom=nhash"
 
         val request = Request.Builder()
             .url(url)

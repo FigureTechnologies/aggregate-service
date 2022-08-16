@@ -7,6 +7,8 @@ import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
 import com.sksamuel.hoplite.sources.EnvironmentVariablesPropertySource
 import com.timgroup.statsd.NoOpStatsDClient
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
+import io.ktor.application.install
+import io.ktor.routing.Routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.provenance.aggregate.common.Config
@@ -34,6 +36,7 @@ import kotlinx.cli.default
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.transform
 import org.slf4j.Logger
@@ -250,8 +253,10 @@ fun main(args: Array<String>) {
 
         // start api
         async {
-            embeddedServer(Netty, port=8080) {
-                configureRouting(properties, dwUri, config.dbConfig)
+            embeddedServer(Netty, port=8081) {
+                install(Routing) {
+                    configureRouting(properties, dwUri, config.dbConfig)
+                }
             }.start(wait = true)
         }
 
