@@ -10,7 +10,7 @@ plugins {
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
-group = "io.provenance.tech.aggregate"
+group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
@@ -67,7 +67,7 @@ sourceSets {
 }
 
 application {
-    mainClass.set("io.provenance.aggregate.service.MainKt")
+    mainClass.set("tech.figure.aggregate.service.MainKt")
 }
 
 tasks.compileKotlin {
@@ -91,7 +91,7 @@ tasks.withType<Jar> {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
     manifest {
-        attributes["Main-Class"] = "io.provenance.aggregate.service.MainKt"
+        attributes["Main-Class"] = "tech.figure.aggregate.service.MainKt"
     }
     isZip64 = true
     from(sourceSets.main.get().output)
@@ -176,8 +176,8 @@ tasks.jacocoTestReport {
     dependsOn(tasks.test)
     classDirectories.setFrom(
         sourceSets.main.get().output.asFileTree.matching {
-            exclude("io/provenance/aggregate/service/MainKt*")
-            exclude("io/provenance/aggregate/service/stream/models/*")
+            exclude("tech/figure/aggregate/service/MainKt*")
+            exclude("tech/figure/aggregate/service/stream/models/*")
         }
     )
 }

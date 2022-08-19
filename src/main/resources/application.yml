@@ -66,8 +66,8 @@ event-stream:
 upload:
   # Each extractor given will be run on a each post-filtered block received in the event stream:
   extractors:
-    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxEventAttributes
-    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMarkerTransfer
-    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxMarkerSupply
-    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxCoinTransfer
-    - io.provenance.aggregate.service.stream.extractors.csv.impl.TxFees
+    - tech.figure.aggregate.service.stream.extractors.csv.impl.TxEventAttributes
+    - tech.figure.aggregate.service.stream.extractors.csv.impl.TxMarkerTransfer
+    - tech.figure.aggregate.service.stream.extractors.csv.impl.TxMarkerSupply
+    - tech.figure.aggregate.service.stream.extractors.csv.impl.TxCoinTransfer
+    - tech.figure.aggregate.service.stream.extractors.csv.impl.TxFees

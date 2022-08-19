@@ -4,7 +4,7 @@ plugins {
     idea
 }
 
-group = "io.provenance.tech.aggregate"
+group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
@@ -94,8 +94,8 @@ tasks.register<org.openapitools.generator.gradle.plugin.tasks.GenerateTask>("gen
     validateSpec.set(true)
     inputSpec.set(TENDERMINT_OPENAPI_YAML)
     outputDir.set("$buildDir/generated")
-    packageName.set("io.provenance.aggregate.common")
-    modelPackage.set("io.provenance.aggregate.common.models")
+    packageName.set("tech.figure.aggregate.common")
+    modelPackage.set("tech.figure.aggregate.common.models")
     library.set("jvm-okhttp4")
 //library.set("jvm-retrofit2")
     configOptions.set(

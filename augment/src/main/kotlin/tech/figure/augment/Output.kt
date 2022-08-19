@@ -1,14 +1,12 @@
 package tech.figure.augment
 
-import io.provenance.aggregate.common.AwsConfig
-import io.provenance.aggregate.common.DynamoConfig
-import io.provenance.aggregate.common.DynamoTable
-import io.provenance.aggregate.common.S3Config
-import io.provenance.aggregate.common.aws.AwsClient
-import io.provenance.aggregate.common.aws.s3.S3Bucket
-import io.provenance.aggregate.common.aws.s3.S3Key
-import io.provenance.aggregate.common.aws.s3.StreamableObject
-import io.provenance.aggregate.common.writer.csv.ApacheCommonsCSVRecordWriter
+import tech.figure.aggregate.common.AwsConfig
+import tech.figure.aggregate.common.S3Config
+import tech.figure.aggregate.common.aws.AwsClient
+import tech.figure.aggregate.common.aws.s3.S3Bucket
+import tech.figure.aggregate.common.aws.s3.S3Key
+import tech.figure.aggregate.common.aws.s3.StreamableObject
+import tech.figure.aggregate.common.writer.csv.ApacheCommonsCSVRecordWriter
 import io.provenance.eventstream.config.Environment
 import org.apache.commons.csv.CSVFormat
 import org.slf4j.Logger
