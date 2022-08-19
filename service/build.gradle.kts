@@ -16,7 +16,6 @@ application {
 
 repositories {
     mavenCentral()
-    maven( url = "https://s01.oss.sonatype.org/content/groups/staging/")
     maven( url = "https://jitpack.io")
 }
 

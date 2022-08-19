@@ -18,7 +18,6 @@ val TENDERMINT_OPENAPI_YAML = "$rootDir/src/main/resources/tendermint-v0.34.12-r
 
 repositories {
     mavenCentral()
-    maven( url = "https://s01.oss.sonatype.org/content/groups/staging/")
     maven( url = "https://jitpack.io")
 }
 
@@ -143,7 +142,7 @@ subprojects {
                 from(components["java"])
 
                 pom {
-                    name.set("Aggergate Service")
+                    name.set("Aggregate Service")
                     description.set("Block data aggregation service")
                     url.set("https://figure.tech")
 
