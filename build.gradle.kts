@@ -116,7 +116,7 @@ nexusPublishing {
 }
 
 subprojects {
-    group="tech.figure.aggregate.service"
+    group="tech.figure.aggregate"
     version = this.findProperty("libraryVersion")?.toString() ?: "1.0-SNAPSHOT"
     apply {
         plugin("signing")
