@@ -116,7 +116,7 @@ nexusPublishing {
 }
 
 subprojects {
-    group="io.provenance.aggregate.service"
+    group="tech.figure.aggregate.service"
     version = this.findProperty("libraryVersion")?.toString() ?: "1.0-SNAPSHOT"
     apply {
         plugin("signing")
