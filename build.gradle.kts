@@ -5,6 +5,8 @@ plugins {
     application
     idea
     jacoco
+    signing
+    `maven-publish`
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
@@ -109,6 +111,59 @@ nexusPublishing {
             username.set(findProject("ossrhUsername")?.toString() ?: System.getenv("OSSRH_USERNAME"))
             password.set(findProject("ossrhPassword")?.toString() ?: System.getenv("OSSRH_PASSWORD"))
             stagingProfileId.set("858b6e4de4734a") // tech.figure staging id
+        }
+    }
+}
+
+subprojects {
+    group="io.provenance.aggregate.service"
+    version = this.findProperty("libraryVersion")?.toString() ?: "1.0-SNAPSHOT"
+    apply {
+        plugin("signing")
+        plugin("maven-publish")
+        plugin("kotlin")
+        plugin("java-library")
+    }
+
+    java {
+        withSourcesJar()
+        withJavadocJar()
+    }
+
+    val artifactName = name
+    val projectVersion = version.toString()
+
+    publishing {
+        publications {
+            create<MavenPublication>("maven") {
+                groupId = project.group.toString()
+                artifactId = artifactName
+                version = projectVersion
+
+                from(components["java"])
+
+                pom {
+                    name.set("Aggergate Service")
+                    description.set("Block data aggregation service")
+                    url.set("https://figure.tech")
+
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                    }
+
+                    scm {
+                        connection.set("git@github.com:FigureTechnologies/aggregate-service.git")
+                        developerConnection.set("git@github.com:FigureTechnologies/aggregate-service.git")
+                        url.set("https://github.com/FigureTechnologies/aggregate-service")
+                    }
+                }
+            }
+        }
+        signing {
+            sign(publishing.publications["maven"])
         }
     }
 }
