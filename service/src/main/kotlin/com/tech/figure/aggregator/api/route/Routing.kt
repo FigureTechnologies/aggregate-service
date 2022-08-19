@@ -1,12 +1,12 @@
-package com.tech.figure.aggregator.api.route
+package tech.figure.aggregator.api.route
 
 import com.papsign.ktor.openapigen.OpenAPIGen
 import com.papsign.ktor.openapigen.openAPIGen
 import com.papsign.ktor.openapigen.route.apiRouting
 import com.papsign.ktor.openapigen.route.route
-import com.tech.figure.aggregator.api.cache.CacheService
-import com.tech.figure.aggregator.api.route.v1.feeRoute
-import com.tech.figure.aggregator.api.route.v1.txRoute
+import tech.figure.aggregator.api.cache.CacheService
+import tech.figure.aggregator.api.route.v1.feeRoute
+import tech.figure.aggregator.api.route.v1.txRoute
 import io.ktor.application.Application
 import io.ktor.application.application
 import io.ktor.application.call

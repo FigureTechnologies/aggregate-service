@@ -1,4 +1,4 @@
-package com.tech.figure.aggregator.api.route
+package tech.figure.aggregator.api.route
 
 import com.papsign.ktor.openapigen.APITag
 

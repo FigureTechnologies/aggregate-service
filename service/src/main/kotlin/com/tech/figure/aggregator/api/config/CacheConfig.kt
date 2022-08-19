@@ -1,4 +1,4 @@
-package com.tech.figure.aggregator.api.config
+package tech.figure.aggregator.api.config
 
 import tech.figure.aggregate.common.DbTypes
 

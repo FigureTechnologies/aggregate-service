@@ -1,6 +1,6 @@
 package tech.figure.aggregate.service
 
-import com.tech.figure.aggregator.api.route.configureRouting
+import tech.figure.aggregator.api.route.configureRouting
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor

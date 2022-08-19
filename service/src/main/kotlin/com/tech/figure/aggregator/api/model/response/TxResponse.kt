@@ -1,4 +1,4 @@
-package com.tech.figure.aggregator.api.model.response
+package tech.figure.aggregator.api.model.response
 
 import com.papsign.ktor.openapigen.annotations.Response
 import io.ktor.http.HttpStatusCode

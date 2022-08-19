@@ -1,4 +1,4 @@
-package com.tech.figure.aggregator.api.model
+package tech.figure.aggregator.api.model
 
 data class TxFeeData(
     val hash: String,

@@ -1,4 +1,4 @@
-package com.tech.figure.aggregator.api.snowflake
+package tech.figure.aggregator.api.snowflake
 
 class QueryBuilder(
     val statement: String,

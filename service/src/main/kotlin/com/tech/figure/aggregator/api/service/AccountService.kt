@@ -1,7 +1,7 @@
-package com.tech.figure.aggregator.api.service
+package tech.figure.aggregator.api.service
 
-import com.tech.figure.aggregator.api.model.TxCoinTransferData
-import com.tech.figure.aggregator.api.model.TxFeeData
+import tech.figure.aggregator.api.model.TxCoinTransferData
+import tech.figure.aggregator.api.model.TxFeeData
 
 class AccountService{
 

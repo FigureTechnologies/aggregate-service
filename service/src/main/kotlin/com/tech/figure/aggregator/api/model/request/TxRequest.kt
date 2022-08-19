@@ -1,4 +1,4 @@
-package com.tech.figure.aggregator.api.model.request
+package tech.figure.aggregator.api.model.request
 
 import com.papsign.ktor.openapigen.annotations.Path
 import com.papsign.ktor.openapigen.annotations.parameters.PathParam

@@ -1,19 +1,19 @@
-package com.tech.figure.aggregator.api.route.v1
+package tech.figure.aggregator.api.route.v1
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.papsign.ktor.openapigen.route.info
 import com.papsign.ktor.openapigen.route.path.normal.NormalOpenAPIRoute
 import com.papsign.ktor.openapigen.route.path.normal.get
 import com.papsign.ktor.openapigen.route.response.respond
-import com.tech.figure.aggregator.api.cache.CacheService
+import tech.figure.aggregator.api.cache.CacheService
 import com.papsign.ktor.openapigen.route.route
 import com.papsign.ktor.openapigen.route.tag
 import com.papsign.ktor.openapigen.route.throws
-import com.tech.figure.aggregator.api.model.request.TxRequest
-import com.tech.figure.aggregator.api.model.response.TxResponse
-import com.tech.figure.aggregator.api.route.Tag
-import com.tech.figure.aggregator.api.route.exception.OptionalResult
-import com.tech.figure.aggregator.api.route.toOffsetDateTime
+import tech.figure.aggregator.api.model.request.TxRequest
+import tech.figure.aggregator.api.model.response.TxResponse
+import tech.figure.aggregator.api.route.Tag
+import tech.figure.aggregator.api.route.exception.OptionalResult
+import tech.figure.aggregator.api.route.toOffsetDateTime
 import io.ktor.http.HttpStatusCode
 
 fun NormalOpenAPIRoute.feeRoute(cacheService: CacheService) {

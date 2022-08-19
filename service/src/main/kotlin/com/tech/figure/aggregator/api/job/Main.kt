@@ -1,4 +1,4 @@
-package com.tech.figure.aggregator.api.job
+package tech.figure.aggregator.api.job
 
 import com.sksamuel.hoplite.ConfigLoader
 import com.sksamuel.hoplite.PropertySource

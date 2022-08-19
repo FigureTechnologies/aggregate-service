@@ -1,7 +1,7 @@
-package com.tech.figure.aggregator.api.snowflake
+package tech.figure.aggregator.api.snowflake
 
-import com.tech.figure.aggregator.api.model.TxCoinTransferData
-import com.tech.figure.aggregator.api.model.TxFeeData
+import tech.figure.aggregator.api.model.TxCoinTransferData
+import tech.figure.aggregator.api.model.TxFeeData
 import tech.figure.aggregate.common.logger
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
