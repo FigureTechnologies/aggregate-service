@@ -21,6 +21,12 @@ jobs:
 
           # Strip "v" prefix from tag name
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          
+          PRERELEASE=${{ github.event.release.prerelease }}
+          echo PRERELEASE=$PRERELEASE
+          if[ "$PRERELEASE" == "true" ]; then
+             VERSION=$VERSION-SNAPSHOT
+          fi
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Set up JDK 11
