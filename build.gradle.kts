@@ -5,6 +5,7 @@ plugins {
     application
     idea
     jacoco
+    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
 group = "io.provenance.tech.aggregate"
@@ -98,6 +99,18 @@ tasks.withType<Jar> {
     })
 
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username.set(findProject("ossrhUsername")?.toString() ?: System.getenv("OSSRH_USERNAME"))
+            password.set(findProject("ossrhPassword")?.toString() ?: System.getenv("OSSRH_PASSWORD"))
+            stagingProfileId.set("858b6e4de4734a") // tech.figure staging id
+        }
+    }
 }
 
 tasks.jacocoTestReport {
