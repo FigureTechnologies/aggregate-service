@@ -4,7 +4,7 @@ plugins {
     idea
 }
 
-group = "io.provenance.tech.aggregate"
+group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
 
 repositories {

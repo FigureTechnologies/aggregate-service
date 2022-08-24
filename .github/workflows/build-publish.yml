@@ -1,4 +1,4 @@
-name: Build and Deploy Serverless
+name: Build and Deploy
 
 # Controls when the workflow will run
 on:
@@ -50,7 +50,7 @@ jobs:
           path: augment/build/libs/*.jar
 
   docker_job_build:
-    name: Push to GitHub Docker Package Registry
+    name: Push to Docker Hub
     if: github.event_name == 'release'
     needs: java_job_build
     runs-on: ubuntu-latest
@@ -66,7 +66,7 @@ jobs:
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/augment-job
+          IMAGE_ID=${{ secrets.DOCKERHUB_USERNAME }}/augment-job
 
           DOCKER_TAGS=$IMAGE_ID:$VERSION
 
@@ -81,7 +81,7 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
         with:
           install: true
 
@@ -91,11 +91,14 @@ jobs:
           name: augment-job
           path: augment/build/libs
 
-      - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: augment
           file: augment/Dockerfile
@@ -136,7 +139,7 @@ jobs:
           path: service/build/libs/*.jar
 
   docker_api_job_build:
-    name: Push to GitHub Docker Package Registry
+    name: Push to Docker Hub
     if: github.event_name == 'release'
     needs: java_api_job_build
     runs-on: ubuntu-latest
@@ -152,7 +155,7 @@ jobs:
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/aggregator-service-job
+          IMAGE_ID=${{ secrets.DOCKERHUB_USERNAME }}/aggregator-service-job
 
           DOCKER_TAGS=$IMAGE_ID:$VERSION
 
@@ -167,7 +170,7 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
         with:
           install: true
 
@@ -177,11 +180,14 @@ jobs:
           name: aggregator-service-job
           path: service/build/libs
 
-      - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Log into DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: service
           file: service/Dockerfile
@@ -219,7 +225,7 @@ jobs:
           path: build/libs/*.jar
 
   docker_service_build:
-    name: Push to GitHub Docker Package Registry
+    name: Push to Docker Hub
     if: github.event_name == 'release'
     needs: java_service_build
     runs-on: ubuntu-latest
@@ -235,7 +241,7 @@ jobs:
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/aggregate-service
+          IMAGE_ID=${{ secrets.DOCKERHUB_USERNAME }}/aggregate-service
 
           DOCKER_TAGS=$IMAGE_ID:$VERSION
 
@@ -250,7 +256,7 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
         with:
           install: true
 
@@ -260,15 +266,17 @@ jobs:
           name: aggregate-service
           path: build/libs
 
-      - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Log into DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: .
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.DOCKER_TAGS }}
-

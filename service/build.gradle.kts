@@ -7,16 +7,15 @@ plugins {
     idea
 }
 
-group = "io.provenance.tech.aggregate"
+group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
 
 application {
-    mainClass.set("com.provenance.aggregator.api.ApplicationKt")
+    mainClass.set("tech.figure.aggregator.api.ApplicationKt")
 }
 
 repositories {
     mavenCentral()
-    maven( url = "https://s01.oss.sonatype.org/content/groups/staging/")
     maven( url = "https://jitpack.io")
 }
 
@@ -80,7 +79,7 @@ sourceSets {
 tasks.withType<Jar> {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
-        attributes["Main-Class"] = "com.provenance.aggregator.api.job.MainKt"
+        attributes["Main-Class"] = "tech.figure.aggregator.api.job.MainKt"
     }
     isZip64 = true
     from(sourceSets.main.get().output)

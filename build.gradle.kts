@@ -5,9 +5,12 @@ plugins {
     application
     idea
     jacoco
+    signing
+    `maven-publish`
+    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
-group = "io.provenance.tech.aggregate"
+group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
@@ -15,7 +18,6 @@ val TENDERMINT_OPENAPI_YAML = "$rootDir/src/main/resources/tendermint-v0.34.12-r
 
 repositories {
     mavenCentral()
-    maven( url = "https://s01.oss.sonatype.org/content/groups/staging/")
     maven( url = "https://jitpack.io")
 }
 
@@ -64,7 +66,7 @@ sourceSets {
 }
 
 application {
-    mainClass.set("io.provenance.aggregate.service.MainKt")
+    mainClass.set("tech.figure.aggregate.service.MainKt")
 }
 
 tasks.compileKotlin {
@@ -88,7 +90,7 @@ tasks.withType<Jar> {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
     manifest {
-        attributes["Main-Class"] = "io.provenance.aggregate.service.MainKt"
+        attributes["Main-Class"] = "tech.figure.aggregate.service.MainKt"
     }
     isZip64 = true
     from(sourceSets.main.get().output)
@@ -100,6 +102,71 @@ tasks.withType<Jar> {
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
 }
 
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username.set(findProject("ossrhUsername")?.toString() ?: System.getenv("OSSRH_USERNAME"))
+            password.set(findProject("ossrhPassword")?.toString() ?: System.getenv("OSSRH_PASSWORD"))
+            stagingProfileId.set("858b6e4de4734a") // tech.figure staging id
+        }
+    }
+}
+
+subprojects {
+    group="tech.figure.aggregate"
+    version = this.findProperty("libraryVersion")?.toString() ?: "1.0-SNAPSHOT"
+    apply {
+        plugin("signing")
+        plugin("maven-publish")
+        plugin("kotlin")
+        plugin("java-library")
+    }
+
+    java {
+        withSourcesJar()
+        withJavadocJar()
+    }
+
+    val artifactName = name
+    val projectVersion = version.toString()
+
+    publishing {
+        publications {
+            create<MavenPublication>("maven") {
+                groupId = project.group.toString()
+                artifactId = artifactName
+                version = projectVersion
+
+                from(components["java"])
+
+                pom {
+                    name.set("Aggregate Service")
+                    description.set("Block data aggregation service")
+                    url.set("https://figure.tech")
+
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                    }
+
+                    scm {
+                        connection.set("git@github.com:FigureTechnologies/aggregate-service.git")
+                        developerConnection.set("git@github.com:FigureTechnologies/aggregate-service.git")
+                        url.set("https://github.com/FigureTechnologies/aggregate-service")
+                    }
+                }
+            }
+        }
+        signing {
+            sign(publishing.publications["maven"])
+        }
+    }
+}
+
 tasks.jacocoTestReport {
     reports {
         xml.required.set(true)
@@ -108,8 +175,8 @@ tasks.jacocoTestReport {
     dependsOn(tasks.test)
     classDirectories.setFrom(
         sourceSets.main.get().output.asFileTree.matching {
-            exclude("io/provenance/aggregate/service/MainKt*")
-            exclude("io/provenance/aggregate/service/stream/models/*")
+            exclude("tech/figure/aggregate/service/MainKt*")
+            exclude("tech/figure/aggregate/service/stream/models/*")
         }
     )
 }
