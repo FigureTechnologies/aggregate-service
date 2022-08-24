@@ -66,7 +66,7 @@ jobs:
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-          IMAGE_ID=hub.docker.com/u/figuretechnologies/augment-job
+          IMAGE_ID=${{ secrets.DOCKERHUB_USERNAME }}/augment-job
 
           DOCKER_TAGS=$IMAGE_ID:$VERSION
 
@@ -155,7 +155,7 @@ jobs:
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-          IMAGE_ID=hub.docker.com/u/figuretechnologies/aggregator-service-job
+          IMAGE_ID=${{ secrets.DOCKERHUB_USERNAME }}/aggregator-service-job
 
           DOCKER_TAGS=$IMAGE_ID:$VERSION
 
