@@ -8,6 +8,7 @@ aws:
 
 
 ws_node: ${WS_NODE}
+api_host: ${API_HOST}
 
 dbConfig:
   addr: ${DB_URI}

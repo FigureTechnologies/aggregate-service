@@ -1,13 +1,11 @@
 package tech.figure.aggregator.api.cache
 
 import com.google.gson.Gson
-import tech.figure.aggregator.api.model.response.TxResponse
 import tech.figure.aggregator.api.model.TxCoinTransferData
 import tech.figure.aggregator.api.model.TxTotalAmtResponse
 import tech.figure.aggregator.api.model.TxFeeData
 import tech.figure.aggregator.api.service.AccountService
 import tech.figure.aggregator.api.snowflake.SnowflakeJDBC
-import io.ktor.http.HttpStatusCode
 import tech.figure.aggregate.common.DBConfig
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.repository.database.ravendb.RavenDB
@@ -36,36 +34,29 @@ class CacheService(
         const val DEFAULT_OFFSET = 1
     }
 
-    fun getNetDateRangeFee(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime, denom: String): TxResponse {
+    fun getNetDateRangeFee(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime, denom: String): TxTotalAmtResponse {
         val result = getAllTxFee(addr, startDate, endDate)
-        return if(result.isEmpty()) {
-            log.info("no transaction found from snowflake")
-            TxResponse(
-                "$addr fee for data range $startDate to $endDate not found".json(),
-                HttpStatusCode.NotFound
-            )
-        } else {
-            val totalFees = accountService.calcTotalFees(result, denom)
-            TxResponse(
-                TxTotalAmtResponse(addr, startDate.toString(), endDate.toString(), totalFees, denom).json(),
-                HttpStatusCode.OK
-            ).also{ log.info(it.toString()) }
-        }
+
+        return TxTotalAmtResponse(
+            addr = addr,
+            startDate = startDate.toString(),
+            endDate = endDate.toString(),
+            total = accountService.calcTotalFees(result, denom),
+            denom = denom
+        )
     }
 
-    fun getNetDateRangeTx(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime, denom: String): TxResponse {
+    fun getNetDateRangeTx(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime, denom: String): TxTotalAmtResponse {
         val recordsIn = getAllTxIn(addr, startDate, endDate)
         val recordsOut = getAllTxOut(addr, startDate, endDate)
 
-        return if(recordsIn.isEmpty() && recordsOut.isEmpty()) {
-            TxResponse("$addr data for date range $startDate to $endDate not found".json(), HttpStatusCode.NotFound)
-        } else {
-            val calcResults = accountService.calcDailyNetTxns(recordsIn, recordsOut, denom)
-            TxResponse(
-                TxTotalAmtResponse(addr, startDate.toString(), endDate.toString(), calcResults, denom).toString(),
-                HttpStatusCode.OK
-            )
-        }
+        return TxTotalAmtResponse(
+            addr = addr,
+            startDate = startDate.toString(),
+            endDate = endDate.toString(),
+            total = accountService.calcDailyNetTxns(recordsIn, recordsOut, denom),
+            denom = denom
+        )
     }
 
     fun getTxFees(

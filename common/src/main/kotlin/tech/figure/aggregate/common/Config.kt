@@ -33,7 +33,8 @@ data class Config (
     val wsNode: String,
     val hrp: String,
     val upload: UploadConfig = UploadConfig.empty(),
-    val dbConfig: DBConfig
+    val dbConfig: DBConfig,
+    val apiHost: String
 )
 
 data class DBConfig(

@@ -9,4 +9,14 @@ data class TxTotalAmtResponse(
     val endDate: String,
     val total: Long,
     val denom: String
-)
+) {
+    companion object {
+        val sampleResponse = TxTotalAmtResponse(
+            addr = "tx123",
+            startDate = "2022-08-24",
+            endDate = "2022-08-25",
+            total = 123455,
+            denom = "nhash"
+        )
+    }
+}
