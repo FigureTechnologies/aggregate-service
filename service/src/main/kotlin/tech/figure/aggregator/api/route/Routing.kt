@@ -16,6 +16,7 @@ import io.ktor.jackson.jackson
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
 import io.ktor.routing.get
+import io.ktor.routing.route
 import io.ktor.routing.routing
 import tech.figure.aggregate.common.DBConfig
 import java.time.LocalDate

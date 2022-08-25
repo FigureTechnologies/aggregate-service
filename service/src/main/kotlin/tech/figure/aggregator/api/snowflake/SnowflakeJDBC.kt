@@ -43,7 +43,8 @@ class SnowflakeJDBC(
     private fun queryTxOutResultSet(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime): List<TxCoinTransferData> {
         val querySendStmt = "SELECT * FROM COIN_TRANSFER " +
                 "WHERE BLOCK_TIMESTAMP BETWEEN '$startDate' and '$endDate' " +
-                "AND SENDER='$addr';"
+                "AND SENDER='$addr'" +
+                "ORDER BY BLOCK_TIMESTAMP";
 
         return executeQuery(querySendStmt).toTxCoinTransferData()
             .also{ log.info("out result size: ${it.size}") }
@@ -52,7 +53,8 @@ class SnowflakeJDBC(
     private fun queryTxInResultSet(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime): List<TxCoinTransferData> {
         val queryReceiveStmt = "SELECT * FROM COIN_TRANSFER " +
                 "WHERE BLOCK_TIMESTAMP BETWEEN '$startDate' and '$endDate' " +
-                "AND RECIPIENT='$addr';"
+                "AND RECIPIENT='$addr'" +
+                "ORDER BY BLOCK_TIMESTAMP";
 
         return executeQuery(queryReceiveStmt).toTxCoinTransferData()
             .also{ log.info("in result size: ${it.size}") }
