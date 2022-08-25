@@ -27,7 +27,7 @@ import java.util.Properties
 
 private const val OPEN_API_JSON_PATH="/openapi.json"
 
-fun Application.configureRouting(properties: Properties, dwUri: String, dbConfig: DBConfig) {
+fun Application.configureRouting(properties: Properties, dwUri: String, dbConfig: DBConfig, apiHost: String) {
     val cacheService = CacheService(properties, dwUri, dbConfig)
     install(ContentNegotiation) {
         jackson()
@@ -38,7 +38,7 @@ fun Application.configureRouting(properties: Properties, dwUri: String, dbConfig
             title = "Aggregate-Service-API"
         }
 
-        server("http://localhost:8080") {
+        server(apiHost) {
             description = "Aggregator-API Server"
         }
     }

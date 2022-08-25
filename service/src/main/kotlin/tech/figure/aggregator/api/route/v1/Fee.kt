@@ -10,23 +10,23 @@ import com.papsign.ktor.openapigen.route.route
 import com.papsign.ktor.openapigen.route.tag
 import com.papsign.ktor.openapigen.route.throws
 import tech.figure.aggregator.api.model.request.TxRequest
-import tech.figure.aggregator.api.model.response.TxResponse
 import tech.figure.aggregator.api.route.Tag
 import tech.figure.aggregator.api.route.exception.OptionalResult
 import tech.figure.aggregator.api.route.toOffsetDateTime
 import io.ktor.http.HttpStatusCode
 import tech.figure.aggregator.api.cache.CacheService.Companion.DEFAULT_LIMIT
 import tech.figure.aggregator.api.cache.CacheService.Companion.DEFAULT_OFFSET
-import tech.figure.aggregator.api.cache.json
+import tech.figure.aggregator.api.model.TxFeeData
+import tech.figure.aggregator.api.model.TxTotalAmtResponse
 
 fun NormalOpenAPIRoute.feeRoute(cacheService: CacheService) {
     tag(Tag.Fee) {
         route("net/fee") {
-            get<TxRequest, TxResponse>(
+            get<TxRequest, TxTotalAmtResponse>(
                 info(
                     summary = "Get the total fee for a given address within a set date range"
                 ),
-                example = TxResponse.sampleNetFeeResponse
+                example = TxTotalAmtResponse.sampleResponse
             ) { param ->
                 if (param.address == "" || param.startDate == "" || param.endDate == "" || param.denom == "") {
                     throws(
@@ -47,11 +47,11 @@ fun NormalOpenAPIRoute.feeRoute(cacheService: CacheService) {
         }
 
         route("fee") {
-            get<TxRequest, TxResponse>(
+            get<TxRequest, List<TxFeeData>>(
                 info(
                     summary = "Get all fee transaction for a given address within a set date range"
                 ),
-                example = TxResponse.sampleFeeResponse
+                example = TxFeeData.sampleResponse
             ) { param ->
                 if (param.address == "" || param.startDate == "" || param.endDate == "" || param.denom == "") {
                     throws(
@@ -70,9 +70,13 @@ fun NormalOpenAPIRoute.feeRoute(cacheService: CacheService) {
                 )
 
                 if(result.isEmpty()) {
-                    respond(TxResponse("No records found", HttpStatusCode.NotFound))
+                    throws(
+                        HttpStatusCode.NotFound.description("Not Found"),
+                        example = OptionalResult.FAIL,
+                        exClass = JsonProcessingException::class
+                    )
                 } else {
-                    respond(TxResponse(result.json(), HttpStatusCode.OK))
+                    respond(result)
                 }
             }
         }

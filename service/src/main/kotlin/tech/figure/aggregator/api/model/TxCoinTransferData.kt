@@ -10,4 +10,20 @@ data class TxCoinTransferData(
     val sender: String,
     val amount: String,
     val denom: String
-)
+) {
+    companion object{
+        val sampleTxResponse = listOf(
+            TxCoinTransferData(
+                hash = "123ABC",
+                eventType = "transfer",
+                blockHeight = 123.0,
+                blockTimestamp = "2022-08-24 00:48:42.245254649",
+                txHash = "ABC123",
+                recipient = "tx123",
+                sender = "tx456",
+                amount = "100",
+                denom = "nhash"
+            )
+        )
+    }
+}

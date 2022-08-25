@@ -255,7 +255,7 @@ fun main(args: Array<String>) {
         async {
             embeddedServer(Netty, port=8080) {
                 install(Routing) {
-                    configureRouting(properties, dwUri, config.dbConfig)
+                    configureRouting(properties, dwUri, config.dbConfig, config.apiHost)
                 }
             }.start(wait = true)
         }
