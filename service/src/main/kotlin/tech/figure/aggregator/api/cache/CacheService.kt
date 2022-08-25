@@ -1,13 +1,11 @@
 package tech.figure.aggregator.api.cache
 
 import com.google.gson.Gson
-import tech.figure.aggregator.api.model.response.TxResponse
 import tech.figure.aggregator.api.model.TxCoinTransferData
 import tech.figure.aggregator.api.model.TxTotalAmtResponse
 import tech.figure.aggregator.api.model.TxFeeData
 import tech.figure.aggregator.api.service.AccountService
 import tech.figure.aggregator.api.snowflake.SnowflakeJDBC
-import io.ktor.http.HttpStatusCode
 import tech.figure.aggregate.common.DBConfig
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.repository.database.ravendb.RavenDB
