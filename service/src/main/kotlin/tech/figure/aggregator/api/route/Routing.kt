@@ -16,7 +16,6 @@ import io.ktor.jackson.jackson
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
 import io.ktor.routing.get
-import io.ktor.routing.route
 import io.ktor.routing.routing
 import tech.figure.aggregate.common.DBConfig
 import java.time.LocalDate
@@ -38,7 +37,7 @@ fun Application.configureRouting(properties: Properties, dwUri: String, dbConfig
             title = "Aggregate-Service-API"
         }
 
-        server(apiHost) {
+        server("") {
             description = "Aggregator-API Server"
         }
     }
@@ -65,5 +64,3 @@ fun String.toOffsetDateTime(): OffsetDateTime = OffsetDateTime.of(
     LocalDate.parse(this, DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay(),
     ZoneOffset.UTC
 )
-
-
