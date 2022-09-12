@@ -12,6 +12,7 @@ import tech.figure.aggregate.repository.database.ravendb.RavenDB
 import net.ravendb.client.Constants
 import net.ravendb.client.documents.session.IDocumentSession
 import net.snowflake.client.jdbc.internal.joda.time.DateTime
+import tech.figure.aggregator.api.model.TxDailyTotal
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Properties
@@ -94,13 +95,52 @@ class CacheService(
         return cachedFeeRecord
     }
 
-    fun getTxOut(
+    fun getTxOutRaw(
         address: String,
         startDate: OffsetDateTime,
         endDate: OffsetDateTime,
         limit: Int,
         offset: Int
     ): List<TxCoinTransferData> {
+        val session = openSession()
+
+        val recordOut = session.query(TxCoinTransferData::class.java)
+            .whereEquals("sender", address)
+            .whereBetween("blockTimestamp", startDate.format(DateTimeFormatter.ISO_LOCAL_DATE), endDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
+            .orderBy("blockTimestamp")
+            .take(limit)
+            .skip(offset)
+            .toList()
+
+        if(recordOut.isEmpty()) {
+            log.info("transaction data for address = $address is not available within this date range: ($startDate - $endDate)")
+
+            val (_, outResult) = loadTxRequestFromDW(address, startDate, endDate)
+            return if(outResult.isNotEmpty()) {
+                log.info("caching result data found from snowflake")
+                cacheTxCoinTransferDataSet(session, outResult)
+                getTxOutRaw(
+                    address,
+                    startDate,
+                    endDate,
+                    limit,
+                    offset
+                )
+            } else {
+                log.info("no out transaction found for $address at date range $startDate to $endDate")
+                emptyList()
+            }
+        }
+        return recordOut
+    }
+
+    fun getTxOut(
+        address: String,
+        startDate: OffsetDateTime,
+        endDate: OffsetDateTime,
+        limit: Int,
+        offset: Int
+    ): List<TxDailyTotal> {
         val session = openSession()
 
         val recordOut = session.query(TxCoinTransferData::class.java)
@@ -130,7 +170,45 @@ class CacheService(
                 emptyList()
             }
         }
-        return recordOut
+        return accountService.organizeTxByDate(recordOut, address)
+    }
+
+    fun getTxInRaw(
+        address: String,
+        startDate: OffsetDateTime,
+        endDate: OffsetDateTime,
+        limit: Int,
+        offset: Int
+    ): List<TxCoinTransferData> {
+        val session = openSession()
+
+        val recordIn = session.query(TxCoinTransferData::class.java)
+            .whereEquals("receiver", address)
+            .whereBetween("blockTimestamp", startDate.format(DateTimeFormatter.ISO_LOCAL_DATE), endDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
+            .orderBy("blockTimestamp")
+            .skip(offset)
+            .take(limit)
+            .toList()
+
+        if(recordIn.isEmpty()) {
+            log.info("transaction data for address = $address is not available within this date range: ($startDate - $endDate)")
+            val (inResult, _) = loadTxRequestFromDW(address, startDate, endDate)
+            return if(inResult.isNotEmpty()) {
+                log.info("caching result data found from snowflake")
+                cacheTxCoinTransferDataSet(session, inResult)
+                getTxInRaw(
+                    address,
+                    startDate,
+                    endDate,
+                    limit,
+                    offset
+                )
+            } else {
+                log.info("no in transaction found for $address at date range $startDate to $endDate")
+                emptyList()
+            }
+        }
+        return recordIn
     }
 
     fun getTxIn(
@@ -139,7 +217,7 @@ class CacheService(
         endDate: OffsetDateTime,
         limit: Int,
         offset: Int
-    ): List<TxCoinTransferData> {
+    ): List<TxDailyTotal> {
         val session = openSession()
 
         val recordIn = session.query(TxCoinTransferData::class.java)
@@ -168,7 +246,7 @@ class CacheService(
                 emptyList()
             }
         }
-        return recordIn
+        return accountService.organizeTxByDate(recordIn, address)
     }
 
     private fun getAllTxFee(

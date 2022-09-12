@@ -17,20 +17,21 @@ import tech.figure.aggregator.api.route.toOffsetDateTime
 import io.ktor.http.HttpStatusCode
 import tech.figure.aggregator.api.cache.CacheService.Companion.DEFAULT_LIMIT
 import tech.figure.aggregator.api.cache.CacheService.Companion.DEFAULT_OFFSET
+import tech.figure.aggregator.api.model.TxDailyTotal
 import tech.figure.aggregator.api.model.TxTotalAmtResponse
 
 fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
 
     tag(Tag.Transaction) {
         route("transaction/out") {
-            get<TxRequest, List<TxCoinTransferData>>(
+            get<TxRequest, List<TxDailyTotal>>(
                 info(
-                    summary = "Get a list of transaction out data for a given address within a set date range."
+                    summary = "Get the list of daily out total transaction as per date range."
                 ),
-                example = TxCoinTransferData.sampleTxResponse
+                example = TxDailyTotal.sampleResponse
             ) { param ->
 
-                val result: List<TxCoinTransferData> = cacheService.getTxOut(
+                val result: List<TxDailyTotal> = cacheService.getTxOut(
                         param.address,
                         param.startDate.toOffsetDateTime(),
                         param.endDate.toOffsetDateTime(),
@@ -50,15 +51,71 @@ fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
             }
         }
 
-        route("transaction/in") {
+        route("transaction/raw/out") {
             get<TxRequest, List<TxCoinTransferData>>(
                 info(
-                    summary = "Get a list of transaction in data for a given address within a set date range."
+                    summary = "Get a list of all transaction out data for a given address within a set date range."
                 ),
                 example = TxCoinTransferData.sampleTxResponse
             ) { param ->
 
-                val result: List<TxCoinTransferData> = cacheService.getTxIn(
+                val result: List<TxCoinTransferData> = cacheService.getTxOutRaw(
+                    param.address,
+                    param.startDate.toOffsetDateTime(),
+                    param.endDate.toOffsetDateTime(),
+                    param.limit?.toInt() ?: DEFAULT_LIMIT,
+                    param.offset?.toInt() ?: DEFAULT_OFFSET
+                )
+
+                if(result.isEmpty()) {
+                    throws(
+                        HttpStatusCode.NotFound.description("Not Found"),
+                        example = OptionalResult.FAIL,
+                        exClass = JsonProcessingException::class
+                    )
+                } else {
+                    respond(result)
+                }
+            }
+        }
+
+        route("transaction/raw/in/") {
+            get<TxRequest, List<TxCoinTransferData>>(
+                info(
+                    summary = "Get a list of all transaction in data for a given address within a set date range."
+                ),
+                example = TxCoinTransferData.sampleTxResponse
+            ) { param ->
+
+                val result: List<TxCoinTransferData> = cacheService.getTxInRaw(
+                    param.address,
+                    param.startDate.toOffsetDateTime(),
+                    param.endDate.toOffsetDateTime(),
+                    param.limit?.toInt() ?: DEFAULT_LIMIT,
+                    param.offset?.toInt() ?: DEFAULT_OFFSET
+                )
+                if(result.isEmpty()) {
+                    throws(
+                        HttpStatusCode.NotFound.description("Not Found"),
+                        example = OptionalResult.FAIL,
+                        exClass = JsonProcessingException::class
+                    )
+                } else {
+                    respond(result)
+                }
+            }
+        }
+
+
+        route("transaction/in") {
+            get<TxRequest, List<TxDailyTotal>>(
+                info(
+                    summary = "Get the list of daily in total transaction as per date range."
+                ),
+                example = TxDailyTotal.sampleResponse
+            ) { param ->
+
+                val result: List<TxDailyTotal> = cacheService.getTxIn(
                     param.address,
                     param.startDate.toOffsetDateTime(),
                     param.endDate.toOffsetDateTime(),
