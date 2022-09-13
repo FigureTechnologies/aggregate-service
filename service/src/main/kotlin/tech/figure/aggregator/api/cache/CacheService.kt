@@ -183,7 +183,7 @@ class CacheService(
         val session = openSession()
 
         val recordIn = session.query(TxCoinTransferData::class.java)
-            .whereEquals("receiver", address)
+            .whereEquals("recipient", address)
             .whereBetween("blockTimestamp", startDate.format(DateTimeFormatter.ISO_LOCAL_DATE), endDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
             .orderBy("blockTimestamp")
             .skip(offset)
@@ -221,7 +221,7 @@ class CacheService(
         val session = openSession()
 
         val recordIn = session.query(TxCoinTransferData::class.java)
-                .whereEquals("receiver", address)
+                .whereEquals("recipient", address)
                 .whereBetween("blockTimestamp", startDate.format(DateTimeFormatter.ISO_LOCAL_DATE), endDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
                 .orderBy("blockTimestamp")
                 .skip(offset)
