@@ -32,7 +32,7 @@ class CacheService(
 
     companion object{
         const val DEFAULT_LIMIT = 100
-        const val DEFAULT_OFFSET = 1
+        const val DEFAULT_OFFSET = 0
     }
 
     fun getNetDateRangeFee(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime, denom: String): TxTotalAmtResponse {
