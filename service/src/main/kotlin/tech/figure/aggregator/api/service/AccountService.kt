@@ -1,12 +1,8 @@
 package tech.figure.aggregator.api.service
 
-import com.papsign.ktor.openapigen.model.schema.DataFormat.date
 import tech.figure.aggregator.api.model.TxCoinTransferData
 import tech.figure.aggregator.api.model.TxDailyTotal
 import tech.figure.aggregator.api.model.TxFeeData
-import tech.figure.aggregator.api.route.toOffsetDateTime
-import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
 
 class AccountService{
 
@@ -53,7 +49,14 @@ class AccountService{
         return uniqueDates.map { date ->
             val txAmtByDate = txCoinTransferDataList.filter {
                 it.blockTimestamp.take(10) == date.take(10)
-            }.map { it.amount.toLong() }
+            }.map {
+                //todo: fix this when we start allowing for different denom type.
+                if(it.denom == "nhash") {
+                    it.amount.toLong()
+                } else {
+                    0
+                }
+            }
 
             TxDailyTotal(
                 address = address,

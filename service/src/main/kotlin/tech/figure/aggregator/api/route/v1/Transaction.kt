@@ -39,15 +39,7 @@ fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
                         param.offset?.toInt() ?: DEFAULT_OFFSET
                     )
 
-                if(result.isEmpty()) {
-                    throws(
-                        HttpStatusCode.NotFound.description("Not Found"),
-                        example = OptionalResult.FAIL,
-                        exClass = JsonProcessingException::class
-                    )
-                } else {
-                    respond(result)
-                }
+                respond(result)
             }
         }
 
@@ -67,15 +59,7 @@ fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
                     param.offset?.toInt() ?: DEFAULT_OFFSET
                 )
 
-                if(result.isEmpty()) {
-                    throws(
-                        HttpStatusCode.NotFound.description("Not Found"),
-                        example = OptionalResult.FAIL,
-                        exClass = JsonProcessingException::class
-                    )
-                } else {
-                    respond(result)
-                }
+                respond(result)
             }
         }
 
@@ -94,15 +78,8 @@ fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
                     param.limit?.toInt() ?: DEFAULT_LIMIT,
                     param.offset?.toInt() ?: DEFAULT_OFFSET
                 )
-                if(result.isEmpty()) {
-                    throws(
-                        HttpStatusCode.NotFound.description("Not Found"),
-                        example = OptionalResult.FAIL,
-                        exClass = JsonProcessingException::class
-                    )
-                } else {
-                    respond(result)
-                }
+
+                respond(result)
             }
         }
 
@@ -122,15 +99,8 @@ fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
                     param.limit?.toInt() ?: DEFAULT_LIMIT,
                     param.offset?.toInt() ?: DEFAULT_OFFSET
                 )
-                if(result.isEmpty()) {
-                    throws(
-                        HttpStatusCode.NotFound.description("Not Found"),
-                        example = OptionalResult.FAIL,
-                        exClass = JsonProcessingException::class
-                    )
-                } else {
-                    respond(result)
-                }
+
+                respond(result)
             }
         }
 
@@ -155,7 +125,6 @@ fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
                     param.endDate.toOffsetDateTime(),
                     param.denom
                 )
-
                 respond(response)
             }
         }
