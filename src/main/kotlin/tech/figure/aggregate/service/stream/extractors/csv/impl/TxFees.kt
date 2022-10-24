@@ -25,7 +25,7 @@ class TxFees: CSVFileExtractor(
                     event.blockDateTime,
                     event.fee.fee,
                     event.fee.denom,
-                    event.fee.incurrAddr, // wallet addr that is paying the fee
+                    event.fee.signerInfo?.incurrAddr, // wallet addr that is paying the fee
                     includeHash = true
                 )
             }

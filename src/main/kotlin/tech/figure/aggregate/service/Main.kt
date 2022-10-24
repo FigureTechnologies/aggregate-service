@@ -263,7 +263,7 @@ fun main(args: Array<String>) {
         val blockFlow: Flow<BlockData> = blockDataFlow(netAdapter, moshiDecoderAdapter(), from = options.fromHeight, to = options.toHeight)
         if (observe) {
             blockFlow
-                .transform { emit(it.toStreamBlock(config.hrp)) }
+                .transform { emit(it.toStreamBlock(config.hrp, Pair(config.badBlockRange[0], config.badBlockRange[1]))) }
                 .onEach {
                     val text = "Block: ${it.block.header?.height ?: "--"}:${it.block.header?.dateTime()?.toLocalDate()}"
                     println(green(text))
@@ -281,7 +281,7 @@ fun main(args: Array<String>) {
                             }
                         }
                     }
-            }
+                }
         } else {
             if (config.upload.extractors.isNotEmpty()) {
                 log.info("upload: adding extractors")
@@ -295,7 +295,8 @@ fun main(args: Array<String>) {
                 aws,
                 repository,
                 options,
-                config.hrp
+                config.hrp,
+                Pair(config.badBlockRange[0], config.badBlockRange[1])
             )
                 .addExtractor(config.upload.extractors)
                 .upload()

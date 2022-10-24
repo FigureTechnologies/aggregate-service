@@ -34,7 +34,8 @@ data class Config (
     val hrp: String,
     val upload: UploadConfig = UploadConfig.empty(),
     val dbConfig: DBConfig,
-    val apiHost: String
+    val apiHost: String,
+    val badBlockRange: List<Long>
 )
 
 data class DBConfig(

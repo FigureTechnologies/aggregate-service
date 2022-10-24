@@ -1,7 +1,7 @@
 package tech.figure.aggregate.common.models.tx
 
 import com.squareup.moshi.JsonClass
-import tech.figure.aggregate.common.models.Fee
+import tech.figure.aggregate.common.models.fee.Fee
 import java.time.OffsetDateTime
 
 /**

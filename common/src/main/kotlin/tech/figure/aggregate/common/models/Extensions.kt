@@ -1,6 +1,7 @@
 package tech.figure.aggregate.common.models
 
 import com.google.common.io.BaseEncoding
+import com.google.gson.Gson
 import cosmos.crypto.secp256k1.Keys
 import cosmos.tx.v1beta1.TxOuterClass
 import tech.figure.aggregate.common.decodeBase64
@@ -20,6 +21,10 @@ import io.provenance.eventstream.stream.clients.BlockData
 import io.provenance.eventstream.stream.models.Event
 import io.provenance.hdwallet.bech32.toBech32
 import io.provenance.hdwallet.common.hashing.sha256hash160
+import tech.figure.aggregate.common.models.fee.Fee
+import tech.figure.aggregate.common.models.fee.SignerInfo
+import tech.figure.aggregate.common.repeatDecodeBase64
+import java.math.BigDecimal
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import tendermint.types.Types.Header as GrpcHeader
@@ -75,7 +80,7 @@ fun Block.txData(index: Int, hrp: String): TxInfo? {
 
         return TxInfo(
             this.data?.txs?.get(index)?.hash(),
-            Fee(amount, denom, signerAddr, feeIncurringAddr)
+            Fee(amount, denom, SignerInfo(signerAddr, feeIncurringAddr))
         )
     }
     return null
@@ -88,18 +93,61 @@ fun Block.dateTime() = this.header?.dateTime()
 fun BlockHeader.dateTime(): OffsetDateTime? =
     runCatching { OffsetDateTime.parse(this.time, DateTimeFormatter.ISO_DATE_TIME) }.getOrNull()
 
-fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxEvent> =
+fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, badBlockRange: Pair<Long, Long>, txHash: (Int) -> TxInfo?): List<TxEvent> =
     txsResults?.flatMapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
         val txHashData = txHash(index)
+
+        // 1.11 bug - fees were not properly swept [0] - lower, [1] - higher
+        val fee = if(height >= badBlockRange.first && height <= badBlockRange.second ) {
+            tx.toBugFee(txHashData?.fee?.signerInfo)
+        } else {
+            txHashData?.fee
+        }
+
         if(tx.code?.toInt() != 0) {
-           mutableListOf(toTxEvent(height, blockDateTime, txHashData?.txHash, txHashData?.fee ?: Fee()))
+           mutableListOf(toTxEvent(height, blockDateTime, txHashData?.txHash, fee ?: Fee()))
         } else {
             tx.events?.map {
-                it.toTxEvent(height, blockDateTime, txHashData?.txHash, fee = txHashData?.fee ?: Fee())
+                it.toTxEvent(height, blockDateTime, txHashData?.txHash, fee = fee ?: Fee())
             } ?: emptyList()
         }
     } ?: emptyList()
 
+fun BlockResultsResponseResultTxsResults.toBugFee(signerInfo: SignerInfo?): Fee {
+    var msgBaseFeeList = listOf<MsgFeeAttribute>()
+    this.events?.map { event ->
+        if(event.type?.repeatDecodeBase64() == "provenance.msgfees.v1.EventMsgFees") {
+            event.attributes?.toDecodedMap()?.map { attribute ->
+                msgBaseFeeList = Gson().fromJson(attribute.value?.decodeBase64(), Array<MsgFeeAttribute>::class.java).toList()
+            }
+        }
+    }
+
+    val msgBaseFee = if(msgBaseFeeList.isNotEmpty()) msgBaseFeeList[0].total.toAmountDenom().amount.toLong() else 0
+
+    // manually calc the proper fees
+    val gasPrice = 1905
+    val baseFee = BigDecimal(this.gasUsed!!.toLong() * gasPrice.toLong()).toLong()
+    val overageFee = BigDecimal(this.gasWanted!!.toLong() * gasPrice.toLong()).toLong() - baseFee
+    val totalFee = baseFee + msgBaseFee + overageFee
+
+    return Fee(fee = totalFee, "nhash", signerInfo)
+}
+
+fun String.toAmountDenom(): AmountDenom {
+    val amount = StringBuilder(this)
+    val denom = StringBuilder()
+    for (i in this.length - 1 downTo 0) {
+        val ch = this[i]
+        if (!ch.isDigit()) {
+            amount.deleteCharAt(i)
+            denom.insert(0, ch)
+        } else {
+            break
+        }
+    }
+    return AmountDenom(amount.toString(), denom.toString())
+}
 
 fun String.toSignerAddr(hrp: String): List<String> {
     val tx = TxOuterClass.Tx.parseFrom(BaseEncoding.base64().decode(this)) ?: return mutableListOf()
@@ -108,14 +156,22 @@ fun String.toSignerAddr(hrp: String): List<String> {
     }
 }
 
-fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxError> =
+fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, gasPriceUpdateBlockHeight: Long, badBlockRange: Pair<Long, Long>, txHash: (Int) -> TxInfo?): List<TxError> =
     txsResults?.filter {
-            it.code?.toInt() ?: 0 != 0
+        (it.code?.toInt() ?: 0) != 0
         }?.mapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
-            tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, txHash(index)?.fee ?: Fee())
-    }?.filterNotNull() ?: emptyList()
 
-fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?, txHash: String?, fee: Fee): TxError? =
+        // 1.11 bug - fees were not properly swept [0] - lower, [1] - higher
+        val fee = if(height >= badBlockRange.first && height <= badBlockRange.second ) {
+            tx.toBugFee(txHash(index)?.fee?.signerInfo)
+        } else {
+            txHash(index)?.fee
+        }
+
+        tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, fee = fee ?: Fee())
+    } ?: emptyList()
+
+fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?, txHash: String?, fee: Fee): TxError =
     TxError(
         blockHeight = blockHeight,
         blockDateTime = blockDateTime,
@@ -151,8 +207,8 @@ fun BlockResultsResponseResultEvents.toTxEvent(
         fee = fee
     )
 
-fun BlockResultsResponse.txEvents(blockDate: OffsetDateTime, txHash: (index: Int) -> TxInfo): List<TxEvent> =
-    this.result.txEvents(blockDate, txHash)
+fun BlockResultsResponse.txEvents(blockDate: OffsetDateTime, badBlockRange: Pair<Long, Long>, txHash: (index: Int) -> TxInfo): List<TxEvent> =
+    this.result.txEvents(blockDate, badBlockRange, txHash)
 
 fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List<BlockEvent> =
     beginBlockEvents?.map { e: BlockResultsResponseResultEvents ->
@@ -164,11 +220,11 @@ fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List
         )
     } ?: emptyList()
 
-fun BlockData.toStreamBlock(hrp: String): StreamBlockImpl {
+fun BlockData.toStreamBlock(hrp: String, badBlockRange: Pair<Long, Long>): StreamBlockImpl {
     val blockDatetime = block.header?.dateTime()
     val blockEvents = blockResult.blockEvents(blockDatetime)
     val blockTxResults = blockResult.txsResults
-    val txEvents = blockResult.txEvents(blockDatetime) { index: Int -> block.txData(index, hrp) }
+    val txEvents = blockResult.txEvents(blockDatetime, badBlockRange) { index: Int -> block.txData(index, hrp) }
     return StreamBlockImpl(block, blockEvents, blockTxResults, txEvents)
 }
 
