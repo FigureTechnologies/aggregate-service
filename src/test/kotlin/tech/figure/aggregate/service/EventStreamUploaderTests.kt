@@ -128,7 +128,8 @@ class EventStreamUploaderTests {
                         aws,
                         repository,
                         options,
-                        "tp"
+                        "tp",
+                        Pair(config.badBlockRange[0], config.badBlockRange[1])
                     )
                         .addExtractor(config.upload.extractors)
                         .upload { inspected1 = true }
@@ -169,7 +170,8 @@ class EventStreamUploaderTests {
                         aws,
                         repository,
                         options,
-                        "tp"
+                        "tp",
+                        Pair(config.badBlockRange[0], config.badBlockRange[1])
                     )
                         .addExtractor(config.upload.extractors)
                         .upload { inspected1 = true }
