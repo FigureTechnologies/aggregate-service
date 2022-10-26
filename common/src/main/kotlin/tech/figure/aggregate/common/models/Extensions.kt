@@ -152,14 +152,14 @@ fun String.toSignerAddr(hrp: String): List<String> {
     }
 }
 
-fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, gasPriceUpdateBlockHeight: Long, badBlockRange: Pair<Long, Long>, txHash: (Int) -> TxInfo?): List<TxError> =
+fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxError> =
     txsResults?.filter {
         (it.code?.toInt() ?: 0) != 0
         }?.mapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
 
         // 1.11 bug doesnt apply for errors
         txHash(index)?.fee
-        tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, fee = fee ?: Fee())
+        tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, fee = txHash(index)?.fee ?: Fee())
     } ?: emptyList()
 
 fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?, txHash: String?, fee: Fee): TxError =
