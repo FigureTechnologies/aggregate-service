@@ -99,7 +99,7 @@ fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, badBlock
 
         // 1.11 bug - fees were not properly swept [0] - lower, [1] - higher
         val fee = if(height >= badBlockRange.first && height <= badBlockRange.second ) {
-            tx.toBugFee(txHashData?.fee?.signerInfo)
+            tx.toBugFee(txHashData?.fee ?: Fee())
         } else {
             txHashData?.fee
         }
@@ -113,7 +113,7 @@ fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, badBlock
         }
     } ?: emptyList()
 
-fun BlockResultsResponseResultTxsResults.toBugFee(signerInfo: SignerInfo?): Fee {
+fun BlockResultsResponseResultTxsResults.toBugFee(fee: Fee): Fee {
     var msgBaseFeeList = listOf<MsgFeeAttribute>()
     this.events?.map { event ->
         if(event.type?.repeatDecodeBase64() == "provenance.msgfees.v1.EventMsgFees") {
@@ -123,15 +123,11 @@ fun BlockResultsResponseResultTxsResults.toBugFee(signerInfo: SignerInfo?): Fee 
         }
     }
 
-    val msgBaseFee = if(msgBaseFeeList.isNotEmpty()) msgBaseFeeList[0].total.toAmountDenom().amount.toLong() else 0
+    val msgBaseFee = if(msgBaseFeeList.isNotEmpty()) msgBaseFeeList[0].total.toAmountDenom().amount.toLong() else 0L
 
-    // manually calc the proper fees
-    val gasPrice = 1905
-    val baseFee = BigDecimal(this.gasUsed!!.toLong() * gasPrice.toLong()).toLong()
-    val overageFee = BigDecimal(this.gasWanted!!.toLong() * gasPrice.toLong()).toLong() - baseFee
-    val totalFee = baseFee + msgBaseFee + overageFee
-
-    return Fee(fee = totalFee, "nhash", signerInfo)
+    // if no msg fee take minimum
+    val minimumFee = BigDecimal(this.gasWanted!!.toLong() * 1905).toLong()
+    return if(msgBaseFee == 0L) Fee(fee = minimumFee, "nhash", fee.signerInfo) else fee
 }
 
 fun String.toAmountDenom(): AmountDenom {
@@ -163,7 +159,7 @@ fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, g
 
         // 1.11 bug - fees were not properly swept [0] - lower, [1] - higher
         val fee = if(height >= badBlockRange.first && height <= badBlockRange.second ) {
-            tx.toBugFee(txHash(index)?.fee?.signerInfo)
+            tx.toBugFee(txHash(index)?.fee ?: Fee())
         } else {
             txHash(index)?.fee
         }
