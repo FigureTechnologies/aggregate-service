@@ -260,7 +260,7 @@ fun main(args: Array<String>) {
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockData> = blockDataFlow(netAdapter, moshiDecoderAdapter(), from = options.fromHeight, to = options.toHeight)
+        val blockFlow: Flow<BlockData> = blockDataFlow(netAdapter, moshiDecoderAdapter(), from = fromHeightGetter(), to = options.toHeight)
         if (observe) {
             blockFlow
                 .transform { emit(it.toStreamBlock(config.hrp, Pair(config.badBlockRange[0], config.badBlockRange[1]))) }
