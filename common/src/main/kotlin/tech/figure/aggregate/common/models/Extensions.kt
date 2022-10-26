@@ -157,13 +157,8 @@ fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, g
         (it.code?.toInt() ?: 0) != 0
         }?.mapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
 
-        // 1.11 bug - fees were not properly swept [0] - lower, [1] - higher
-        val fee = if(height >= badBlockRange.first && height <= badBlockRange.second ) {
-            tx.toBugFee(txHash(index)?.fee ?: Fee())
-        } else {
-            txHash(index)?.fee
-        }
-
+        // 1.11 bug doesnt apply for errors
+        txHash(index)?.fee
         tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, fee = fee ?: Fee())
     } ?: emptyList()
 
