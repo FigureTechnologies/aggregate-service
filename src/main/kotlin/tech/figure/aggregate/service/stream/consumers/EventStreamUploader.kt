@@ -205,10 +205,15 @@ class EventStreamUploader(
                                         val lowestBlockHeight = streamBlocks.first().height
 
                                         if (putResponse.sdkHttpResponse().isSuccessful) {
-                                            repository?.writeBlockCheckpoint(highestBlockHeight!!)
-                                                .also {
-                                                    log.info("Checkpoint::Updating max block height to = $highestBlockHeight")
-                                                }
+                                            val currentCheckpoint = repository?.getBlockCheckpoint()
+                                            // only update raven checkpoint if highestBlockHeight is higher than
+                                            // what is in raven.
+                                            if((currentCheckpoint != null) && (currentCheckpoint < highestBlockHeight!!)) {
+                                                repository?.writeBlockCheckpoint(highestBlockHeight)
+                                                    .also {
+                                                        log.info("Checkpoint::Updating max block height to = $highestBlockHeight")
+                                                    }
+                                            }
                                             log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
                                         }
 
