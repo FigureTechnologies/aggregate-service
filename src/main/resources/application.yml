@@ -10,6 +10,7 @@ aws:
 ws_node: ${WS_NODE}
 api_host: ${API_HOST}
 bad_block_range: ${ONE_DOT_ELEVEN_BAD_BLOCK_RANGE}
+msg_fee_height: ${MSG_FEE_HEIGHT}
 
 dbConfig:
   addr: ${DB_URI}
