@@ -93,7 +93,7 @@ fun Block.dateTime() = this.header?.dateTime()
 fun BlockHeader.dateTime(): OffsetDateTime? =
     runCatching { OffsetDateTime.parse(this.time, DateTimeFormatter.ISO_DATE_TIME) }.getOrNull()
 
-fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, badBlockRange: Pair<Long, Long>, txHash: (Int) -> TxInfo?): List<TxEvent> =
+fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, badBlockRange: Pair<Long, Long>, msgBaseFeeHeight: Long, txHash: (Int) -> TxInfo?): List<TxEvent> =
     txsResults?.flatMapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
         val txHashData = txHash(index)
 
@@ -105,7 +105,13 @@ fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, badBlock
         }
 
         if(tx.code?.toInt() != 0) {
-           mutableListOf(toTxEvent(height, blockDateTime, txHashData?.txHash, fee ?: Fee()))
+            // if a tx errored, fee is gas_wanted * 1905 at when msg base fee was introduced.
+            val errorFee = if(msgBaseFeeHeight <= height) {
+                Fee(BigDecimal(tx.gasWanted!!.toLong() * 1905).toLong(), "nhash", fee?.signerInfo)
+            } else {
+                fee
+            }
+           mutableListOf(toTxEvent(height, blockDateTime, txHashData?.txHash, errorFee ?: Fee()))
         } else {
             tx.events?.map {
                 it.toTxEvent(height, blockDateTime, txHashData?.txHash, fee = fee ?: Fee())
@@ -154,7 +160,7 @@ fun String.toSignerAddr(hrp: String): List<String> {
 
 fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxError> =
     txsResults?.filter {
-        (it.code?.toInt() ?: 0) != 0
+            (it.code?.toInt() ?: 0) != 0
         }?.mapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
 
         // 1.11 bug doesnt apply for errors
@@ -198,8 +204,8 @@ fun BlockResultsResponseResultEvents.toTxEvent(
         fee = fee
     )
 
-fun BlockResultsResponse.txEvents(blockDate: OffsetDateTime, badBlockRange: Pair<Long, Long>, txHash: (index: Int) -> TxInfo): List<TxEvent> =
-    this.result.txEvents(blockDate, badBlockRange, txHash)
+fun BlockResultsResponse.txEvents(blockDate: OffsetDateTime, badBlockRange: Pair<Long, Long>, msgBaseFeeHeight: Long, txHash: (index: Int) -> TxInfo): List<TxEvent> =
+    this.result.txEvents(blockDate, badBlockRange, msgBaseFeeHeight, txHash)
 
 fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List<BlockEvent> =
     beginBlockEvents?.map { e: BlockResultsResponseResultEvents ->
@@ -211,11 +217,11 @@ fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List
         )
     } ?: emptyList()
 
-fun BlockData.toStreamBlock(hrp: String, badBlockRange: Pair<Long, Long>): StreamBlockImpl {
+fun BlockData.toStreamBlock(hrp: String, badBlockRange: Pair<Long, Long>, msgBaseFeeHeight: Long): StreamBlockImpl {
     val blockDatetime = block.header?.dateTime()
     val blockEvents = blockResult.blockEvents(blockDatetime)
     val blockTxResults = blockResult.txsResults
-    val txEvents = blockResult.txEvents(blockDatetime, badBlockRange) { index: Int -> block.txData(index, hrp) }
+    val txEvents = blockResult.txEvents(blockDatetime, badBlockRange, msgBaseFeeHeight) { index: Int -> block.txData(index, hrp) }
     return StreamBlockImpl(block, blockEvents, blockTxResults, txEvents)
 }
 

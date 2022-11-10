@@ -129,7 +129,8 @@ class EventStreamUploaderTests {
                         repository,
                         options,
                         "tp",
-                        Pair(config.badBlockRange[0], config.badBlockRange[1])
+                        Pair(config.badBlockRange[0], config.badBlockRange[1]),
+                        config.msgFeeHeight
                     )
                         .addExtractor(config.upload.extractors)
                         .upload { inspected1 = true }
@@ -171,7 +172,8 @@ class EventStreamUploaderTests {
                         repository,
                         options,
                         "tp",
-                        Pair(config.badBlockRange[0], config.badBlockRange[1])
+                        Pair(config.badBlockRange[0], config.badBlockRange[1]),
+                        config.msgFeeHeight
                     )
                         .addExtractor(config.upload.extractors)
                         .upload { inspected1 = true }

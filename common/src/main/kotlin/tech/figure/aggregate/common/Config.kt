@@ -35,7 +35,8 @@ data class Config (
     val upload: UploadConfig = UploadConfig.empty(),
     val dbConfig: DBConfig,
     val apiHost: String,
-    val badBlockRange: List<Long>
+    val badBlockRange: List<Long>,
+    val msgFeeHeight: Long
 )
 
 data class DBConfig(

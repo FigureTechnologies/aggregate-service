@@ -49,6 +49,7 @@ class EventStreamUploader(
     private val options: BlockStreamOptions,
     private val hrp: String,
     private val badBlockRange: Pair<Long, Long>,
+    private val msgFeeHeight: Long,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) {
 
@@ -152,7 +153,7 @@ class EventStreamUploader(
             }
 
         return blockFlow
-            .transform { emit(it.toStreamBlock(hrp, badBlockRange)) }
+            .transform { emit(it.toStreamBlock(hrp, badBlockRange, msgFeeHeight)) }
             .filter { streamBlock ->
                 !streamBlock.blockResult.isNullOrEmpty().also {
                     log.info(
