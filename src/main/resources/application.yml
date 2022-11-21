@@ -6,7 +6,6 @@ aws:
   s3:
     bucket: ${AWS_S3_BUCKET_NAME}
 
-
 ws_node: ${WS_NODE}
 api_host: ${API_HOST}
 bad_block_range: ${ONE_DOT_ELEVEN_BAD_BLOCK_RANGE}
@@ -18,12 +17,6 @@ dbConfig:
   cacheTable: ${CACHE_TABLE}
   dbType: ${DB_TYPE}
   dbMaxConnections: ${DB_MAX_CONNECTIONS}
-  # DynamoDB configuration options:
-  dynamodb:
-    service-metadata-table: ${AWS_DYNAMODB_SERVICE_METADATA_TABLE_NAME}
-    block-batch-table: ${AWS_DYNAMODB_BLOCK_BATCH_TABLE_NAME}
-    block-metadata-table: ${AWS_DYNAMODB_BLOCK_METADATA_TABLE_NAME}
-    dynamoBatchGetItems: ${DYNAMODB_BATCH_GET_ITEM_MAX_ITEMS}
 
 hrp: ${HRP}
 # Event stream-specific configuration options:

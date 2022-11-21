@@ -12,8 +12,7 @@ import io.mockk.mockk
 import tech.figure.aggregate.common.Config
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.UploadResult
-import tech.figure.aggregate.repository.database.dynamo.WriteResult
-import tech.figure.aggregate.repository.database.ravendb.RavenDB
+import tech.figure.aggregate.repository.database.RavenDB
 import tech.figure.aggregate.service.stream.consumers.EventStreamUploader
 import tech.figure.aggregate.service.test.mocks.LocalStackS3
 import tech.figure.aggregate.service.test.mocks.MockAwsClient
@@ -115,7 +114,6 @@ class EventStreamUploaderTests {
                 repository.writeBlockCheckpoint(any())
             } answers {
                 complete = true
-                WriteResult(50, emptyList())
             }
             var inspected1 = false
 
@@ -158,7 +156,6 @@ class EventStreamUploaderTests {
                 repository.writeBlockCheckpoint(any())
             } answers {
                 complete = true
-                WriteResult(50, emptyList())
             }
             var inspected1 = false
 
