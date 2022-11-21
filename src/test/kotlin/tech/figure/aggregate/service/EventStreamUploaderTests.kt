@@ -67,7 +67,7 @@ class EventStreamUploaderTests {
         withOrdered(true)
     )
 
-    val repository = mockk<RavenDB>()
+    val ravenClient = mockk<RavenDB>()
     lateinit var environment: Environment
 
     lateinit var config: Config
@@ -111,7 +111,7 @@ class EventStreamUploaderTests {
         var complete = false
         runBlocking {
             coEvery {
-                repository.writeBlockCheckpoint(any())
+                ravenClient.writeBlockCheckpoint(any())
             } answers {
                 complete = true
             }
@@ -124,7 +124,7 @@ class EventStreamUploaderTests {
                     uploadResults1 = EventStreamUploader(
                         blockFlow,
                         aws,
-                        repository,
+                        ravenClient,
                         options,
                         "tp",
                         Pair(config.badBlockRange[0], config.badBlockRange[1]),
@@ -153,7 +153,7 @@ class EventStreamUploaderTests {
         var complete = false
         runBlocking {
             coEvery {
-                repository.writeBlockCheckpoint(any())
+                ravenClient.writeBlockCheckpoint(any())
             } answers {
                 complete = true
             }
@@ -166,7 +166,7 @@ class EventStreamUploaderTests {
                     uploadResults1 = EventStreamUploader(
                         blockFlow,
                         aws,
-                        repository,
+                        ravenClient,
                         options,
                         "tp",
                         Pair(config.badBlockRange[0], config.badBlockRange[1]),
