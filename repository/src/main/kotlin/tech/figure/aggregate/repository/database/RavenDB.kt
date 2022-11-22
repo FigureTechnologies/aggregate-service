@@ -1,33 +1,33 @@
-package tech.figure.aggregate.repository.database.ravendb
+package tech.figure.aggregate.repository.database
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.block.StreamBlock
-import tech.figure.aggregate.common.models.tx.TxEvent
 import tech.figure.aggregate.repository.RepositoryBase
-import tech.figure.aggregate.repository.database.dynamo.WriteResult
 import tech.figure.aggregate.repository.model.l2cache.BlockMetadata
 import tech.figure.aggregate.repository.model.l2cache.Tx
 import tech.figure.aggregate.repository.model.checkpoint.BlockHeightCheckpoint
-import tech.figure.aggregate.repository.model.toDecodedAttributes
 import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
 import io.provenance.eventstream.stream.models.extensions.hash
 import io.provenance.eventstream.stream.models.extensions.txHashes
 import net.ravendb.client.documents.DocumentStore
 import net.ravendb.client.documents.session.IDocumentSession
+import tech.figure.aggregate.common.DBConfig
+import tech.figure.aggregate.common.models.tx.TxEvent
 import tech.figure.aggregate.repository.model.TxEvents
+import tech.figure.aggregate.repository.model.toDecodedAttributes
 
-open class RavenDB(addr: String?, dbName: String?, maxConnections: Int): RepositoryBase {
+open class RavenDB(dbConfig: DBConfig): RepositoryBase {
 
     companion object {
         const val CHECKPOINT_ID = "BlockHeightCheckpoint"
     }
 
-    private val store = DocumentStore(addr, dbName).also { it.conventions.maxNumberOfRequestsPerSession = maxConnections }.initialize()
+    private val store = DocumentStore(dbConfig.addr, dbConfig.dbName).also { it.conventions.maxNumberOfRequestsPerSession = dbConfig.dbMaxConnections }.initialize()
     private val log = logger()
 
-    override suspend fun writeBlockCheckpoint(blockHeight: Long): WriteResult {
+    override suspend fun writeBlockCheckpoint(blockHeight: Long) {
         val session = openSession()
         val height = session.load(BlockHeightCheckpoint::class.java, CHECKPOINT_ID)
         if(height == null) {
@@ -39,8 +39,6 @@ open class RavenDB(addr: String?, dbName: String?, maxConnections: Int): Reposit
             height.blockHeight = blockHeight
         }
         saveChanges(session)
-
-        return WriteResult.empty()
     }
 
     override suspend fun getBlockCheckpoint(): Long? = openSession().load(BlockHeightCheckpoint::class.java, CHECKPOINT_ID)?.blockHeight

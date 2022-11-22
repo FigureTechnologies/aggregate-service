@@ -19,7 +19,6 @@ import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.UploadResult
 import tech.figure.aggregate.common.models.toStreamBlock
 import io.provenance.eventstream.stream.models.extensions.dateTime
-import tech.figure.aggregate.repository.factory.RepositoryFactory
 import tech.figure.aggregate.service.stream.consumers.EventStreamUploader
 import io.provenance.eventstream.config.Environment
 import io.provenance.eventstream.decoder.moshiDecoderAdapter
@@ -40,6 +39,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.transform
 import org.slf4j.Logger
+import tech.figure.aggregate.repository.database.RavenDB
 import java.util.Properties
 import kotlin.time.Duration
 
@@ -161,7 +161,7 @@ fun main(args: Array<String>) {
 
     val netAdapter = okHttpNetAdapter(config.wsNode)
     val aws: AwsClient = AwsClient.create(environment, config.aws.s3)
-    val repository = RepositoryFactory(config.dbConfig).dbInstance()
+    val ravenClient = RavenDB(config.dbConfig)
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
         NonBlockingStatsDClientBuilder()
@@ -197,7 +197,7 @@ fun main(args: Array<String>) {
         // Update DataDog with the latest historical block height every minute:
         launch {
             while (true) {
-                repository.getBlockCheckpoint()
+                ravenClient.getBlockCheckpoint()
                     .also { log.info("Maximum block height: ${it ?: "--"}") }
                     ?.let(dogStatsClient::recordMaxBlockHeight)
                     ?.getOrElse { log.error("DD metric failure", it) }
@@ -221,7 +221,7 @@ fun main(args: Array<String>) {
         // will be chosen as the starting height
 
         val fromHeightGetter: suspend () -> Long? = {
-            var maxHistoricalHeight: Long? =  repository.getBlockCheckpoint()
+            var maxHistoricalHeight: Long? =  ravenClient.getBlockCheckpoint()
             log.info("Start :: historical max block height = $maxHistoricalHeight")
             if (restart) {
                 if (maxHistoricalHeight == null) {
@@ -292,7 +292,7 @@ fun main(args: Array<String>) {
             EventStreamUploader(
                 blockFlow,
                 aws,
-                repository,
+                ravenClient,
                 options,
                 config.hrp,
                 Pair(config.badBlockRange[0], config.badBlockRange[1]),

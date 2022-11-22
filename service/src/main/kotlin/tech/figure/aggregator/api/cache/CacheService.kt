@@ -8,7 +8,7 @@ import tech.figure.aggregator.api.service.AccountService
 import tech.figure.aggregator.api.snowflake.SnowflakeJDBC
 import tech.figure.aggregate.common.DBConfig
 import tech.figure.aggregate.common.logger
-import tech.figure.aggregate.repository.database.ravendb.RavenDB
+import tech.figure.aggregate.repository.database.RavenDB
 import net.ravendb.client.Constants
 import net.ravendb.client.documents.session.IDocumentSession
 import net.snowflake.client.jdbc.internal.joda.time.DateTime
@@ -22,9 +22,7 @@ class CacheService(
     private val dwUri: String,
     private val config: DBConfig
 ): RavenDB(
-    config.addr,
-    config.cacheTable,
-    config.dbMaxConnections
+   config
 ) {
 
     private val log = logger()

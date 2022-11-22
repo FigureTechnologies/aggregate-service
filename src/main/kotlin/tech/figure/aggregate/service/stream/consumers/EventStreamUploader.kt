@@ -1,7 +1,6 @@
 package tech.figure.aggregate.service.stream.consumers
 
 import tech.figure.aggregate.common.aws.AwsClient
-import tech.figure.aggregate.repository.database.dynamo.BlockBatch
 import tech.figure.aggregate.common.aws.s3.S3Key
 import tech.figure.aggregate.common.aws.s3.StreamableObject
 import tech.figure.aggregate.common.aws.s3.client.S3Client
@@ -11,7 +10,6 @@ import tech.figure.aggregate.common.models.UploadResult
 import tech.figure.aggregate.common.models.dateTime
 import tech.figure.aggregate.common.models.toStreamBlock
 import io.provenance.eventstream.stream.BlockStreamOptions
-import tech.figure.aggregate.repository.RepositoryBase
 import tech.figure.aggregate.service.flow.extensions.chunked
 import tech.figure.aggregate.service.stream.batch.Batch
 import tech.figure.aggregate.service.stream.extractors.Extractor
@@ -25,6 +23,7 @@ import kotlinx.coroutines.flow.*
 import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import tech.figure.aggregate.common.models.BatchId
+import tech.figure.aggregate.repository.database.RavenDB
 import java.time.OffsetDateTime
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.seconds
@@ -45,7 +44,7 @@ import kotlin.time.ExperimentalTime
 class EventStreamUploader(
     private val blockFlow: Flow<BlockData>,
     private val aws: AwsClient,
-    private val repository: RepositoryBase?,
+    private val ravenClient: RavenDB,
     private val options: BlockStreamOptions,
     private val hrp: String,
     private val badBlockRange: Pair<Long, Long>,
@@ -205,7 +204,7 @@ class EventStreamUploader(
                                         val lowestBlockHeight = streamBlocks.first().height
 
                                         if (putResponse.sdkHttpResponse().isSuccessful) {
-                                            repository?.writeBlockCheckpoint(highestBlockHeight!!)
+                                            ravenClient.writeBlockCheckpoint(highestBlockHeight!!)
                                                 .also {
                                                     log.info("Checkpoint::Updating max block height to = $highestBlockHeight")
                                                 }
@@ -232,7 +231,6 @@ class EventStreamUploader(
 
                 // Mark the blocks as having been processed:
                 val s3Keys = uploaded.map { it.s3Key }
-                val blockBatch = BlockBatch(batch.id, aws.s3Config.bucket, s3Keys)
 
                 //  At this point, signal success by emitting results:
                 emitAll(uploaded.asFlow())
