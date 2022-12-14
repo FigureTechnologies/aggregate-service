@@ -7,6 +7,7 @@ import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
 import com.sksamuel.hoplite.sources.EnvironmentVariablesPropertySource
 import com.timgroup.statsd.NoOpStatsDClient
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
+import io.grpc.LoadBalancerRegistry
 import io.ktor.application.install
 import io.ktor.routing.Routing
 import io.ktor.server.engine.embeddedServer
@@ -55,6 +56,9 @@ private fun installShutdownHook(log: Logger): Channel<Unit> {
 @OptIn(FlowPreview::class, kotlin.time.ExperimentalTime::class)
 @ExperimentalCoroutinesApi
 fun main(args: Array<String>) {
+
+    LoadBalancerRegistry.getDefaultRegistry().getProvider("pick_first")
+
     /**
      * All configuration options can be overridden via environment variables:
      *
