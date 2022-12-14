@@ -17,17 +17,19 @@ class TxFees: CSVFileExtractor(
 ) {
 
     override suspend fun extract(block: StreamBlock) {
-        for (event in block.txEvents) {
-            if(event.eventType == "transfer" || event.eventType == "ERROR") {
-                syncWriteRecord(
-                    event.txHash,
-                    event.blockHeight,
-                    event.blockDateTime,
-                    event.fee.fee,
-                    event.fee.denom,
-                    event.fee.signerInfo?.incurrAddr, // wallet addr that is paying the fee
-                    includeHash = true
-                )
+        for (blockTxData in block.blockTxData) {
+            for(event in blockTxData.events) {
+                if(event.eventType == "transfer" || event.eventType == "ERROR") {
+                    syncWriteRecord(
+                        event.txHash,
+                        event.blockHeight,
+                        event.blockDateTime,
+                        blockTxData.fee.fee,
+                        blockTxData.fee.denom,
+                        blockTxData.fee.signerInfo?.incurrAddr,
+                        includeHash = true
+                    )
+                }
             }
         }
     }

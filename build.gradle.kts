@@ -14,8 +14,6 @@ group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
-val TENDERMINT_OPENAPI_YAML = "$rootDir/src/main/resources/tendermint-v0.34.12-rpc-openapi-FIXED.yaml"
-
 repositories {
     mavenCentral()
     maven( url = "https://jitpack.io")
@@ -29,7 +27,6 @@ dependencies {
     implementation(libs.ktor.core)
     implementation(libs.ktor.netty)
 
-    implementation(libs.bundles.eventstream)
     implementation(libs.bundles.kotlin)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.kotlin.testcoroutines)
@@ -47,6 +44,9 @@ dependencies {
     implementation(platform(libs.aws.bom))
     implementation(libs.bundles.aws)
     implementation(libs.localstack)
+
+    implementation(libs.blockapi.client)
+    implementation(libs.blockapi.proto)
 }
 
 sourceSets {

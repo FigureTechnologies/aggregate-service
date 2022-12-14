@@ -1,9 +1,8 @@
 package tech.figure.aggregate.common.models.tx
 
 import com.squareup.moshi.JsonClass
-import tech.figure.aggregate.common.models.fee.Fee
+import tech.figure.aggregate.common.models.Event
 import tech.figure.aggregate.common.models.block.EncodedBlockchainEvent
-import io.provenance.eventstream.stream.models.Event
 import java.time.OffsetDateTime
 
 /**
@@ -16,6 +15,5 @@ data class TxEvent(
     val blockDateTime: OffsetDateTime?,
     val txHash: String,
     override val eventType: String?,
-    override val attributes: List<Event>,
-    val fee: Fee
+    override val attributes: List<Event>
 ) : EncodedBlockchainEvent

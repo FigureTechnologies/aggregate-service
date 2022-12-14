@@ -23,27 +23,29 @@ class TxMarkerTransfer : CSVFileExtractor(
     )
 ) {
     override suspend fun extract(block: StreamBlock) {
-        for (event in block.txEvents) {
-            EventMarker.mapper.fromEvent(event)
-                ?.let { record: EventMarker ->
-                    when (record) {
-                        is EventMarker.Transfer ->
-                            syncWriteRecord(
-                                event.eventType,
-                                event.blockHeight,
-                                event.blockDateTime?.toISOString(),
-                                record.amount,
-                                record.denom,
-                                record.administrator,
-                                record.toAddress,
-                                record.fromAddress,
-                                includeHash = true
-                            )
-                        else -> {
-                            // noop
+        for (blockTxData in block.blockTxData) {
+            for(event in blockTxData.events) {
+                EventMarker.mapper.fromEvent(event)
+                    ?.let { record: EventMarker ->
+                        when (record) {
+                            is EventMarker.Transfer ->
+                                syncWriteRecord(
+                                    event.eventType,
+                                    event.blockHeight,
+                                    event.blockDateTime?.toISOString(),
+                                    record.amount,
+                                    record.denom,
+                                    record.administrator,
+                                    record.toAddress,
+                                    record.fromAddress,
+                                    includeHash = true
+                                )
+                            else -> {
+                                // noop
+                            }
                         }
                     }
-                }
+            }
         }
     }
 }

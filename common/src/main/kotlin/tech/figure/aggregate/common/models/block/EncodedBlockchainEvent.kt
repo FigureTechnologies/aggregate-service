@@ -1,7 +1,6 @@
 package tech.figure.aggregate.common.models.block
 
-import io.provenance.eventstream.stream.models.Event
-import java.util.Base64
+import tech.figure.aggregate.common.models.Event
 
 /**
  * Common interface for various blockchain event types that are encoded as an event type followed by a series of
@@ -109,5 +108,5 @@ interface EncodedBlockchainEvent {
  *   }
  */
 fun List<Event>.toDecodedMap(): Map<String, String?> = associate { e ->
-    Base64.getDecoder().decode(e.key).decodeToString() to e.value
+    e.key to e.value
 }

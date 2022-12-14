@@ -1,12 +1,12 @@
 package tech.figure.aggregate.service.stream.batch
 
-import tech.figure.aggregate.common.models.block.StreamBlock
-import io.provenance.eventstream.coroutines.DispatcherProvider
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.BatchId
+import tech.figure.aggregate.common.models.block.StreamBlock
+import tech.figure.aggregate.service.DispatcherProvider
 import tech.figure.aggregate.service.stream.extractors.Extractor
 import java.io.Closeable
 import kotlin.reflect.KClass

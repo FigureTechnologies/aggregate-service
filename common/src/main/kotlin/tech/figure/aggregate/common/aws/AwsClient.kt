@@ -4,7 +4,6 @@ import tech.figure.aggregate.common.S3Config
 import tech.figure.aggregate.common.aws.s3.client.DefaultS3Client
 import tech.figure.aggregate.common.aws.s3.client.S3Client
 import tech.figure.aggregate.common.logger
-import io.provenance.eventstream.config.Environment
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
@@ -30,13 +29,7 @@ abstract class AwsClient(val s3Config: S3Config, val region: String? = null) {
     companion object {
         val DEFAULT_REGION: Region = Region.US_EAST_1
 
-        fun create(environment: Environment, s3Config: S3Config): AwsClient {
-            return when (environment) {
-                Environment.local -> LocalStackAwsClient(s3Config)
-                Environment.development -> DefaultAwsClient(s3Config)
-                Environment.production -> DefaultAwsClient(s3Config)
-            }
-        }
+        fun create(s3Config: S3Config): AwsClient = DefaultAwsClient(s3Config)
     }
 
     private val log = logger()

@@ -18,6 +18,11 @@ dbConfig:
   dbType: ${DB_TYPE}
   dbMaxConnections: ${DB_MAX_CONNECTIONS}
 
+block-api:
+  host: ${BLOCK_API_HOST}
+  port: ${BLOCK_API_PORT}
+  apiKey: ${BLOCK_API_API_KEY}
+
 hrp: ${HRP}
 # Event stream-specific configuration options:
 event-stream:

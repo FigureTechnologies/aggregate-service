@@ -17,18 +17,7 @@ import tech.figure.aggregate.common.recordMaxBlockHeight
 import tech.figure.aggregate.common.unwrapEnvOrError
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.UploadResult
-import tech.figure.aggregate.common.models.toStreamBlock
-import io.provenance.eventstream.stream.models.extensions.dateTime
 import tech.figure.aggregate.service.stream.consumers.EventStreamUploader
-import io.provenance.eventstream.config.Environment
-import io.provenance.eventstream.decoder.moshiDecoderAdapter
-import io.provenance.eventstream.extensions.repeatDecodeBase64
-import io.provenance.eventstream.flow.extensions.cancelOnSignal
-import io.provenance.eventstream.net.okHttpNetAdapter
-import io.provenance.eventstream.stream.*
-import io.provenance.eventstream.stream.clients.BlockData
-import io.provenance.eventstream.stream.flows.blockDataFlow
-import io.provenance.eventstream.utils.colors.green
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.default
@@ -36,10 +25,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.transform
 import org.slf4j.Logger
+import tech.figure.aggregate.common.Environment
 import tech.figure.aggregate.repository.database.RavenDB
+import tech.figure.aggregate.service.flow.extensions.cancelOnSignal
+import tech.figure.block.api.client.BlockAPIClient
+import tech.figure.block.api.proto.BlockServiceOuterClass
+import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
 import java.util.Properties
 import kotlin.time.Duration
 
@@ -87,22 +79,11 @@ fun main(args: Array<String>) {
     val toHeight by parser.option(
         ArgType.Int, fullName = "to", description = "Fetch blocks up to height, inclusive"
     )
-    val observe by parser.option(
-        ArgType.Boolean, fullName = "observe", description = "Observe blocks instead of upload"
-    ).default(false)
     val restart by parser.option(
         ArgType.Boolean,
         fullName = "restart",
         description = "Restart processing blocks from the last maximum historical block height recorded"
     ).default(false)
-    val verbose by parser.option(
-        ArgType.Boolean, shortName = "v", fullName = "verbose", description = "Enables verbose output"
-    ).default(false)
-    val ordered by parser.option(
-        ArgType.Boolean,
-        fullName = "ordered",
-        description = "Stream from the event stream in order"
-    ).default(true)
     val skipIfEmpty by parser.option(
         ArgType.Choice(listOf(false, true), { it.toBooleanStrict() }),
         fullName = "skip-if-empty",
@@ -159,8 +140,8 @@ fun main(args: Array<String>) {
 
     val log = "main".logger()
 
-    val netAdapter = okHttpNetAdapter(config.wsNode)
-    val aws: AwsClient = AwsClient.create(environment, config.aws.s3)
+    val blockApiClient = BlockAPIClient(config.blockApi.apiKey, config.blockApi.host, config.blockApi.port)
+    val aws: AwsClient = AwsClient.create(config.aws.s3)
     val ravenClient = RavenDB(config.dbConfig)
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
@@ -205,95 +186,21 @@ fun main(args: Array<String>) {
             }
         }
 
-        // This function will be used by the event stream to determine the current maximum historical block height.
-        // It will be called at the start of the event stream, as well as any time the event stream has to be restarted.
-        // In the event of restart, if progress was made on the maximum block height since the stream was initialized,
-        // we need to compute the updated max starting height on demand to know where to start again, rather than in the
-        // past.
-        //
-        // Regarding how this is computed:
-        //   Figure out if there's a maximum historical block height that's been seen already.
-        //   - If `--restart` is provided and a max height was found, try to start from there.
-        //   - If no height exists, `--restart` implies that the caller is interested in historical blocks,
-        //     so issue a warning and start at 1.
-        //
-        // Note: `--restart` can be combined with `--from=HEIGHT`. If both are given, the maximum value
-        // will be chosen as the starting height
-
-        val fromHeightGetter: suspend () -> Long? = {
-            var maxHistoricalHeight: Long? =  ravenClient.getBlockCheckpoint()
-            log.info("Start :: historical max block height = $maxHistoricalHeight")
-            if (restart) {
-                if (maxHistoricalHeight == null) {
-                    log.warn("No historical max block height found; defaulting to 1")
-                } else {
-                    log.info("Restarting from historical max block height: ${maxHistoricalHeight + 1}")
-                    // maxHistoricalHeight is last successful processed, to prevent processing this block height again
-                    // we need to increment.
-                    maxHistoricalHeight += 1
-                }
-                log.info(
-                    "--restart: true, starting block height at: ${
-                        maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
-                    } }"
-                )
-                maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
-            } else {
-                log.info("--restart: false, starting from block height ${fromHeight?.toLong()}")
-                fromHeight?.toLong()
-            }
-        }
-
-        val options = BlockStreamOptions.create(
-            withFromHeight(fromHeightGetter()),
-            withToHeight(toHeight?.toLong()),
-            withSkipEmptyBlocks(skipIfEmpty),
-            withOrdered(ordered)
-        )
-
         // start api
         async {
-            embeddedServer(Netty, port=8080) {
+            embeddedServer(Netty, port=8081) {
                 install(Routing) {
                     configureRouting(properties, dwUri, config.dbConfig, config.apiHost)
                 }
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockData> = blockDataFlow(netAdapter, moshiDecoderAdapter(), from = fromHeightGetter(), to = options.toHeight)
-        if (observe) {
-            blockFlow
-                .transform { emit(it.toStreamBlock(config.hrp, Pair(config.badBlockRange[0], config.badBlockRange[1]), config.msgFeeHeight)) }
-                .onEach {
-                    val text = "Block: ${it.block.header?.height ?: "--"}:${it.block.header?.dateTime()?.toLocalDate()}"
-                    println(green(text))
-                    if (verbose) {
-                        for (event in it.blockEvents) {
-                            println("  Block-Event: ${event.eventType}")
-                            for (attr in event.attributes) {
-                                println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
-                            }
-                        }
-                        for (event in it.txEvents) {
-                            println(" Tx-Event: ${event.eventType}")
-                            for (attr in event.attributes) {
-                                println("    ${attr.key?.repeatDecodeBase64()}: ${attr.value?.repeatDecodeBase64()}")
-                            }
-                        }
-                    }
-                }
-        } else {
-            if (config.upload.extractors.isNotEmpty()) {
-                log.info("upload: adding extractors")
-                for (event in config.upload.extractors) {
-                    log.info(" - $event")
-                }
-            }
+        //val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeight?.toLong() ?: 1, PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(448484, PREFER.TX_EVENTS)
             EventStreamUploader(
                 blockFlow,
                 aws,
                 ravenClient,
-                options,
                 config.hrp,
                 Pair(config.badBlockRange[0], config.badBlockRange[1]),
                 config.msgFeeHeight
@@ -310,6 +217,5 @@ fun main(args: Array<String>) {
                     )
                 }
         }
-    }
 }
 
