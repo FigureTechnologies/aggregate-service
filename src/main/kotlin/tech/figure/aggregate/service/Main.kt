@@ -8,6 +8,7 @@ import com.sksamuel.hoplite.sources.EnvironmentVariablesPropertySource
 import com.timgroup.statsd.NoOpStatsDClient
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
 import io.grpc.LoadBalancerRegistry
+import io.grpc.StatusException
 import io.ktor.application.install
 import io.ktor.routing.Routing
 import io.ktor.server.engine.embeddedServer
@@ -36,6 +37,8 @@ import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
 import java.util.Properties
 import kotlin.time.Duration
 import io.grpc.internal.PickFirstLoadBalancerProvider
+import kotlinx.coroutines.flow.retryWhen
+import tech.figure.aggregate.common.utils.backoff
 
 /**
  * Installs a shutdown a handler to clean up resources when the returned Channel receives its one (and only) element.
@@ -191,16 +194,40 @@ fun main(args: Array<String>) {
             }
         }
 
+        val fromHeightGetter: suspend () -> Long? = {
+            var maxHistoricalHeight: Long? =  ravenClient.getBlockCheckpoint()
+            log.info("Start :: historical max block height = $maxHistoricalHeight")
+            if (restart) {
+                if (maxHistoricalHeight == null) {
+                    log.warn("No historical max block height found; defaulting to 1")
+                } else {
+                    log.info("Restarting from historical max block height: ${maxHistoricalHeight + 1}")
+                    // maxHistoricalHeight is last successful processed, to prevent processing this block height again
+                    // we need to increment.
+                    maxHistoricalHeight += 1
+                }
+                log.info(
+                    "--restart: true, starting block height at: ${
+                        maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
+                    } }"
+                )
+                maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
+            } else {
+                log.info("--restart: false, starting from block height ${fromHeight?.toLong()}")
+                fromHeight?.toLong()
+            }
+        }
+
         // start api
         async {
-            embeddedServer(Netty, port=8080) {
+            embeddedServer(Netty, port=8081) {
                 install(Routing) {
                     configureRouting(properties, dwUri, config.dbConfig, config.apiHost)
                 }
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(1, PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter() ?: 1, PREFER.TX_EVENTS)
             EventStreamUploader(
                 blockFlow,
                 aws,
@@ -212,6 +239,16 @@ fun main(args: Array<String>) {
                 .addExtractor(config.upload.extractors)
                 .upload()
                 .cancelOnSignal(shutDownSignal)
+                .retryWhen{ cause: Throwable, attempt: Long ->
+                    when(cause) {
+                        is StatusException -> {
+                            val duration = backoff(attempt, jitter = false)
+                            log.error("Reconnect attempt #$attempt; waiting ${duration.inWholeSeconds}s before trying again: $cause")
+                            delay(duration)
+                            true
+                        } else -> false
+                    }
+                }
                 .collect { result: UploadResult ->
                     log.info(
                         "uploaded #${result.batchId} => \n" +
