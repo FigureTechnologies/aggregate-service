@@ -1,5 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 plugins {
     kotlin("jvm")
     kotlin("kapt")
@@ -10,7 +8,6 @@ plugins {
     signing
     `maven-publish`
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
-    id("com.github.johnrengelman.shadow") version "7.0.0"
 }
 
 group = "tech.figure.aggregate"
@@ -50,6 +47,8 @@ dependencies {
 
     implementation(libs.blockapi.client)
     implementation(libs.blockapi.proto)
+
+    implementation("io.grpc:grpc-core:1.51.0")
 }
 
 sourceSets {
@@ -88,10 +87,6 @@ tasks.compileTestKotlin {
     }
 }
 
-tasks.withType<ShadowJar> {
-    mergeServiceFiles()
-}
-
 tasks.withType<Jar> {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
@@ -105,7 +100,7 @@ tasks.withType<Jar> {
         configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }
     })
 
-    //exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
 }
 
 nexusPublishing {

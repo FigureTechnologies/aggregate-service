@@ -35,6 +35,7 @@ import tech.figure.block.api.proto.BlockServiceOuterClass
 import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
 import java.util.Properties
 import kotlin.time.Duration
+import io.grpc.internal.PickFirstLoadBalancerProvider
 
 /**
  * Installs a shutdown a handler to clean up resources when the returned Channel receives its one (and only) element.
@@ -57,7 +58,7 @@ private fun installShutdownHook(log: Logger): Channel<Unit> {
 @ExperimentalCoroutinesApi
 fun main(args: Array<String>) {
 
-    LoadBalancerRegistry.getDefaultRegistry().getProvider("pick_first")
+    LoadBalancerRegistry.getDefaultRegistry().register(PickFirstLoadBalancerProvider())
 
     /**
      * All configuration options can be overridden via environment variables:
