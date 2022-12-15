@@ -200,7 +200,7 @@ fun main(args: Array<String>) {
         }
 
         //val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeight?.toLong() ?: 1, PREFER.TX_EVENTS)
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(448484, PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(1, PREFER.TX_EVENTS)
             EventStreamUploader(
                 blockFlow,
                 aws,

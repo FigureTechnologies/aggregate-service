@@ -146,13 +146,7 @@ fun List<BlockOuterClass.Transaction>.blockEvents(blockDateTime: OffsetDateTime?
     }
 }
 
-fun BlockServiceOuterClass.BlockStreamResult.toJson() {
-    val jsonResult = Gson().toJson(this)
-    println(jsonResult)
-}
-
 fun BlockStreamResult.toStreamBlock(hrp: String, badBlockRange: Pair<Long, Long>, msgBaseFeeHeight: Long): StreamBlock {
-    this.toJson()
     val blockDateTime = this.blockResult.block.time.toOffsetDateTime()
     val blockTxData = this.blockResult.block.transactionsList.blockEvents(blockDateTime, badBlockRange, msgBaseFeeHeight)
     val block = this.blockResult.block
