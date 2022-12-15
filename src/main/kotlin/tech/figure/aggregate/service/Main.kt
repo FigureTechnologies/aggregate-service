@@ -193,7 +193,7 @@ fun main(args: Array<String>) {
 
         // start api
         async {
-            embeddedServer(Netty, port=8081) {
+            embeddedServer(Netty, port=8080) {
                 install(Routing) {
                     configureRouting(properties, dwUri, config.dbConfig, config.apiHost)
                 }
