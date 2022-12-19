@@ -41,5 +41,6 @@ data class DBConfig(
 data class BlockApiConfig(
     val host: String,
     val port: Int,
-    val apiKey: String
+    val apiKey: String,
+    val maxBlockSize: Int
 )

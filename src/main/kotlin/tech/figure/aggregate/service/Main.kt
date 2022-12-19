@@ -39,6 +39,10 @@ import kotlin.time.Duration
 import io.grpc.internal.PickFirstLoadBalancerProvider
 import kotlinx.coroutines.flow.retryWhen
 import tech.figure.aggregate.common.utils.backoff
+import tech.figure.block.api.client.GRPCConfigOpt
+import tech.figure.block.api.client.Protocol.TLS
+import tech.figure.block.api.client.withApiKey
+import tech.figure.block.api.client.withProtocol
 
 /**
  * Installs a shutdown a handler to clean up resources when the returned Channel receives its one (and only) element.
@@ -55,6 +59,10 @@ private fun installShutdownHook(log: Logger): Channel<Unit> {
         }
     })
     return signal
+}
+
+private fun withManagedChannelConfig(maxBlockSize: Int): GRPCConfigOpt = {
+    channel.maxInboundMessageSize(maxBlockSize)
 }
 
 @OptIn(FlowPreview::class, kotlin.time.ExperimentalTime::class)
@@ -148,7 +156,14 @@ fun main(args: Array<String>) {
 
     val log = "main".logger()
 
-    val blockApiClient = BlockAPIClient(config.blockApi.apiKey, config.blockApi.host, config.blockApi.port)
+    val blockApiClient = BlockAPIClient(
+        config.blockApi.host,
+        config.blockApi.port,
+        withProtocol(TLS),
+        withApiKey(config.blockApi.apiKey),
+        withManagedChannelConfig(config.blockApi.maxBlockSize)
+    )
+
     val aws: AwsClient = AwsClient.create(config.aws.s3)
     val ravenClient = RavenDB(config.dbConfig)
     val dogStatsClient = if (ddEnabled) {
@@ -227,7 +242,7 @@ fun main(args: Array<String>) {
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter() ?: 1, PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(2270400, PREFER.TX_EVENTS)
             EventStreamUploader(
                 blockFlow,
                 aws,
