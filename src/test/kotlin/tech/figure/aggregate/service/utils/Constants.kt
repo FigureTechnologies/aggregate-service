@@ -1,7 +1,6 @@
 package tech.figure.aggregate.service.test.utils
 
 
-import io.provenance.eventstream.stream.EventStream
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /***********************************************************************************************************************
@@ -35,11 +34,6 @@ const val EXPECTED_EMPTY_BLOCKS: Long = EXPECTED_TOTAL_BLOCKS - EXPECTED_NONEMPT
 const val BATCH_SIZE: Int = 4
 
 val heights: List<Long> = (MIN_HISTORICAL_BLOCK_HEIGHT..MAX_HISTORICAL_BLOCK_HEIGHT).toList() + (MIN_LIVE_BLOCK_HEIGHT..MAX_LIVE_BLOCK_HEIGHT).toList()
-
-@OptIn(ExperimentalCoroutinesApi::class)
-val heightChunks: List<Pair<Long, Long>> = heights
-    .chunked(EventStream.TENDERMINT_MAX_QUERY_RANGE)
-    .map { Pair(it.minOrNull()!!, it.maxOrNull()!!) }
 
 /***********************************************************************************************************************
  * AWS

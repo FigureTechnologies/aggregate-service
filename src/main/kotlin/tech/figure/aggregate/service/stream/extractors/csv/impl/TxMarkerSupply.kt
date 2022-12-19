@@ -30,32 +30,34 @@ class TxMarkerSupply : CSVFileExtractor(
     )
 ) {
     override suspend fun extract(block: StreamBlock) {
-        for (event in block.txEvents) {
-            EventMarker.mapper.fromEvent(event)
-                ?.toEventRecord()
-                ?.let { record ->
-                    // All transfers are processed by `TxMarkerTransfer`
-                    if (!record.isTransfer()) {
-                        syncWriteRecord(
-                            event.eventType,
-                            event.blockHeight,
-                            event.blockDateTime?.toISOString(),
-                            record.coins,
-                            record.denom,
-                            record.amount,
-                            record.administrator,
-                            record.toAddress,
-                            record.fromAddress,
-                            record.metadataBase,
-                            record.metadataDescription,
-                            record.metadataDisplay,
-                            record.metadataDenomUnits,
-                            record.metadataName,
-                            record.metadataSymbol,
-                            includeHash = true
-                        )
+        for (txData in block.blockTxData) {
+            for(event in txData.events) {
+                EventMarker.mapper.fromEvent(event)
+                    ?.toEventRecord()
+                    ?.let { record ->
+                        // All transfers are processed by `TxMarkerTransfer`
+                        if (!record.isTransfer()) {
+                            syncWriteRecord(
+                                event.eventType,
+                                event.blockHeight,
+                                event.blockDateTime?.toISOString(),
+                                record.coins,
+                                record.denom,
+                                record.amount,
+                                record.administrator,
+                                record.toAddress,
+                                record.fromAddress,
+                                record.metadataBase,
+                                record.metadataDescription,
+                                record.metadataDisplay,
+                                record.metadataDenomUnits,
+                                record.metadataName,
+                                record.metadataSymbol,
+                                includeHash = true
+                            )
+                        }
                     }
-                }
+            }
         }
     }
 }

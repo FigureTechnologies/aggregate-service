@@ -1,4 +1,5 @@
 [versions]
+blockApi = "0.1.8"
 eventStream = "0.6.3"
 kotlinxCore = "1.5.2"
 kotlinxCli = "0.3.3"
@@ -39,6 +40,8 @@ pluginNexusPublishPlugin = "1.1.0"
 pluginOpenAPI = "5.2.1"
 
 [libraries]
+blockapi-proto = { module = "tech.figure.block:api-proto", version.ref = "blockApi" }
+blockapi-client = { module = "tech.figure.block:api-client", version.ref = "blockApi" }
 es-model = { module = "io.provenance.eventstream:es-api-model", version.ref = "eventStream" }
 es-api = { module = "io.provenance.eventstream:es-api", version.ref = "eventStream" }
 es-core = { module = "io.provenance.eventstream:es-core", version.ref = "eventStream" }
@@ -138,3 +141,4 @@ scarlet = ["scarlet-core", "scarlet-stream", "scarlet-websocket", "scarlet-moshi
 logback = ["logback-core", "logback-classic"]
 aws = ["aws-netty", "aws-s3", "aws-dynamodb", "aws-dynamodb-enhanced"]
 hoplite = ["hoplite-core", "hoplite-yaml"]
+blockapi = ["blockapi-proto", "blockapi-client"]

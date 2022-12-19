@@ -4,38 +4,23 @@ import com.google.common.io.BaseEncoding
 import com.google.gson.Gson
 import cosmos.crypto.secp256k1.Keys
 import cosmos.tx.v1beta1.TxOuterClass
-import tech.figure.aggregate.common.decodeBase64
-import tech.figure.aggregate.common.hash
-import tech.figure.aggregate.common.models.block.StreamBlockImpl
-import tech.figure.aggregate.common.models.block.BlockEvent
-import tech.figure.aggregate.common.models.tx.TxError
+import io.provenance.client.protobuf.extensions.time.toOffsetDateTime
+import tech.figure.aggregate.common.models.block.BlockTxData
 import tech.figure.aggregate.common.models.tx.TxEvent
-import tech.figure.aggregate.common.models.tx.TxInfo
-import io.provenance.eventstream.stream.models.Block
-import io.provenance.eventstream.stream.models.BlockHeader
-import io.provenance.eventstream.stream.models.BlockResultsResponseResult
-import io.provenance.eventstream.stream.models.BlockResultsResponseResultTxsResults
-import io.provenance.eventstream.stream.models.BlockResultsResponseResultEvents
-import io.provenance.eventstream.stream.models.BlockResultsResponse
-import io.provenance.eventstream.stream.clients.BlockData
-import io.provenance.eventstream.stream.models.Event
 import io.provenance.hdwallet.bech32.toBech32
 import io.provenance.hdwallet.common.hashing.sha256hash160
+import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.common.models.fee.Fee
 import tech.figure.aggregate.common.models.fee.SignerInfo
-import tech.figure.aggregate.common.repeatDecodeBase64
+import tech.figure.block.api.proto.BlockOuterClass
+import tech.figure.block.api.proto.BlockServiceOuterClass
+import tech.figure.block.api.proto.BlockServiceOuterClass.BlockStreamResult
 import java.math.BigDecimal
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
-import tendermint.types.Types.Header as GrpcHeader
-import java.time.Instant
-import tendermint.types.BlockOuterClass.Block as GrpcBlock
 import java.time.OffsetDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 // === RPC ========================================================================================================
-
 
 /**
  * Compute a hex-encoded (printable) version of a SHA-256 encoded byte array.
@@ -61,81 +46,6 @@ fun sha256(input: ByteArray?): ByteArray =
  */
 fun String.hash(): String = sha256(BaseEncoding.base64().decode(this)).toHexString()
 
-// === Date/time methods ===============================================================================================
-
-fun Block.txData(index: Int, hrp: String): TxInfo? {
-    val tx = this.data?.txs?.get(index)
-
-    if (tx != null) {
-        val feeInfo = TxOuterClass.Tx.parseFrom(BaseEncoding.base64().decode(tx)).authInfo.fee
-        val amount = feeInfo.amountList.getOrNull(0)?.amount?.toLong()
-        val denom = feeInfo.amountList.getOrNull(0)?.denom
-        val signerAddr = this.data?.txs?.get(index)?.toSignerAddr(hrp) ?: mutableListOf()
-
-        val feeIncurringAddr = when {
-            feeInfo.granter != "" -> feeInfo.granter
-            feeInfo.payer != "" -> feeInfo.payer
-            else -> signerAddr[0]
-        }
-
-        return TxInfo(
-            this.data?.txs?.get(index)?.hash(),
-            Fee(amount, denom, SignerInfo(signerAddr, feeIncurringAddr))
-        )
-    }
-    return null
-}
-
-fun Block.txHashes(): List<String> = this.data?.txs?.map { it.hash() } ?: emptyList()
-
-fun Block.dateTime() = this.header?.dateTime()
-
-fun BlockHeader.dateTime(): OffsetDateTime? =
-    runCatching { OffsetDateTime.parse(this.time, DateTimeFormatter.ISO_DATE_TIME) }.getOrNull()
-
-fun BlockResultsResponseResult.txEvents(blockDateTime: OffsetDateTime?, badBlockRange: Pair<Long, Long>, msgBaseFeeHeight: Long, txHash: (Int) -> TxInfo?): List<TxEvent> =
-    txsResults?.flatMapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
-        val txHashData = txHash(index)
-
-        // 1.11 bug - fees were not properly swept [0] - lower, [1] - higher
-        val fee = if(height >= badBlockRange.first && height <= badBlockRange.second ) {
-            tx.toBugFee(txHashData?.fee ?: Fee())
-        } else {
-            txHashData?.fee
-        }
-
-        if(tx.code?.toInt() != 0) {
-            // if a tx errored, fee is gas_wanted * 1905 at when msg base fee was introduced.
-            val errorFee = if(msgBaseFeeHeight <= height) {
-                Fee(BigDecimal(tx.gasWanted!!.toLong() * 1905).toLong(), "nhash", fee?.signerInfo)
-            } else {
-                fee
-            }
-           mutableListOf(toTxEvent(height, blockDateTime, txHashData?.txHash, errorFee ?: Fee()))
-        } else {
-            tx.events?.map {
-                it.toTxEvent(height, blockDateTime, txHashData?.txHash, fee = fee ?: Fee())
-            } ?: emptyList()
-        }
-    } ?: emptyList()
-
-fun BlockResultsResponseResultTxsResults.toBugFee(fee: Fee): Fee {
-    var msgBaseFeeList = listOf<MsgFeeAttribute>()
-    this.events?.map { event ->
-        if(event.type?.repeatDecodeBase64() == "provenance.msgfees.v1.EventMsgFees") {
-            event.attributes?.toDecodedMap()?.map { attribute ->
-                msgBaseFeeList = Gson().fromJson(attribute.value?.decodeBase64(), Array<MsgFeeAttribute>::class.java).toList()
-            }
-        }
-    }
-
-    val msgBaseFee = if(msgBaseFeeList.isNotEmpty()) msgBaseFeeList[0].total.toAmountDenom().amount.toLong() else 0L
-
-    // if no msg fee take minimum
-    val minimumFee = BigDecimal(this.gasWanted!!.toLong() * 1905).toLong()
-    return if(msgBaseFee == 0L) Fee(fee = minimumFee, "nhash", fee.signerInfo) else fee
-}
-
 fun String.toAmountDenom(): AmountDenom {
     val amount = StringBuilder(this)
     val denom = StringBuilder()
@@ -158,109 +68,87 @@ fun String.toSignerAddr(hrp: String): List<String> {
     }
 }
 
-fun BlockResultsResponseResult.txErroredEvents(blockDateTime: OffsetDateTime?, txHash: (Int) -> TxInfo?): List<TxError> =
-    txsResults?.filter {
-            (it.code?.toInt() ?: 0) != 0
-        }?.mapIndexed { index: Int, tx: BlockResultsResponseResultTxsResults ->
+fun BlockOuterClass.Fee.toBugFee(events: List<TxEvent>, gasWanted: Long, code: Long, msgBaseFeeHeight: Long): Long {
+    var msgBaseFeeList = listOf<MsgFeeAttribute>()
 
-        // 1.11 bug doesnt apply for errors
-        txHash(index)?.fee
-        tx.toBlockError(height, blockDateTime, txHash(index)?.txHash, fee = txHash(index)?.fee ?: Fee())
-    } ?: emptyList()
+    events.map { event ->
+        if(event.eventType == "provenance.msgfees.v1.EventMsgFees") {
+            event.attributes.map { attribute ->
+                msgBaseFeeList = Gson().fromJson(attribute.value, Array<MsgFeeAttribute>::class.java).toList()
+            }
+        }
+    }
+    val msgBaseFee = if(msgBaseFeeList.isNotEmpty()) msgBaseFeeList[0].total.toAmountDenom().amount.toLong() else 0L
 
-fun BlockResultsResponseResultTxsResults.toBlockError(blockHeight: Long, blockDateTime: OffsetDateTime?, txHash: String?, fee: Fee): TxError =
-    TxError(
-        blockHeight = blockHeight,
-        blockDateTime = blockDateTime,
-        code = this.code?.toLong() ?: 0L,
-        info = this.log ?: "",
-        txHash = txHash ?: "",
-        fee = fee,
-    )
+    //if no msg fee take minimum
+    val minimumFee = BigDecimal(gasWanted * 1905).toLong()
 
-fun toTxEvent(blockHeight: Long, blockDateTime: OffsetDateTime?, txHash: String?, fee: Fee): TxEvent =
-    TxEvent(
-        blockHeight = blockHeight,
-        blockDateTime = blockDateTime,
-        txHash = txHash ?: "",
-        eventType = "ERROR",
-        attributes = emptyList(),
-        fee = fee
-    )
-
-fun BlockResultsResponseResultEvents.toTxEvent(
-    blockHeight: Long,
-    blockDateTime: OffsetDateTime?,
-    txHash: String?,
-    eventType: String? = "",
-    fee: Fee
-): TxEvent =
-    TxEvent(
-        blockHeight = blockHeight,
-        blockDateTime = blockDateTime,
-        txHash = txHash ?: "",
-        eventType = this.type ?: eventType,
-        attributes = this.attributes?.map { event -> Event(event.key,event.value, event.index) } ?: emptyList(),
-        fee = fee
-    )
-
-fun BlockResultsResponse.txEvents(blockDate: OffsetDateTime, badBlockRange: Pair<Long, Long>, msgBaseFeeHeight: Long, txHash: (index: Int) -> TxInfo): List<TxEvent> =
-    this.result.txEvents(blockDate, badBlockRange, msgBaseFeeHeight, txHash)
-
-fun BlockResultsResponseResult.blockEvents(blockDateTime: OffsetDateTime?): List<BlockEvent> =
-    beginBlockEvents?.map { e: BlockResultsResponseResultEvents ->
-        BlockEvent(
-            blockHeight = height,
-            blockDateTime = blockDateTime,
-            eventType = e.type ?: "",
-            attributes = e.attributes?.map { event -> Event(event.key,event.value, event.index) } ?: emptyList()
-        )
-    } ?: emptyList()
-
-fun BlockData.toStreamBlock(hrp: String, badBlockRange: Pair<Long, Long>, msgBaseFeeHeight: Long): StreamBlockImpl {
-    val blockDatetime = block.header?.dateTime()
-    val blockEvents = blockResult.blockEvents(blockDatetime)
-    val blockTxResults = blockResult.txsResults
-    val txEvents = blockResult.txEvents(blockDatetime, badBlockRange, msgBaseFeeHeight) { index: Int -> block.txData(index, hrp) }
-    return StreamBlockImpl(block, blockEvents, blockTxResults, txEvents)
+    return if(msgBaseFee == 0L) minimumFee else this.fee
 }
 
+fun BlockOuterClass.SignerInfo.toSignerInfo(): SignerInfo =
+    SignerInfo(
+        signerAddrs  = this.signerAddrList,
+        incurrAddr = this.incurringAddr
+    )
 
-/**
- * A utility function which converts a list of key/value event attributes like:
- *
- *   [
- *     {
- *       "key": "cmVjb3JkX2FkZHI=",
- *       "value": "InJlY29yZDFxMm0zeGFneDc2dXl2ZzRrN3l2eGM3dWhudWdnOWc2bjBsY2Robm43YXM2YWQ4a3U4Z3ZmdXVnZjZ0aiI="
- *     },
- *     {
- *       "key": "c2Vzc2lvbl9hZGRy",
- *       "value": "InNlc3Npb24xcXhtM3hhZ3g3NnV5dmc0azd5dnhjN3VobnVnMHpwdjl1cTNhdTMzMmsyNzY2NmplMGFxZ2o4Mmt3dWUi"
- *     },
- *     {
- *       "key": "c2NvcGVfYWRkcg==",
- *       "value": "InNjb3BlMXF6bTN4YWd4NzZ1eXZnNGs3eXZ4Yzd1aG51Z3F6ZW1tbTci"
- *     }
- *   ]
- *
- * which have been deserialized in `List<Event>`, into `Map<String, String>`,
- *
- * where keys have been base64 decoded:
- *
- *   {
- *     "record_addr"  to "InJlY29yZDFxMm0zeGFneDc2dXl2ZzRrN3l2eGM3dWhudWdnOWc2bjBsY2Robm43YXM2YWQ4a3U4Z3ZmdXVnZjZ0aiI=",
- *     "session_addr" to "InNlc3Npb24xcXhtM3hhZ3g3NnV5dmc0azd5dnhjN3VobnVnMHpwdjl1cTNhdTMzMmsyNzY2NmplMGFxZ2o4Mmt3dWUi",
- *     "scope_addr"   to "InNjb3BlMXF6bTN4YWd4NzZ1eXZnNGs3eXZ4Yzd1aG51Z3F6ZW1tbTci"
- *   }
- */
-fun List<Event>.toDecodedMap(): Map<String, String?> =
-    this.mapNotNull { e -> e.key?.let { it.decodeBase64() to e.value } }
-        .toMap()
+fun BlockOuterClass.Fee.toFee(events: List<TxEvent>, code: Long, gasWanted: Long, badBlockRange: Pair<Long, Long>, msgBaseFeeHeight: Long): Fee {
+    val fee = if(code.toInt() != 0) {
+        if(msgBaseFeeHeight <= height) {
+            BigDecimal(gasWanted * 1905).toLong()
+        } else {
+            this.fee
+        }
+    } else {
+        if(this.height >= badBlockRange.first && this.height <= badBlockRange.second) {
+            this.toBugFee(events, gasWanted, code, msgBaseFeeHeight)
+        } else {
+            this.fee
+        }
+    }
 
-// === gRPC ========================================================================================================
+    return Fee(
+        fee = fee,
+        denom = this.denom,
+        signerInfo = this.signerInfo.toSignerInfo()
+    )
+}
 
-fun GrpcBlock.dateTime() = this.header.dateTime()
+fun List<BlockOuterClass.TxEvent>.txEvents(
+    blockDateTime: OffsetDateTime?,
+    height: Long,
+    txCode: Long
+): List<TxEvent> {
+    return this.map { event ->
+        TxEvent(
+            blockHeight = height,
+            blockDateTime = blockDateTime,
+            txHash = event.txHash,
+            eventType = if(txCode.toInt() != 0) "ERROR" else event.eventType,
+            attributes = event.attributesList.map { attr -> Event(attr.key, attr.value, attr.index) }
+        )
+    }
+}
 
-fun GrpcHeader.dateTime(): OffsetDateTime? =
-    runCatching { OffsetDateTime.ofInstant(Instant.ofEpochSecond(this.time.seconds), ZoneOffset.UTC) }.getOrNull()
+fun List<BlockOuterClass.Transaction>.blockEvents(blockDateTime: OffsetDateTime?, badBlockRange: Pair<Long, Long>, msgBaseFeeHeight: Long): List<BlockTxData> {
+    return this.map { tx ->
+        val events = tx.eventsList.txEvents(blockDateTime, tx.blockHeight, tx.code)
+        BlockTxData(
+            txHash = tx.txHash,
+            blockHeight = tx.blockHeight,
+            blockDateTime = blockDateTime,
+            code = tx.code,
+            gasUsed = tx.gasUsed,
+            gasWanted = tx.gasWanted,
+            events = events,
+            fee = tx.fee.toFee(events, tx.code, tx.gasWanted, badBlockRange, msgBaseFeeHeight)
+        )
+    }
+}
+
+fun BlockStreamResult.toStreamBlock(hrp: String, badBlockRange: Pair<Long, Long>, msgBaseFeeHeight: Long): StreamBlock {
+    val blockDateTime = this.blockResult.block.time.toOffsetDateTime()
+    val blockTxData = this.blockResult.block.transactionsList.blockEvents(blockDateTime, badBlockRange, msgBaseFeeHeight)
+    val block = this.blockResult.block
+    return StreamBlock(block, blockTxData, blockDateTime = blockDateTime)
+}

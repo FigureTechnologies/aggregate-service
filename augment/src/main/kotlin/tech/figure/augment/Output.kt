@@ -40,7 +40,7 @@ suspend fun Data.output(environment: Environment, jobName: String, output: Outpu
             region = System.getenv("AWS_REGION"),
             S3Config(S3Bucket(output.bucket))
         )
-        val client = AwsClient.create(environment, config.s3)
+        val client = AwsClient.create(config.s3)
         val outputFile = Files.createTempFile("", "staging_file.csv")
         val outputStream = BufferedOutputStream(Files.newOutputStream(outputFile, StandardOpenOption.APPEND, StandardOpenOption.WRITE))
         val writer = ApacheCommonsCSVRecordWriter.Builder()

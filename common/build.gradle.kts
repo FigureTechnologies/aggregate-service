@@ -8,8 +8,6 @@ group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
-val TENDERMINT_OPENAPI_YAML = "$rootDir/src/main/resources/tendermint-v0.34.12-rpc-openapi-FIXED.yaml"
-
 repositories {
     mavenCentral()
 }
@@ -26,14 +24,14 @@ dependencies {
     implementation(libs.provenance.protos)
     implementation(libs.bundles.logback)
     implementation(libs.moshi.kotlin.codegen)
-    kapt(libs.moshi.kotlin.codegen)
     implementation(libs.bundles.hoplite)
     implementation(libs.json)
     implementation(platform(libs.aws.bom))
     implementation(libs.bundles.aws)
     implementation(libs.localstack)
-    implementation(libs.bundles.eventstream)
     implementation(libs.bundles.hdwallet)
+
+    implementation("tech.figure.block:api-proto:0.1.8")
 }
 
 sourceSets {
@@ -56,11 +54,6 @@ kapt {
     correctErrorTypes = true
 }
 
-project.afterEvaluate {
-    // Force generation of the API and models based on the
-    tasks.get("kaptGenerateStubsKotlin").dependsOn("generateTendermintAPI")
-}
-
 tasks.compileKotlin {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
@@ -79,40 +72,4 @@ tasks.compileTestKotlin {
 
 tasks.test {
     useJUnitPlatform()
-}
-
-/**
- * See the following links for information about generating models from an OpenAPI spec:
- * - https://github.com/OpenAPITools/openapi-generator/tree/master/modules/openapi-generator-gradle-plugin
- * - https://github.com/OpenAPITools/openapi-generator/blob/master/docs/global-properties.md
- * - https://github.com/OpenAPITools/openapi-generator/blob/master/docs/generators/kotlin.md
- */
-tasks.register<org.openapitools.generator.gradle.plugin.tasks.GenerateTask>("generateTendermintAPI") {
-    generatorName.set("kotlin")
-    verbose.set(false)
-    validateSpec.set(true)
-    inputSpec.set(TENDERMINT_OPENAPI_YAML)
-    outputDir.set("$buildDir/generated")
-    packageName.set("tech.figure.aggregate.common")
-    modelPackage.set("tech.figure.aggregate.common.models")
-    library.set("jvm-okhttp4")
-//library.set("jvm-retrofit2")
-    configOptions.set(
-        mapOf(
-            "artifactId" to "tendermint-api",
-            "dateLibrary" to "java8",
-            "moshiCodeGen" to true.toString(),
-            "modelMutable" to false.toString(),
-            "serializableModel" to true.toString(),
-            "serializationLibrary" to "moshi",
-            "useCoroutines" to true.toString()
-        )
-    )
-//    globalProperties.set(
-//        mapOf(
-//            "apis" to "false",
-//            "models" to "",
-//            "modelDocs" to ""
-//        )
-//    )
 }

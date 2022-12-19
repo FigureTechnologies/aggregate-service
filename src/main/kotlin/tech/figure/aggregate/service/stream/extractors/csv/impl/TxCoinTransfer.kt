@@ -1,8 +1,8 @@
 package tech.figure.aggregate.service.stream.extractors.csv.impl
 
 import tech.figure.aggregate.common.toISOString
-import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.common.models.AmountDenom
+import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import tech.figure.aggregate.service.stream.models.cosmos.Tx as CosmosTx
 
@@ -24,28 +24,30 @@ class TxCoinTransfer : CSVFileExtractor(
     )
 ) {
     override suspend fun extract(block: StreamBlock) {
-        for (event in block.txEvents) {
-            tech.figure.aggregate.service.stream.models.cosmos.Tx.mapper.fromEvent(event)
-                ?.let { record: CosmosTx ->
-                    when (record) {
-                        is CosmosTx.Transfer -> {
-                            val amountAndDenom: List<AmountDenom>? = record.amountAndDenom?.let { record.splitAmountAndDenom(it) }
-                            amountAndDenom?.map { amountDenom ->
-                                syncWriteRecord(
-                                    event.eventType,
-                                    event.blockHeight,
-                                    event.blockDateTime?.toISOString(),
-                                    event.txHash,
-                                    record.recipient,
-                                    record.sender,
-                                    amountDenom.amount,  // amount
-                                    amountDenom.denom,  // denom
-                                    includeHash = true
-                                )
+        for(txData in block.blockTxData) {
+            for(event in txData.events) {
+                tech.figure.aggregate.service.stream.models.cosmos.Tx.mapper.fromEvent(event)
+                    ?.let { record: CosmosTx ->
+                        when(record) {
+                            is CosmosTx.Transfer -> {
+                                val amountAndDenom: List<AmountDenom>? = record.amountAndDenom?.let { record.splitAmountAndDenom(it)}
+                                amountAndDenom?.map { amountDenom ->
+                                    syncWriteRecord(
+                                        event.eventType,
+                                        event.blockHeight,
+                                        event.blockDateTime?.toISOString(),
+                                        event.txHash,
+                                        record.recipient,
+                                        record.sender,
+                                        amountDenom.amount,
+                                        amountDenom.denom,
+                                        includeHash = true
+                                    )
+                                }
                             }
                         }
                     }
-                }
+            }
         }
     }
 }

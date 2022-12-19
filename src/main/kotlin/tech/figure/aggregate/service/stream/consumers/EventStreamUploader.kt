@@ -5,25 +5,23 @@ import tech.figure.aggregate.common.aws.s3.S3Key
 import tech.figure.aggregate.common.aws.s3.StreamableObject
 import tech.figure.aggregate.common.aws.s3.client.S3Client
 import tech.figure.aggregate.common.logger
-import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.common.models.UploadResult
-import tech.figure.aggregate.common.models.dateTime
-import tech.figure.aggregate.common.models.toStreamBlock
-import io.provenance.eventstream.stream.BlockStreamOptions
 import tech.figure.aggregate.service.flow.extensions.chunked
 import tech.figure.aggregate.service.stream.batch.Batch
 import tech.figure.aggregate.service.stream.extractors.Extractor
 import tech.figure.aggregate.service.stream.extractors.OutputType
-import io.provenance.eventstream.coroutines.DefaultDispatcherProvider
-import io.provenance.eventstream.coroutines.DispatcherProvider
-import io.provenance.eventstream.stream.clients.BlockData
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.BufferOverflow.SUSPEND
 import kotlinx.coroutines.flow.*
 import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import tech.figure.aggregate.common.models.BatchId
+import tech.figure.aggregate.common.models.block.StreamBlock
+import tech.figure.aggregate.common.models.toStreamBlock
 import tech.figure.aggregate.repository.database.RavenDB
+import tech.figure.aggregate.service.DefaultDispatcherProvider
+import tech.figure.aggregate.service.DispatcherProvider
+import tech.figure.block.api.proto.BlockServiceOuterClass
 import java.time.OffsetDateTime
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.seconds
@@ -42,10 +40,9 @@ import kotlin.time.ExperimentalTime
 @OptIn(FlowPreview::class, ExperimentalTime::class)
 @ExperimentalCoroutinesApi
 class EventStreamUploader(
-    private val blockFlow: Flow<BlockData>,
+    private val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult>,
     private val aws: AwsClient,
     private val ravenClient: RavenDB,
-    private val options: BlockStreamOptions,
     private val hrp: String,
     private val badBlockRange: Pair<Long, Long>,
     private val msgFeeHeight: Long,
@@ -154,35 +151,32 @@ class EventStreamUploader(
         return blockFlow
             .transform { emit(it.toStreamBlock(hrp, badBlockRange, msgFeeHeight)) }
             .filter { streamBlock ->
-                !streamBlock.blockResult.isNullOrEmpty().also {
+                !streamBlock.blockTxData.isEmpty().also {
                     log.info(
-                        if (streamBlock.blockResult.isNullOrEmpty())
+                        if (streamBlock.blockTxData.isEmpty())
                             "Skipping empty block: ${streamBlock.height}"
                         else
-                            "Buffering block: ${streamBlock.height} Tx Result Size: ${streamBlock.blockResult!!.size} Tx Event Size: ${streamBlock.txEvents.size}"
+                            "Buffering block: ${streamBlock.height} Block Tx Count: ${streamBlock.blockTxData.size}"
                     )
                 }
             }
-            .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = BufferOverflow.SUSPEND)
+            .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = SUSPEND)
             .flowOn(dispatchers.io())
-            .chunked(size = options.batchSize, timeout = 10.seconds)
-            .transform { streamBlocks: List<StreamBlock> ->
-                log.info("collected block chunk(size=${streamBlocks.size}) and preparing for upload")
+            .chunked(size = 100, timeout = 10.seconds)
+            .transform { streamBlocks: List<StreamBlock>  ->
+                log.info("collected block chunck(size=${streamBlocks.size} and preparing for upload")
                 val batch: Batch = batchBlueprint.build()
 
-                // Use the earliest block date to generate the S3 key prefix the data files will be stored under:
                 val earliestDate: OffsetDateTime? =
-                    streamBlocks.mapNotNull { block -> block.block.dateTime() }.minOrNull()
+                    streamBlocks.minOfOrNull { block -> block.blockDateTime }
 
-                // Run the extract steps:
                 val uploaded: List<UploadResult> = coroutineScope {
                     withContext(dispatchers.io()) {
-                        streamBlocks.map { block ->
+                        streamBlocks.map{ block ->
                             onEachBlock(block)
                             async { batch.processBlock(block) }
                         }.awaitAll()
 
-                        // Upload the results to S3:
                         batch.complete { batchId: BatchId, extractor: Extractor ->
                             val key: S3Key = csvS3Key(batchId, earliestDate, extractor.name)
                             when (val out = extractor.output()) {
