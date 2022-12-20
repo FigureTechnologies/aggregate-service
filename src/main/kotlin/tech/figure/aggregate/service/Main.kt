@@ -37,12 +37,14 @@ import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
 import java.util.Properties
 import kotlin.time.Duration
 import io.grpc.internal.PickFirstLoadBalancerProvider
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.retryWhen
 import tech.figure.aggregate.common.utils.backoff
 import tech.figure.block.api.client.GRPCConfigOpt
 import tech.figure.block.api.client.Protocol.TLS
 import tech.figure.block.api.client.withApiKey
 import tech.figure.block.api.client.withProtocol
+import kotlin.system.exitProcess
 
 /**
  * Installs a shutdown a handler to clean up resources when the returned Channel receives its one (and only) element.
@@ -254,15 +256,10 @@ fun main(args: Array<String>) {
                 .addExtractor(config.upload.extractors)
                 .upload()
                 .cancelOnSignal(shutDownSignal)
-                .retryWhen{ cause: Throwable, attempt: Long ->
-                    when(cause) {
-                        is StatusException -> {
-                            val duration = backoff(attempt, jitter = false)
-                            log.error("Reconnect attempt #$attempt; waiting ${duration.inWholeSeconds}s before trying again: $cause")
-                            delay(duration)
-                            true
-                        } else -> false
-                    }
+                .catch {
+                    // Reset on exception so that we can pick up
+                    // the last successful checked block height
+                    exitProcess(1)
                 }
                 .collect { result: UploadResult ->
                     log.info(
