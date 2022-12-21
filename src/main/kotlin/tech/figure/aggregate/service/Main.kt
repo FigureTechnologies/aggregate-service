@@ -237,14 +237,14 @@ fun main(args: Array<String>) {
 
         // start api
         async {
-            embeddedServer(Netty, port=8081) {
+            embeddedServer(Netty, port=8080) {
                 install(Routing) {
                     configureRouting(properties, dwUri, config.dbConfig, config.apiHost)
                 }
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(2270400, PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter() ?: 1 , PREFER.TX_EVENTS)
             EventStreamUploader(
                 blockFlow,
                 aws,
