@@ -48,7 +48,7 @@ dependencies {
     implementation(libs.blockapi.client)
     implementation(libs.blockapi.proto)
 
-    implementation("io.grpc:grpc-core:1.51.0")
+    implementation("io.grpc:grpc-core:1.51.1")
 }
 
 sourceSets {
