@@ -2,7 +2,7 @@
 blockApi = "0.1.9"
 eventStream = "0.6.3"
 kotlinxCore = "1.5.2"
-kotlinxCli = "0.3.3"
+kotlinxCli = "0.3.5"
 kotlinxDateTime = "0.3.0"
 kotlinReflect = "1.6.0"
 kotlinStdLib = "1.6.0"
