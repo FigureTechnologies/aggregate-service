@@ -1,11 +1,4 @@
 ---
-# AWS specific configuration options:
-aws:
-  region: ${AWS_REGION}
-  # S3 configuration options:
-  s3:
-    bucket: ${AWS_S3_BUCKET_NAME}
-
 ws_node: ${WS_NODE}
 api_host: ${API_HOST}
 bad_block_range: ${ONE_DOT_ELEVEN_BAD_BLOCK_RANGE}

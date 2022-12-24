@@ -1,8 +1,6 @@
 package tech.figure.aggregate.service.test.utils
 
 import com.google.gson.Gson
-import tech.figure.aggregate.common.S3Config
-import tech.figure.aggregate.common.aws.s3.S3Bucket
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import tech.figure.block.api.proto.BlockServiceOuterClass
@@ -30,5 +28,4 @@ object Defaults {
             }
             .asFlow()
 
-    val s3Config: S3Config = S3Config(bucket = S3Bucket(S3_BUCKET))
 }

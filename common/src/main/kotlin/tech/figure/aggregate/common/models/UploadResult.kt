@@ -1,7 +1,6 @@
 package tech.figure.aggregate.common.models
 
-import tech.figure.aggregate.common.aws.s3.S3Key
-import tech.figure.aggregate.common.models.BatchId
+import tech.figure.aggregate.common.snowflake.Key
 
 /**
  * Represents the result of uploading a block to S3.
@@ -14,7 +13,6 @@ import tech.figure.aggregate.common.models.BatchId
 data class UploadResult(
     val batchId: BatchId,
     val batchSize: Int,
-    val eTag: String,
-    val s3Key: S3Key,
+    val s3Key: Key,
     val blockHeightRange: Pair<Long?, Long?>
 )

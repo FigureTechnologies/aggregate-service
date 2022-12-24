@@ -41,12 +41,12 @@ dependencies {
     implementation(libs.hoplite.core)
     implementation(libs.hoplite.yaml)
     implementation(libs.json)
-    implementation(platform(libs.aws.bom))
-    implementation(libs.bundles.aws)
     implementation(libs.localstack)
 
     implementation(libs.blockapi.client)
     implementation(libs.blockapi.proto)
+
+
 
     implementation("io.grpc:grpc-core:1.51.0")
 }

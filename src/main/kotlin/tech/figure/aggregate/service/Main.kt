@@ -8,13 +8,11 @@ import com.sksamuel.hoplite.sources.EnvironmentVariablesPropertySource
 import com.timgroup.statsd.NoOpStatsDClient
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
 import io.grpc.LoadBalancerRegistry
-import io.grpc.StatusException
 import io.ktor.application.install
 import io.ktor.routing.Routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import tech.figure.aggregate.common.Config
-import tech.figure.aggregate.common.aws.AwsClient
 import tech.figure.aggregate.common.recordMaxBlockHeight
 import tech.figure.aggregate.common.unwrapEnvOrError
 import tech.figure.aggregate.common.logger
@@ -38,8 +36,7 @@ import java.util.Properties
 import kotlin.time.Duration
 import io.grpc.internal.PickFirstLoadBalancerProvider
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.retryWhen
-import tech.figure.aggregate.common.utils.backoff
+import tech.figure.aggregate.common.snowflake.SnowflakeClient
 import tech.figure.block.api.client.GRPCConfigOpt
 import tech.figure.block.api.client.Protocol.TLS
 import tech.figure.block.api.client.withApiKey
@@ -166,7 +163,6 @@ fun main(args: Array<String>) {
         withManagedChannelConfig(config.blockApi.maxBlockSize)
     )
 
-    val aws: AwsClient = AwsClient.create(config.aws.s3)
     val ravenClient = RavenDB(config.dbConfig)
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
@@ -235,19 +231,21 @@ fun main(args: Array<String>) {
             }
         }
 
+        val snowflakeClient = SnowflakeClient(properties, dwUri)
+
         // start api
         async {
-            embeddedServer(Netty, port=8080) {
+            embeddedServer(Netty, port=8081) {
                 install(Routing) {
-                    configureRouting(properties, dwUri, config.dbConfig, config.apiHost)
+                    configureRouting(snowflakeClient, config.dbConfig, config.apiHost)
                 }
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter() ?: 1 , PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(147724 , PREFER.TX_EVENTS)
             EventStreamUploader(
                 blockFlow,
-                aws,
+                snowflakeClient,
                 ravenClient,
                 config.hrp,
                 Pair(config.badBlockRange[0], config.badBlockRange[1]),
@@ -264,8 +262,7 @@ fun main(args: Array<String>) {
                 .collect { result: UploadResult ->
                     log.info(
                         "uploaded #${result.batchId} => \n" +
-                                "S3 ETag: ${result.eTag} => \n" +
-                                "S3Key: ${result.s3Key} => \n" +
+                                "Key: ${result.s3Key} => \n" +
                                 "Historical Block Height Range: ${result.blockHeightRange.first} - ${result.blockHeightRange.second}"
                     )
                 }

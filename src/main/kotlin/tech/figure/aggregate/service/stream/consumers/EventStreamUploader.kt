@@ -1,9 +1,6 @@
 package tech.figure.aggregate.service.stream.consumers
 
-import tech.figure.aggregate.common.aws.AwsClient
-import tech.figure.aggregate.common.aws.s3.S3Key
-import tech.figure.aggregate.common.aws.s3.StreamableObject
-import tech.figure.aggregate.common.aws.s3.client.S3Client
+import tech.figure.aggregate.common.snowflake.Key
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.UploadResult
 import tech.figure.aggregate.service.flow.extensions.chunked
@@ -13,11 +10,10 @@ import tech.figure.aggregate.service.stream.extractors.OutputType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow.SUSPEND
 import kotlinx.coroutines.flow.*
-import software.amazon.awssdk.core.async.AsyncRequestBody
-import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import tech.figure.aggregate.common.models.BatchId
 import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.common.models.toStreamBlock
+import tech.figure.aggregate.common.snowflake.SnowflakeClient
 import tech.figure.aggregate.repository.database.RavenDB
 import tech.figure.aggregate.service.DefaultDispatcherProvider
 import tech.figure.aggregate.service.DispatcherProvider
@@ -41,7 +37,7 @@ import kotlin.time.ExperimentalTime
 @ExperimentalCoroutinesApi
 class EventStreamUploader(
     private val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult>,
-    private val aws: AwsClient,
+    private val snowflakeClient: SnowflakeClient,
     private val ravenClient: RavenDB,
     private val hrp: String,
     private val badBlockRange: Pair<Long, Long>,
@@ -57,8 +53,8 @@ class EventStreamUploader(
 
     private val extractorClassNames: MutableList<String> = mutableListOf()
 
-    private fun csvS3Key(id: BatchId, d: OffsetDateTime?, label: String): S3Key =
-        S3Key.create(d ?: OffsetDateTime.MIN, id.value, "$label.csv")
+    private fun csvKey(id: BatchId, d: OffsetDateTime?, label: String): Key =
+        Key.create(d ?: OffsetDateTime.MIN, id.value, "$label.csv")
 
     /**
      * The fully-qualified class names of the Class instances to load.
@@ -137,8 +133,6 @@ class EventStreamUploader(
      *  @return A flow yielding the results of uploading blocks to S3.
      */
     suspend fun upload(onEachBlock: (StreamBlock) -> Unit = {}): Flow<UploadResult> {
-        val s3: S3Client = aws.s3()
-
         val batchBlueprint: Batch.Builder = Batch.Builder()
             .dispatchers(dispatchers)
             // Extractors are specified via their Kotlin class, along with any arguments to pass to the constructor:
@@ -178,15 +172,14 @@ class EventStreamUploader(
                         }.awaitAll()
 
                         batch.complete { batchId: BatchId, extractor: Extractor ->
-                            val key: S3Key = csvS3Key(batchId, earliestDate, extractor.name)
+
+                            val key: Key = csvKey(batchId, earliestDate, extractor.name)
                             when (val out = extractor.output()) {
                                 is OutputType.FilePath -> {
                                     if (extractor.shouldOutput()) {
-                                        val putResponse: PutObjectResponse = s3.streamObject(object : StreamableObject {
-                                            override val key: S3Key get() = key
-                                            override val body: AsyncRequestBody get() = AsyncRequestBody.fromFile(out.path)
-                                            override val metadata: Map<String, String>? get() = out.metadata
-                                        })
+                                        // Handle inserting data into snowflake.
+                                        // todo: want to return a proper status.
+                                        snowflakeClient.handleInsert(extractor.name, out.path.toFile())
 
                                         /**
                                          * We want to track the last successful block height that was processed to S3, so
@@ -197,18 +190,14 @@ class EventStreamUploader(
                                         val highestBlockHeight = streamBlocks.last().height
                                         val lowestBlockHeight = streamBlocks.first().height
 
-                                        if (putResponse.sdkHttpResponse().isSuccessful) {
-                                            ravenClient.writeBlockCheckpoint(highestBlockHeight!!)
-                                                .also {
-                                                    log.info("Checkpoint::Updating max block height to = $highestBlockHeight")
-                                                }
-                                            log.info("dest = ${aws.s3Config.bucket}/$key; eTag = ${putResponse.eTag()}")
-                                        }
+                                        ravenClient.writeBlockCheckpoint(highestBlockHeight!!)
+                                            .also {
+                                                log.info("Checkpoint::Updating max block height to = $highestBlockHeight")
+                                            }
 
                                         UploadResult(
                                             batchId = batch.id,
                                             batchSize = streamBlocks.size,
-                                            eTag = putResponse.eTag(),
                                             s3Key = key,
                                             blockHeightRange = Pair(lowestBlockHeight, highestBlockHeight)
                                         )
@@ -222,9 +211,6 @@ class EventStreamUploader(
                             .filterNotNull()
                     }
                 }
-
-                // Mark the blocks as having been processed:
-                val s3Keys = uploaded.map { it.s3Key }
 
                 //  At this point, signal success by emitting results:
                 emitAll(uploaded.asFlow())

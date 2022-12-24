@@ -1,4 +1,4 @@
-package tech.figure.aggregator.api.model
+package tech.figure.aggregate.common.snowflake.model
 
 data class TxFeeData(
     val hash: String,

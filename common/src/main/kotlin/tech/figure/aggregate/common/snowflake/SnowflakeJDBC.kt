@@ -1,20 +1,21 @@
-package tech.figure.aggregator.api.snowflake
+package tech.figure.aggregate.common.snowflake
 
-import tech.figure.aggregator.api.model.TxCoinTransferData
-import tech.figure.aggregator.api.model.TxFeeData
 import tech.figure.aggregate.common.logger
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
+import tech.figure.aggregate.common.snowflake.model.TxCoinTransferData
+import tech.figure.aggregate.common.snowflake.model.TxFeeData
+import java.sql.Connection
 import java.sql.DriverManager
 import java.time.OffsetDateTime
 import java.util.Properties
 
-class SnowflakeJDBC(
+abstract class SnowflakeJDBC(
     properties: Properties,
     dbUri: String
 ) {
     private val log = logger()
-    private val conn = DriverManager.getConnection(dbUri, properties)
+    protected val conn: Connection = DriverManager.getConnection(dbUri, properties)
 
     /**
      * Returns the pair of in and out of an address Txns Pair<In, Out>
