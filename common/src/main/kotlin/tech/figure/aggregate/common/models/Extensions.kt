@@ -13,7 +13,6 @@ import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.common.models.fee.Fee
 import tech.figure.aggregate.common.models.fee.SignerInfo
 import tech.figure.block.api.proto.BlockOuterClass
-import tech.figure.block.api.proto.BlockServiceOuterClass
 import tech.figure.block.api.proto.BlockServiceOuterClass.BlockStreamResult
 import java.math.BigDecimal
 import java.security.MessageDigest
