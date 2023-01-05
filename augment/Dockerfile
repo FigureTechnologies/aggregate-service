@@ -1,4 +1,4 @@
-FROM openjdk:11
+FROM openjdk:11.0.16
 
 ADD ./build/libs/*.jar /augment-job/augment-job.jar
 
