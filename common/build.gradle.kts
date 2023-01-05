@@ -31,6 +31,9 @@ dependencies {
     implementation(libs.localstack)
     implementation(libs.bundles.hdwallet)
 
+    implementation(libs.commons.dbutils)
+    implementation(libs.apache.commons)
+
     implementation("tech.figure.block:api-proto:0.1.8")
 }
 

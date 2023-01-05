@@ -98,10 +98,5 @@ fun main(args: Array<String>) {
             }
         }
 
-        // TODO implement transformations when needed
-
-        sourceStepResult
-            .filterColumns(job.query.output)
-            .output(environment, job.name, job.query.output, log)
     }
 }

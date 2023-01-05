@@ -24,6 +24,7 @@ gson = "2.8.5"
 aws = "2.17.127"
 localstack = "0.2.21"
 grpc = "1.41.0"
+grpcCore = "1.51.1"
 kotlinSerialization = "1.2.2"
 snowflake = "3.13.19"
 dbUtils = "1.7"
@@ -34,6 +35,8 @@ ktor = "1.6.8" # A handful of plugins don't support ktor 2.0 yet due diligence b
 okhttp = "4.10.0"
 kodein = "7.10.0"
 swaggerKtor="0.3-beta.3"
+apache = "1.5"
+protobufUtil = "3.21.12"
 
 pluginProtobuf = "0.18.7"
 pluginNexusPublishPlugin = "1.1.0"
@@ -101,6 +104,7 @@ hoplite-yaml = { module = "com.sksamuel.hoplite:hoplite-yaml", version.ref = "ho
 
 json = { module = "org.json:json", version.ref = "json" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+apache-commons = { module = "org.apache.commons:commons-csv", version.ref = "apache" }
 
 aws-bom = { module = "software.amazon.awssdk:bom", version.ref = "aws"}
 aws-netty = { module = "software.amazon.awssdk:netty-nio-client" }
@@ -113,6 +117,9 @@ localstack = { module = "cloud.localstack:localstack-utils", version.ref = "loca
 grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc"}
 grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc"}
 grpc-netty = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc"}
+grpc-core = { module = "io.grpc:grpc-core", version.ref = "grpcCore" }
+
+protobuf-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobufUtil"}
 
 snowflake = { module = "net.snowflake:snowflake-jdbc", version.ref = "snowflake"}
 commons-dbutils = { module = "commons-dbutils:commons-dbutils", version.ref = "dbUtils"}

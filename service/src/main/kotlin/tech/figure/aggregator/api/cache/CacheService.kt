@@ -1,25 +1,24 @@
 package tech.figure.aggregator.api.cache
 
 import com.google.gson.Gson
-import tech.figure.aggregator.api.model.TxCoinTransferData
+import tech.figure.aggregate.common.snowflake.model.TxCoinTransferData
 import tech.figure.aggregator.api.model.TxTotalAmtResponse
-import tech.figure.aggregator.api.model.TxFeeData
+import tech.figure.aggregate.common.snowflake.model.TxFeeData
 import tech.figure.aggregator.api.service.AccountService
-import tech.figure.aggregator.api.snowflake.SnowflakeJDBC
 import tech.figure.aggregate.common.DBConfig
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.repository.database.RavenDB
 import net.ravendb.client.Constants
 import net.ravendb.client.documents.session.IDocumentSession
 import net.snowflake.client.jdbc.internal.joda.time.DateTime
+import tech.figure.aggregate.common.snowflake.SnowflakeClient
+import tech.figure.aggregate.common.snowflake.SnowflakeJDBC
 import tech.figure.aggregator.api.model.TxDailyTotal
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Properties
 
 class CacheService(
-    private val properties: Properties,
-    private val dwUri: String,
+    private val snowflakeClient: SnowflakeClient,
     private val config: DBConfig
 ): RavenDB(
    config
@@ -32,6 +31,10 @@ class CacheService(
         const val DEFAULT_LIMIT = 100
         const val DEFAULT_OFFSET = 0
     }
+
+
+
+    /*TODO: clean up the below*/
 
     fun getNetDateRangeFee(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime, denom: String): TxTotalAmtResponse {
         val result = getAllTxFee(addr, startDate, endDate)
@@ -323,10 +326,10 @@ class CacheService(
      * Reauthenticate with Snowflake every time we query to Snowflake
      */
     private fun loadTxRequestFromDW(address: String, startDate: OffsetDateTime, endDate: OffsetDateTime) =
-        SnowflakeJDBC(properties, dwUri).getNetResult(address, startDate, endDate)
+        snowflakeClient.getNetResult(address, startDate, endDate)
 
     private fun loadFeeRequestFromDW(address: String, startDate: OffsetDateTime, endDate: OffsetDateTime) =
-        SnowflakeJDBC(properties, dwUri).getTotalFee(address, startDate, endDate)
+        snowflakeClient.getTotalFee(address, startDate, endDate)
 
     private fun configureEviction(data: Any, session: IDocumentSession) {
         //Evict data after 30 days

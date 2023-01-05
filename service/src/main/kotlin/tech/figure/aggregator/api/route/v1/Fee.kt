@@ -16,7 +16,7 @@ import tech.figure.aggregator.api.route.toOffsetDateTime
 import io.ktor.http.HttpStatusCode
 import tech.figure.aggregator.api.cache.CacheService.Companion.DEFAULT_LIMIT
 import tech.figure.aggregator.api.cache.CacheService.Companion.DEFAULT_OFFSET
-import tech.figure.aggregator.api.model.TxFeeData
+import tech.figure.aggregate.common.snowflake.model.TxFeeData
 import tech.figure.aggregator.api.model.TxTotalAmtResponse
 
 fun NormalOpenAPIRoute.feeRoute(cacheService: CacheService) {
