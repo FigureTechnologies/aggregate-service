@@ -34,7 +34,7 @@ dependencies {
     implementation(libs.commons.dbutils)
     implementation(libs.apache.commons)
 
-    implementation("tech.figure.block:api-proto:0.1.9")
+    implementation("tech.figure.block:api-proto:0.1.10")
 }
 
 sourceSets {
