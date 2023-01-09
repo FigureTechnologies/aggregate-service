@@ -1,5 +1,5 @@
 [versions]
-blockApi = "0.1.9"
+blockApi = "0.1.10"
 eventStream = "0.6.3"
 kotlinxCore = "1.5.2"
 kotlinxCli = "0.3.5"
