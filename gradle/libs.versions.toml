@@ -40,7 +40,7 @@ protobufUtil = "3.21.12"
 
 pluginProtobuf = "0.18.7"
 pluginNexusPublishPlugin = "1.1.0"
-pluginOpenAPI = "5.2.1"
+pluginOpenAPI = "5.4.0"
 
 [libraries]
 blockapi-proto = { module = "tech.figure.block:api-proto", version.ref = "blockApi" }
