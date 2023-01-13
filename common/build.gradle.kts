@@ -35,6 +35,12 @@ dependencies {
     implementation(libs.apache.commons)
 
     implementation("tech.figure.block:api-proto:0.1.10")
+
+    implementation("org.postgresql:postgresql:42.5.1")
+
+    implementation("org.jetbrains.exposed:exposed-core:0.41.1")
+    implementation("org.jetbrains.exposed:exposed-dao:0.41.1")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.41.1")
 }
 
 sourceSets {

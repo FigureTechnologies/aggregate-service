@@ -36,6 +36,7 @@ import java.util.Properties
 import kotlin.time.Duration
 import io.grpc.internal.PickFirstLoadBalancerProvider
 import kotlinx.coroutines.flow.catch
+import org.jetbrains.exposed.sql.Database
 import tech.figure.aggregate.common.snowflake.SnowflakeClient
 import tech.figure.block.api.client.GRPCConfigOpt
 import tech.figure.block.api.client.Protocol.TLS
@@ -163,6 +164,8 @@ fun main(args: Array<String>) {
         withManagedChannelConfig(config.blockApi.maxBlockSize)
     )
 
+    Database.connect("jdbc:postgresql://localhost:5432/postgresdb", "org.postgresql.Driver", "postgres", "password1")
+
     val ravenClient = RavenDB(config.dbConfig)
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
@@ -242,7 +245,7 @@ fun main(args: Array<String>) {
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter() ?: 1 , PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(147724, PREFER.TX_EVENTS)
             EventStreamUploader(
                 blockFlow,
                 snowflakeClient,
@@ -254,11 +257,12 @@ fun main(args: Array<String>) {
                 .addExtractor(config.upload.extractors)
                 .upload()
                 .cancelOnSignal(shutDownSignal)
-                .catch {
-                    // Reset on exception so that we can pick up
-                    // the last successful checked block height
-                    exitProcess(1)
-                }
+//                .catch { e ->
+//                    // Reset on exception so that we can pick up
+//                    // the last successful checked block height
+//                    println(e)
+//                    exitProcess(1)
+//                }
                 .collect { result: UploadResult ->
                     log.info(
                         "uploaded #${result.batchId} => \n" +

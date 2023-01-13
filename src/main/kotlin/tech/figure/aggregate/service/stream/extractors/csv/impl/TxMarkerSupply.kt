@@ -1,9 +1,12 @@
 package tech.figure.aggregate.service.stream.extractors.csv.impl
 
-import tech.figure.aggregate.common.toISOString
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.transactions.transaction
+import tech.figure.aggregate.common.domain.MarkerSupplyTable
 import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import tech.figure.aggregate.service.stream.models.marker.EventMarker
+import java.util.UUID
 
 /**
  * Extract data related to the overall supply of a marker.
@@ -37,24 +40,26 @@ class TxMarkerSupply : CSVFileExtractor(
                     ?.let { record ->
                         // All transfers are processed by `TxMarkerTransfer`
                         if (!record.isTransfer()) {
-                            syncWriteRecord(
-                                event.eventType,
-                                event.blockHeight,
-                                event.blockDateTime?.toISOString(),
-                                record.coins,
-                                record.denom,
-                                record.amount,
-                                record.administrator,
-                                record.toAddress,
-                                record.fromAddress,
-                                record.metadataBase,
-                                record.metadataDescription,
-                                record.metadataDisplay,
-                                record.metadataDenomUnits,
-                                record.metadataName,
-                                record.metadataSymbol,
-                                includeHash = true
-                            )
+                             transaction {
+                                 MarkerSupplyTable.insert {
+                                     it[id] = UUID.randomUUID()
+                                     it[eventType] = event.eventType ?: ""
+                                     it[blockHeight] = event.blockHeight.toDouble()
+                                     it[blockTimestamp] = event.blockDateTime!!
+                                     it[coins] = record.coins ?: ""
+                                     it[denom] = record.denom ?: ""
+                                     it[amount] = record.amount ?: ""
+                                     it[administrator] = record.administrator ?: ""
+                                     it[toAddress] = record.toAddress ?: ""
+                                     it[fromAddress] = record.fromAddress ?: ""
+                                     it[metadataBase] = record.metadataBase ?: ""
+                                     it[metadataDescription] = record.metadataDescription ?: ""
+                                     it[metadataDisplay] = record.metadataDisplay ?: ""
+                                     it[metadataDenomUnits] = record.metadataDenomUnits ?: ""
+                                     it[metadataName] = record.metadataName ?: ""
+                                     it[metadataSymbol] = record.metadataSymbol ?: ""
+                                 }
+                             }
                         }
                     }
             }

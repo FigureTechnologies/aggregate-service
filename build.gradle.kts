@@ -48,6 +48,8 @@ dependencies {
 
     implementation(libs.grpc.core)
     implementation(libs.protobuf.util)
+
+    implementation("org.jetbrains.exposed:exposed-core:0.41.1")
 }
 
 sourceSets {

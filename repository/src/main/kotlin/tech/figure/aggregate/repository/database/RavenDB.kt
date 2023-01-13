@@ -8,7 +8,6 @@ import tech.figure.aggregate.repository.model.checkpoint.BlockHeightCheckpoint
 import net.ravendb.client.documents.DocumentStore
 import net.ravendb.client.documents.session.IDocumentSession
 import tech.figure.aggregate.common.DBConfig
-import tech.figure.aggregate.common.models.block.StreamBlock
 
 open class RavenDB(dbConfig: DBConfig): RepositoryBase {
 
