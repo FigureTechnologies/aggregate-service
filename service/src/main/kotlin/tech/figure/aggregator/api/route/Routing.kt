@@ -18,18 +18,16 @@ import io.ktor.response.respondRedirect
 import io.ktor.routing.get
 import io.ktor.routing.routing
 import tech.figure.aggregate.common.DBConfig
-import tech.figure.aggregate.common.snowflake.SnowflakeClient
-import tech.figure.aggregate.common.snowflake.SnowflakeJDBC
+import tech.figure.aggregate.common.db.DBClient
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.util.Properties
 
 private const val OPEN_API_JSON_PATH="/openapi.json"
 
-fun Application.configureRouting(snowflakeClient: SnowflakeClient, dbConfig: DBConfig, apiHost: String) {
-    val cacheService = CacheService(snowflakeClient, dbConfig)
+fun Application.configureRouting(dbClient: DBClient, dbConfig: DBConfig, apiHost: String) {
+    val cacheService = CacheService(dbClient, dbConfig)
     install(ContentNegotiation) {
         jackson()
     }

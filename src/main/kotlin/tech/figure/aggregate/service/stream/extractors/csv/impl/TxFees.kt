@@ -24,17 +24,14 @@ class TxFees: CSVFileExtractor(
         for (blockTxData in block.blockTxData) {
             for(event in blockTxData.events) {
                 if(event.eventType == "transfer" || event.eventType == "ERROR") {
-                    transaction {
-                        FeesTable.insert {
-                            it[id] = UUID.randomUUID()
-                            it[txHash] = event.txHash
-                            it[blockHeight] = event.blockHeight.toDouble()
-                            it[blockTimestamp] = event.blockDateTime!!
-                            it[fee] = blockTxData.fee.fee.toString()
-                            it[feeDenom] = blockTxData.fee.denom ?: ""
-                            it[sender] = blockTxData.fee.signerInfo?.incurrAddr ?: ""
-                        }
-                    }
+                    syncWriteRecord(
+                        event.txHash,
+                        event.blockHeight,
+                        event.blockDateTime,
+                        blockTxData.fee.fee,
+                        blockTxData.fee.denom,
+                        blockTxData.fee.signerInfo?.incurrAddr
+                    )
                 }
             }
         }

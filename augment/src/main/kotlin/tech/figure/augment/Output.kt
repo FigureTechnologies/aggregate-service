@@ -7,7 +7,7 @@
 //import tech.figure.aggregate.common.S3Config
 //import tech.figure.aggregate.common.aws.AwsClient
 //import tech.figure.aggregate.common.aws.s3.S3Bucket
-//import tech.figure.aggregate.common.snowflake.Key
+//import tech.figure.aggregate.common.db.Key
 //import tech.figure.aggregate.common.aws.s3.StreamableObject
 //import tech.figure.aggregate.common.writer.csv.ApacheCommonsCSVRecordWriter
 //import io.provenance.eventstream.config.Environment

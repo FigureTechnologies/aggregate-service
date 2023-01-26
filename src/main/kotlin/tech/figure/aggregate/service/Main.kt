@@ -24,11 +24,9 @@ import kotlinx.cli.default
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import org.slf4j.Logger
 import tech.figure.aggregate.common.Environment
 import tech.figure.aggregate.repository.database.RavenDB
-import tech.figure.aggregate.service.flow.extensions.cancelOnSignal
 import tech.figure.block.api.client.BlockAPIClient
 import tech.figure.block.api.proto.BlockServiceOuterClass
 import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
@@ -37,7 +35,7 @@ import kotlin.time.Duration
 import io.grpc.internal.PickFirstLoadBalancerProvider
 import kotlinx.coroutines.flow.catch
 import org.jetbrains.exposed.sql.Database
-import tech.figure.aggregate.common.snowflake.SnowflakeClient
+import tech.figure.aggregate.common.db.DBClient
 import tech.figure.block.api.client.GRPCConfigOpt
 import tech.figure.block.api.client.Protocol.TLS
 import tech.figure.block.api.client.withApiKey
@@ -166,6 +164,7 @@ fun main(args: Array<String>) {
 
     Database.connect("jdbc:postgresql://localhost:5432/postgresdb", "org.postgresql.Driver", "postgres", "password1")
 
+    val dbClient = DBClient()
     val ravenClient = RavenDB(config.dbConfig)
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
@@ -234,21 +233,19 @@ fun main(args: Array<String>) {
             }
         }
 
-        val snowflakeClient = SnowflakeClient(properties, dwUri)
-
         // start api
         async {
             embeddedServer(Netty, port=8081) {
                 install(Routing) {
-                    configureRouting(snowflakeClient, config.dbConfig, config.apiHost)
+                    configureRouting(dbClient, config.dbConfig, config.apiHost)
                 }
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(147724, PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter() ?:  1, PREFER.TX_EVENTS)
             EventStreamUploader(
                 blockFlow,
-                snowflakeClient,
+                dbClient,
                 ravenClient,
                 config.hrp,
                 Pair(config.badBlockRange[0], config.badBlockRange[1]),
@@ -256,13 +253,12 @@ fun main(args: Array<String>) {
             )
                 .addExtractor(config.upload.extractors)
                 .upload()
-                .cancelOnSignal(shutDownSignal)
-//                .catch { e ->
-//                    // Reset on exception so that we can pick up
-//                    // the last successful checked block height
-//                    println(e)
-//                    exitProcess(1)
-//                }
+                .catch { e ->
+                    // Reset on exception so that we can pick up
+                    // the last successful checked block height
+                    println(e)
+                    exitProcess(1)
+                }
                 .collect { result: UploadResult ->
                     log.info(
                         "uploaded #${result.batchId} => \n" +

@@ -1,8 +1,5 @@
 package tech.figure.aggregate.service
 
-import cloud.localstack.ServiceName
-import cloud.localstack.docker.LocalstackDockerExtension
-import cloud.localstack.docker.annotation.LocalstackDockerProperties
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
@@ -25,7 +22,7 @@ import kotlinx.coroutines.flow.toList
 import org.junit.jupiter.api.BeforeAll
 import org.junitpioneer.jupiter.SetEnvironmentVariable
 import tech.figure.aggregate.common.Environment
-import tech.figure.aggregate.common.snowflake.SnowflakeClient
+import tech.figure.aggregate.common.db.DBClient
 import tech.figure.aggregate.service.flow.extensions.cancelOnSignal
 import tech.figure.aggregate.service.test.utils.Defaults.blockData
 import kotlin.time.Duration
@@ -33,19 +30,10 @@ import kotlin.time.ExperimentalTime
 
 @ExperimentalCoroutinesApi
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@LocalstackDockerProperties(services = [ServiceName.S3])
 @SetEnvironmentVariable.SetEnvironmentVariables(
     SetEnvironmentVariable(
         key = "ENVIRONMENT",
         value = "local"
-    ),
-    SetEnvironmentVariable(
-        key = "AWS_ACCESS_KEY_ID",
-        value = "test",
-    ),
-    SetEnvironmentVariable(
-        key = "AWS_SECRET_ACCESS_KEY",
-        value = "test"
     )
 )
 class EventStreamUploaderTests {
@@ -56,7 +44,7 @@ class EventStreamUploaderTests {
     lateinit var environment: Environment
     lateinit var config: Config
 
-    val snowflakeClient = mockk<SnowflakeClient>()
+    val dbClient = mockk<DBClient>()
     val shutDownSignal: Channel<Unit> = installShutdownHook(log)
 
     @BeforeAll
@@ -99,7 +87,7 @@ class EventStreamUploaderTests {
             }
             var inspected1 = false
 
-            justRun { snowflakeClient.handleInsert(any(), any())}
+            justRun { dbClient.handleInsert(any(), any())}
 
             var uploadResults1: List<UploadResult> = mutableListOf()
             withTimeoutOrNull(Duration.seconds(4)) {
@@ -107,7 +95,7 @@ class EventStreamUploaderTests {
 
                     uploadResults1 = EventStreamUploader(
                         blockFlow,
-                        snowflakeClient,
+                        dbClient,
                         ravenClient,
                         "tp",
                         Pair(config.badBlockRange[0], config.badBlockRange[1]),

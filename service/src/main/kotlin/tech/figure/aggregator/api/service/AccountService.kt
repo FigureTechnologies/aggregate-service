@@ -1,8 +1,8 @@
 package tech.figure.aggregator.api.service
 
-import tech.figure.aggregate.common.snowflake.model.TxCoinTransferData
+import tech.figure.aggregate.common.db.model.TxCoinTransferData
 import tech.figure.aggregator.api.model.TxDailyTotal
-import tech.figure.aggregate.common.snowflake.model.TxFeeData
+import tech.figure.aggregate.common.db.model.TxFeeData
 
 class AccountService{
 

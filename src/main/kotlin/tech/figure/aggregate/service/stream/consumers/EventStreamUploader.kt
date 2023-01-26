@@ -1,6 +1,6 @@
 package tech.figure.aggregate.service.stream.consumers
 
-import tech.figure.aggregate.common.snowflake.Key
+import tech.figure.aggregate.common.db.Key
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.UploadResult
 import tech.figure.aggregate.service.flow.extensions.chunked
@@ -10,10 +10,11 @@ import tech.figure.aggregate.service.stream.extractors.OutputType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow.SUSPEND
 import kotlinx.coroutines.flow.*
+import org.jetbrains.exposed.sql.transactions.transaction
+import tech.figure.aggregate.common.db.DBClient
 import tech.figure.aggregate.common.models.BatchId
 import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.common.models.toStreamBlock
-import tech.figure.aggregate.common.snowflake.SnowflakeClient
 import tech.figure.aggregate.repository.database.RavenDB
 import tech.figure.aggregate.service.DefaultDispatcherProvider
 import tech.figure.aggregate.service.DispatcherProvider
@@ -37,7 +38,7 @@ import kotlin.time.ExperimentalTime
 @ExperimentalCoroutinesApi
 class EventStreamUploader(
     private val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult>,
-    private val snowflakeClient: SnowflakeClient,
+    private val dbClient: DBClient = DBClient(),
     private val ravenClient: RavenDB,
     private val hrp: String,
     private val badBlockRange: Pair<Long, Long>,
@@ -158,7 +159,7 @@ class EventStreamUploader(
             .flowOn(dispatchers.io())
             .chunked(size = 100, timeout = 10.seconds)
             .transform { streamBlocks: List<StreamBlock>  ->
-                log.info("collected block chunck(size=${streamBlocks.size} and preparing for upload")
+                log.info("collected block chunk(size=${streamBlocks.size} and preparing for upload")
                 val batch: Batch = batchBlueprint.build()
 
                 val earliestDate: OffsetDateTime? =
@@ -168,7 +169,9 @@ class EventStreamUploader(
                     withContext(dispatchers.io()) {
                         streamBlocks.map{ block ->
                             onEachBlock(block)
-                            async { batch.processBlock(block) }
+                            async {
+                                batch.processBlock(block)
+                            }
                         }.awaitAll()
 
                         batch.complete { batchId: BatchId, extractor: Extractor ->
@@ -176,10 +179,13 @@ class EventStreamUploader(
                             val key: Key = csvKey(batchId, earliestDate, extractor.name)
                             when (val out = extractor.output()) {
                                 is OutputType.FilePath -> {
+                                    println(out)
                                     if (extractor.shouldOutput()) {
-                                        // Handle inserting data into snowflake.
+                                        // Handle inserting data into postgres.
                                         // todo: want to return a proper status.
-                                        snowflakeClient.handleInsert(extractor.name, out.path.toFile())
+                                        transaction {
+                                            dbClient.handleInsert(extractor.name, out.path.toFile())
+                                        }
 
                                         /**
                                          * We want to track the last successful block height that was processed to S3, so

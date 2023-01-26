@@ -33,31 +33,16 @@ class TxMarkerTransfer : CSVFileExtractor(
                     ?.let { record: EventMarker ->
                         when (record) {
                             is EventMarker.Transfer ->
-                                transaction {
-                                    MarkerTransferTable.insert {
-                                        it[id] = UUID.randomUUID()
-                                        it[eventType] = event.eventType ?: ""
-                                        it[blockHeight] = event.blockHeight.toDouble()
-                                        it[blockTimestamp] = event.blockDateTime!!
-                                        it[amount] = record.amount ?: ""
-                                        it[administrator] = record.administrator ?: ""
-                                        it[toAddress] = record.toAddress ?: ""
-                                        it[fromAddress] = record.fromAddress ?: ""
-                                    }
-                                }
-
-
-//                                syncWriteRecord(
-//                                    event.eventType,
-//                                    event.blockHeight,
-//                                    event.blockDateTime?.toISOString(),
-//                                    record.amount,
-//                                    record.denom,
-//                                    record.administrator,
-//                                    record.toAddress,
-//                                    record.fromAddress,
-//                                    includeHash = true
-//                                )
+                                syncWriteRecord(
+                                    event.eventType,
+                                    event.blockHeight,
+                                    event.blockDateTime?.toISOString(),
+                                    record.amount,
+                                    record.denom,
+                                    record.administrator,
+                                    record.toAddress,
+                                    record.fromAddress
+                                )
                             else -> {
                                 // noop
                             }

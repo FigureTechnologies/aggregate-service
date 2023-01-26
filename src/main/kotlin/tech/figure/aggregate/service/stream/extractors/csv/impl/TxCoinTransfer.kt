@@ -52,19 +52,16 @@ class TxCoinTransfer : CSVFileExtractor(
                             is CosmosTx.Transfer -> {
                                 val amountAndDenom: List<AmountDenom>? = record.amountAndDenom?.let { record.splitAmountAndDenom(it)}
                                 amountAndDenom?.map { amountDenom ->
-                                    transaction {
-                                        CoinTransferTable.insert {
-                                            it[id] = UUID.randomUUID()
-                                            it[eventType] = event.eventType.toString()
-                                            it[blockHeight] = event.blockHeight.toDouble()
-                                            it[blockTimestamp] = event.blockDateTime!!
-                                            it[txhash] = event.txHash
-                                            it[recipient] = record.recipient.toString()
-                                            it[sender] = record.sender.toString()
-                                            it[amount] = amountDenom.amount
-                                            it[denom] = amountDenom.denom
-                                        }
-                                    }
+                                    syncWriteRecord(
+                                        event.eventType,
+                                        event.blockHeight,
+                                        event.blockDateTime?.toISOString(),
+                                        event.txHash,
+                                        record.recipient,
+                                        record.sender,
+                                        amountDenom.amount,
+                                        amountDenom.denom
+                                    )
                                 }
                             }
                         }

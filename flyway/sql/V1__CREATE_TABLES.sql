@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS COIN_TRANSFER (
-    id UUID PRIMARY KEY,
+    hash TEXT PRIMARY KEY,
     event_type TEXT,
     block_height BIGINT,
     block_timestamp TIMESTAMPTZ,
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS COIN_TRANSFER (
 );
 
 CREATE TABLE IF NOT EXISTS FEES (
-    id UUID PRIMARY KEY,
+    hash TEXT PRIMARY KEY,
     tx_hash TEXT,
     block_height BIGINT,
     block_timestamp TIMESTAMPTZ,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS FEES (
 );
 
 CREATE TABLE IF NOT EXISTS MARKER_TRANSFER(
-    id UUID PRIMARY KEY,
+    hash TEXT PRIMARY KEY,
     event_type TEXT,
     block_height BIGINT,
     block_timestamp TIMESTAMPTZ,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS MARKER_TRANSFER(
 );
 
 CREATE TABLE IF NOT EXISTS MARKER_SUPPLY(
-    id UUID PRIMARY KEY,
+    hash TEXT PRIMARY KEY,
     event_type TEXT,
     block_height BIGINT,
     block_timestamp TIMESTAMPTZ,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS MARKER_SUPPLY(
 );
 
 CREATE TABLE IF NOT EXISTS ATTRIBUTES(
-    id UUID PRIMARY KEY,
+    hash TEXT PRIMARY KEY,
     event_type TEXT,
     block_height BIGINT,
     block_timestamp TIMESTAMPTZ,

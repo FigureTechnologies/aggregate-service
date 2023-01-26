@@ -26,7 +26,6 @@ localstack = "0.2.21"
 grpc = "1.41.0"
 grpcCore = "1.51.1"
 kotlinSerialization = "1.2.2"
-snowflake = "3.13.26"
 dbUtils = "1.7"
 ravendb = "5.4.0"
 hdWallet = "0.1.15"
@@ -121,7 +120,6 @@ grpc-core = { module = "io.grpc:grpc-core", version.ref = "grpcCore" }
 
 protobuf-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobufUtil"}
 
-snowflake = { module = "net.snowflake:snowflake-jdbc", version.ref = "snowflake"}
 commons-dbutils = { module = "commons-dbutils:commons-dbutils", version.ref = "dbUtils"}
 
 raven-db = { module = "net.ravendb:ravendb", version.ref = "ravendb" }

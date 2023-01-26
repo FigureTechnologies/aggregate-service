@@ -1,9 +1,9 @@
-package tech.figure.aggregate.common.snowflake.model
+package tech.figure.aggregate.common.db.model
 
 data class TxCoinTransferData(
     val hash: String,
     val eventType: String,
-    val blockHeight: Double,
+    val blockHeight: Long,
     val blockTimestamp: String,
     val txHash: String,
     val recipient: String,
@@ -16,7 +16,7 @@ data class TxCoinTransferData(
             TxCoinTransferData(
                 hash = "123ABC",
                 eventType = "transfer",
-                blockHeight = 123.0,
+                blockHeight = 123,
                 blockTimestamp = "2022-08-24 00:48:42.245254649",
                 txHash = "ABC123",
                 recipient = "tx123",

@@ -6,7 +6,9 @@ plugins {
 
 group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
-java.sourceCompatibility = JavaVersion.VERSION_11
+val javaTarget = JavaVersion.VERSION_11
+java.sourceCompatibility = javaTarget
+java.targetCompatibility = javaTarget
 
 repositories {
     mavenCentral()
