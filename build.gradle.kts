@@ -52,6 +52,8 @@ dependencies {
     implementation(libs.protobuf.util)
 
     implementation("org.jetbrains.exposed:exposed-core:0.41.1")
+
+    testImplementation("com.h2database:h2:1.4.200")
 }
 
 sourceSets {
@@ -66,6 +68,7 @@ sourceSets {
     test {
         java {
             srcDir("$projectDir/src/test/kotlin")
+
         }
     }
 }
