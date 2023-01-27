@@ -315,7 +315,7 @@ jobs:
 
   docker_migration_build:
     name: Push to Docker Hub
-    #if: github.event_name == 'release'
+    if: github.event_name == 'release'
     needs: migration_build
     runs-on: ubuntu-latest
     steps:
