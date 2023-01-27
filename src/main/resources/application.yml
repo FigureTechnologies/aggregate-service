@@ -7,11 +7,10 @@ msg_fee_height: ${MSG_FEE_HEIGHT}
 dbConfig:
   dbUri: ${DB_URI}
   dbUser: ${DB_USER}
-  dbPass: ${DB_PASSWORD}
+  dbPassword: ${DB_PASSWORD}
   cacheUri: ${CACHE_URI}
   cacheCheckpoint: ${CACHE_CHECKPOINT}
   cacheTable: ${CACHE_TABLE}
-  dbType: ${DB_TYPE}
   dbMaxConnections: ${DB_MAX_CONNECTIONS}
 
 block-api:
