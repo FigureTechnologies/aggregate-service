@@ -226,7 +226,7 @@ jobs:
 
   docker_service_build:
     name: Push to Docker Hub
-    if: github.event_name == 'release'
+#    if: github.event_name == 'release'
     needs: java_service_build
     runs-on: ubuntu-latest
     steps:
