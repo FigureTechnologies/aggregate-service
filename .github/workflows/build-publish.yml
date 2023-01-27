@@ -316,7 +316,7 @@ jobs:
   docker_migration_build:
     name: Push to Docker Hub
     #if: github.event_name == 'release'
-    needs: java_api_job_build
+    needs: migration_build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
