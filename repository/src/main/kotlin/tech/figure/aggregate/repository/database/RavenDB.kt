@@ -15,7 +15,7 @@ open class RavenDB(dbConfig: DBConfig): RepositoryBase {
         const val CHECKPOINT_ID = "BlockHeightCheckpoint"
     }
 
-    private val store = DocumentStore(dbConfig.addr, dbConfig.dbName).also { it.conventions.maxNumberOfRequestsPerSession = dbConfig.dbMaxConnections }.initialize()
+    private val store = DocumentStore(dbConfig.cacheUri, dbConfig.cacheCheckpoint).also { it.conventions.maxNumberOfRequestsPerSession = dbConfig.dbMaxConnections }.initialize()
     private val log = logger()
 
     override suspend fun writeBlockCheckpoint(blockHeight: Long) {

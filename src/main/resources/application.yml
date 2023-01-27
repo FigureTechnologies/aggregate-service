@@ -5,8 +5,11 @@ bad_block_range: ${ONE_DOT_ELEVEN_BAD_BLOCK_RANGE}
 msg_fee_height: ${MSG_FEE_HEIGHT}
 
 dbConfig:
-  addr: ${DB_URI}
-  dbName: ${DB_DATABASE}
+  dbUri: ${DB_URI}
+  dbUser: ${DB_USER}
+  dbPass: ${DB_PASSWORD}
+  cacheUri: ${CACHE_URI}
+  cacheCheckpoint: ${CACHE_CHECKPOINT}
   cacheTable: ${CACHE_TABLE}
   dbType: ${DB_TYPE}
   dbMaxConnections: ${DB_MAX_CONNECTIONS}

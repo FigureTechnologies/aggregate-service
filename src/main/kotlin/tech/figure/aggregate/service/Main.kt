@@ -121,18 +121,6 @@ fun main(args: Array<String>) {
     val ddHost = ddHostFlag ?: runCatching { System.getenv("DD_AGENT_HOST") }.getOrElse { "localhost" }
     val ddTags = ddTagsFlag ?: runCatching { System.getenv("DD_TAGS") }.getOrElse { "" }
 
-    val properties = Properties().apply {
-        put("user", unwrapEnvOrError("DW_USER"))
-        put("password", unwrapEnvOrError("DW_PASSWORD"))
-        put("warehouse", unwrapEnvOrError("DW_WAREHOUSE"))
-        put("db", unwrapEnvOrError("DW_DATABASE"))
-        put("schema", unwrapEnvOrError("DW_SCHEMA"))
-        put("networkTimeout", "30")
-        put("queryTimeout", "30")
-    }
-
-    val dwUri = "jdbc:snowflake://${unwrapEnvOrError("DW_HOST")}.snowflakecomputing.com"
-
     val environment: Environment =
         envFlag ?: runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
             .getOrElse {
@@ -162,7 +150,7 @@ fun main(args: Array<String>) {
         withManagedChannelConfig(config.blockApi.maxBlockSize)
     )
 
-    Database.connect("jdbc:postgresql://localhost:5432/postgresdb", "org.postgresql.Driver", "postgres", "password1")
+    Database.connect("jdbc:postgresql://${config.dbConfig.dbUri}/postgresdb", "org.postgresql.Driver", config.dbConfig.dbUser, config.dbConfig.dbPassword)
 
     val dbClient = DBClient()
     val ravenClient = RavenDB(config.dbConfig)
