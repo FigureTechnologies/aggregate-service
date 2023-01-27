@@ -285,7 +285,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: migration/docker/Dockerfile
+          file: migration/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.DOCKER_TAGS }}
