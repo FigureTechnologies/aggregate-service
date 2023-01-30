@@ -310,7 +310,7 @@ jobs:
       - name: Upload migration artifact
         uses: actions/upload-artifact@v2
         with:
-          name: aggregator-service-migration
+          name: aggregate-service-migration
           path: migrations/build/libs/*.jar
 
   docker_migration_build:
@@ -330,7 +330,7 @@ jobs:
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-          IMAGE_ID=figuretechnologies/aggregator-service-migration
+          IMAGE_ID=figuretechnologies/aggregate-service-migration
 
           DOCKER_TAGS=$IMAGE_ID:$VERSION
 
@@ -352,7 +352,7 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v2
         with:
-          name: aggregator-service-migration
+          name: aggregate-service-migration
           path: migrations/build/libs
 
       - name: Log into DockerHub
