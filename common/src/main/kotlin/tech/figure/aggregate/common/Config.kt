@@ -23,6 +23,8 @@ data class DBConfig(
     val dbUri: String,
     val dbUser: String,
     val dbPassword: String,
+    val dbName: String,
+    val dbSchema: String,
     val cacheUri: String,
     val cacheCheckpoint: String,
     val cacheTable: String,

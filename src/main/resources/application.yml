@@ -7,7 +7,9 @@ msg_fee_height: ${MSG_FEE_HEIGHT}
 dbConfig:
   dbUri: ${DB_URI}
   dbUser: ${DB_USER}
-  dbPassword: ${DB_PASSWORD}
+  dbPassword: ${DB_PASS}
+  dbName: ${DB_NAME}
+  dbSchema: ${DB_SCHEMA}
   cacheUri: ${CACHE_URI}
   cacheCheckpoint: ${CACHE_CHECKPOINT}
   cacheTable: ${CACHE_TABLE}
