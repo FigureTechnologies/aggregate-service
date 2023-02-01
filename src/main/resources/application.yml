@@ -5,7 +5,7 @@ bad_block_range: ${ONE_DOT_ELEVEN_BAD_BLOCK_RANGE}
 msg_fee_height: ${MSG_FEE_HEIGHT}
 
 dbConfig:
-  dbUri: ${DB_URI}
+  dbHost: ${DB_HOST}
   dbUser: ${DB_USER}
   dbPassword: ${DB_PASS}
   dbName: ${DB_NAME}

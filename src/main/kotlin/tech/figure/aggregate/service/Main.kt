@@ -150,7 +150,7 @@ fun main(args: Array<String>) {
         withManagedChannelConfig(config.blockApi.maxBlockSize)
     )
 
-    Database.connect("jdbc:postgresql://${config.dbConfig.dbUri}/${config.dbConfig.dbName}", "org.postgresql.Driver", config.dbConfig.dbUser, config.dbConfig.dbPassword)
+    Database.connect("jdbc:postgresql://${config.dbConfig.dbHost}/${config.dbConfig.dbName}", "org.postgresql.Driver", config.dbConfig.dbUser, config.dbConfig.dbPassword)
 
     val dbClient = DBClient()
     val ravenClient = RavenDB(config.dbConfig)

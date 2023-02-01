@@ -20,7 +20,7 @@ data class Config (
 )
 
 data class DBConfig(
-    val dbUri: String,
+    val dbHost: String,
     val dbUser: String,
     val dbPassword: String,
     val dbName: String,
