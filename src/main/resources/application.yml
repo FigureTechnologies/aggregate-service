@@ -6,6 +6,7 @@ msg_fee_height: ${MSG_FEE_HEIGHT}
 
 dbConfig:
   dbHost: ${DB_HOST}
+  dbPort: ${DB_PORT}
   dbUser: ${DB_USER}
   dbPassword: ${DB_PASS}
   dbName: ${DB_NAME}

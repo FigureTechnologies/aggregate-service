@@ -21,6 +21,7 @@ data class Config (
 
 data class DBConfig(
     val dbHost: String,
+    val dbPort: Int,
     val dbUser: String,
     val dbPassword: String,
     val dbName: String,
