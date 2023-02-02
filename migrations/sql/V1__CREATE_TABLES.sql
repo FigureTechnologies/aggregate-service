@@ -63,6 +63,6 @@ CREATE TABLE IF NOT EXISTS ATTRIBUTES(
     owner TEXT
 );
 
-CREATE UNIQUE INDEX coin_transfer_block_height ON COIN_TRANSFER (block_height);
-CREATE UNIQUE INDEX fees_block_height ON FEES (block_height);
+CREATE INDEX coin_transfer_block_height ON COIN_TRANSFER (block_height);
+CREATE INDEX fees_block_height ON FEES (block_height);
 

@@ -17,6 +17,6 @@ flyway {
     driver = "org.postgresql.Driver"
     user = "postgres"
     password = "password1"
-    schemas = mutableListOf("aggregatedb").toTypedArray()
+    schemas = mutableListOf("public").toTypedArray()
     locations = mutableListOf("filesystem:sql").toTypedArray()
 }
