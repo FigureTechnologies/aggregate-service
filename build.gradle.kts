@@ -8,7 +8,6 @@ plugins {
     signing
     `maven-publish`
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
-    id("org.flywaydb.flyway") version "9.8.1"
 }
 
 group = "tech.figure.aggregate"
@@ -56,16 +55,6 @@ dependencies {
 
     testImplementation("com.h2database:h2:1.4.200")
 }
-
-flyway {
-    url = "jdbc:postgresql://localhost:5432/postgresdb"
-    driver = "org.postgresql.Driver"
-    user = "postgres"
-    password = "password1"
-    schemas = mutableListOf("aggregate-service").toTypedArray()
-    locations = mutableListOf("filesystem:${projectDir}/src/main/kotlin/tech/figure/aggregate/service/sql/").toTypedArray()
-}
-
 
 sourceSets {
     main {
