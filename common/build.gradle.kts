@@ -36,13 +36,13 @@ dependencies {
     implementation(libs.commons.dbutils)
     implementation(libs.apache.commons)
 
-    implementation("tech.figure.block:api-proto:0.1.10")
+    implementation(libs.postgres)
+    
+    implementation(libs.blockapi.proto)
 
-    implementation("org.postgresql:postgresql:42.5.1")
-
-    implementation("org.jetbrains.exposed:exposed-core:0.41.1")
-    implementation("org.jetbrains.exposed:exposed-dao:0.41.1")
-    implementation("org.jetbrains.exposed:exposed-jdbc:0.41.1")
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.dao)
+    implementation(libs.exposed.jdbc)
 }
 
 sourceSets {

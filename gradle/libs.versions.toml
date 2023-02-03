@@ -126,7 +126,10 @@ protobuf-util = { module = "com.google.protobuf:protobuf-java-util", version.ref
 commons-dbutils = { module = "commons-dbutils:commons-dbutils", version.ref = "dbUtils"}
 
 raven-db = { module = "net.ravendb:ravendb", version.ref = "ravendb" }
-exposed = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
+exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
+exposed-dao = { module = "org.jetbrains.exposed:exposed-dao", version.ref = "exposed" }
+exposed-jdbc = {module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed"}
+
 postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
 h2database = { module = "com.h2database:h2", version.ref = "h2database" }
 
@@ -154,3 +157,4 @@ logback = ["logback-core", "logback-classic"]
 aws = ["aws-netty", "aws-s3", "aws-dynamodb", "aws-dynamodb-enhanced"]
 hoplite = ["hoplite-core", "hoplite-yaml"]
 blockapi = ["blockapi-proto", "blockapi-client"]
+exposed = ["exposed-core", "exposed-dao", "exposed-jdbc"]

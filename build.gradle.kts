@@ -51,7 +51,7 @@ dependencies {
     implementation(libs.grpc.core)
     implementation(libs.protobuf.util)
 
-    implementation(libs.exposed)
+    implementation(libs.exposed.core)
 
     testImplementation(libs.h2database)
 }
