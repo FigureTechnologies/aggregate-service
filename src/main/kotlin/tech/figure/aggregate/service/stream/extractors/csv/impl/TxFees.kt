@@ -1,11 +1,7 @@
 package tech.figure.aggregate.service.stream.extractors.csv.impl
 
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.transactions.transaction
-import tech.figure.aggregate.common.domain.FeesTable
 import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.service.stream.extractors.csv.CSVFileExtractor
-import java.util.UUID
 
 class TxFees: CSVFileExtractor(
     name = "tx_fees",

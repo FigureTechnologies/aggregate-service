@@ -230,7 +230,7 @@ fun main(args: Array<String>) {
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter() ?:  1, PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter() ?: 1, PREFER.TX_EVENTS)
             EventStreamUploader(
                 blockFlow,
                 dbClient,
