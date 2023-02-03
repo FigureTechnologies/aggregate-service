@@ -51,9 +51,9 @@ dependencies {
     implementation(libs.grpc.core)
     implementation(libs.protobuf.util)
 
-    implementation("org.jetbrains.exposed:exposed-core:0.41.1")
+    implementation(libs.exposed)
 
-    testImplementation("com.h2database:h2:1.4.200")
+    testImplementation(libs.h2database)
 }
 
 sourceSets {
