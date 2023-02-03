@@ -8,7 +8,7 @@ import com.papsign.ktor.openapigen.route.response.respond
 import com.papsign.ktor.openapigen.route.route
 import com.papsign.ktor.openapigen.route.tag
 import com.papsign.ktor.openapigen.route.throws
-import tech.figure.aggregate.common.snowflake.model.TxCoinTransferData
+import tech.figure.aggregate.common.db.model.TxCoinTransferData
 import tech.figure.aggregator.api.cache.CacheService
 import tech.figure.aggregator.api.model.request.TxRequest
 import tech.figure.aggregator.api.route.Tag

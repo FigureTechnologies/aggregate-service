@@ -1,7 +1,7 @@
 package tech.figure.aggregate.service.stream.extractors.csv.impl
 
-import tech.figure.aggregate.common.toISOString
 import tech.figure.aggregate.common.models.block.StreamBlock
+import tech.figure.aggregate.common.toISOString
 import tech.figure.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import tech.figure.aggregate.service.stream.models.marker.EventMarker
 
@@ -52,8 +52,7 @@ class TxMarkerSupply : CSVFileExtractor(
                                 record.metadataDisplay,
                                 record.metadataDenomUnits,
                                 record.metadataName,
-                                record.metadataSymbol,
-                                includeHash = true
+                                record.metadataSymbol
                             )
                         }
                     }

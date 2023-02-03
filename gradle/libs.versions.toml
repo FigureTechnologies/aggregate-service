@@ -1,6 +1,8 @@
 [versions]
 blockApi = "0.1.10"
 eventStream = "0.6.3"
+exposed = "0.41.1"
+h2database = "1.4.200"
 kotlinxCore = "1.5.2"
 kotlinxCli = "0.3.5"
 kotlinxDateTime = "0.3.0"
@@ -15,6 +17,7 @@ commonsio = "2.11.0"
 commonslang = "3.12.0"
 scarlet = "0.1.12"
 datadog = "2.13.0"
+postgres = "42.2.5"
 provenanceProtos = "1.13.1"
 logback = "1.2.3"
 moshi = "1.13.0"
@@ -26,7 +29,6 @@ localstack = "0.2.21"
 grpc = "1.41.0"
 grpcCore = "1.51.1"
 kotlinSerialization = "1.2.2"
-snowflake = "3.13.26"
 dbUtils = "1.7"
 ravendb = "5.4.0"
 hdWallet = "0.1.15"
@@ -121,10 +123,16 @@ grpc-core = { module = "io.grpc:grpc-core", version.ref = "grpcCore" }
 
 protobuf-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobufUtil"}
 
-snowflake = { module = "net.snowflake:snowflake-jdbc", version.ref = "snowflake"}
 commons-dbutils = { module = "commons-dbutils:commons-dbutils", version.ref = "dbUtils"}
 
 raven-db = { module = "net.ravendb:ravendb", version.ref = "ravendb" }
+exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
+exposed-dao = { module = "org.jetbrains.exposed:exposed-dao", version.ref = "exposed" }
+exposed-jdbc = {module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed"}
+
+postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
+h2database = { module = "com.h2database:h2", version.ref = "h2database" }
+
 hdwallet-bech32 = { module = "io.provenance.hdwallet:hdwallet-bech32", version.ref = "hdWallet"}
 hdwallet-common = { module = "io.provenance.hdwallet:hdwallet-common", version.ref = "hdWallet"}
 
@@ -149,3 +157,4 @@ logback = ["logback-core", "logback-classic"]
 aws = ["aws-netty", "aws-s3", "aws-dynamodb", "aws-dynamodb-enhanced"]
 hoplite = ["hoplite-core", "hoplite-yaml"]
 blockapi = ["blockapi-proto", "blockapi-client"]
+exposed = ["exposed-core", "exposed-dao", "exposed-jdbc"]

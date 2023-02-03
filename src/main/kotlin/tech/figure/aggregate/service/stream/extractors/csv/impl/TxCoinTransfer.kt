@@ -23,6 +23,7 @@ class TxCoinTransfer : CSVFileExtractor(
         "denom"
     )
 ) {
+
     override suspend fun extract(block: StreamBlock) {
         for(txData in block.blockTxData) {
             for(event in txData.events) {
@@ -40,8 +41,7 @@ class TxCoinTransfer : CSVFileExtractor(
                                         record.recipient,
                                         record.sender,
                                         amountDenom.amount,
-                                        amountDenom.denom,
-                                        includeHash = true
+                                        amountDenom.denom
                                     )
                                 }
                             }

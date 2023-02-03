@@ -9,6 +9,9 @@ plugins {
 
 group = "tech.figure.augment"
 version = project.property("version")?.takeIf { it != "unspecified" } ?: "1.0-SNAPSHOT"
+val javaTarget = JavaVersion.VERSION_11
+java.sourceCompatibility = javaTarget
+java.targetCompatibility = javaTarget
 
 repositories {
     mavenCentral()
@@ -41,7 +44,6 @@ dependencies {
     implementation(libs.kotlin.core)
     implementation(libs.kotlin.guava)
     implementation(libs.kotlin.jdk8coroutines)
-    implementation(libs.snowflake)
     implementation(libs.commons.dbutils)
     implementation(platform(libs.aws.bom))
     implementation(libs.aws.s3)

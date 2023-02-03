@@ -29,6 +29,9 @@ fun String.decodeBase64(): String =
  */
 fun String.isAsciiPrintable(): Boolean = StringUtils.isAsciiPrintable(this)
 
+fun String.toOffsetDateTime(): OffsetDateTime = OffsetDateTime.parse(this)
+
+
 /**
  * Decodes a string repeatedly base64 encoded, terminating when:
  *

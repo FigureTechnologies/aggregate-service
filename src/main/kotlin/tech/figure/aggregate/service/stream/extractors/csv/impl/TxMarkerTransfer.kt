@@ -37,8 +37,7 @@ class TxMarkerTransfer : CSVFileExtractor(
                                     record.denom,
                                     record.administrator,
                                     record.toAddress,
-                                    record.fromAddress,
-                                    includeHash = true
+                                    record.fromAddress
                                 )
                             else -> {
                                 // noop

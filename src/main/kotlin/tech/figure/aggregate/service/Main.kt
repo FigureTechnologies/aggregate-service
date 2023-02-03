@@ -24,11 +24,9 @@ import kotlinx.cli.default
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import org.slf4j.Logger
 import tech.figure.aggregate.common.Environment
 import tech.figure.aggregate.repository.database.RavenDB
-import tech.figure.aggregate.service.flow.extensions.cancelOnSignal
 import tech.figure.block.api.client.BlockAPIClient
 import tech.figure.block.api.proto.BlockServiceOuterClass
 import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
@@ -36,7 +34,8 @@ import java.util.Properties
 import kotlin.time.Duration
 import io.grpc.internal.PickFirstLoadBalancerProvider
 import kotlinx.coroutines.flow.catch
-import tech.figure.aggregate.common.snowflake.SnowflakeClient
+import org.jetbrains.exposed.sql.Database
+import tech.figure.aggregate.common.db.DBClient
 import tech.figure.block.api.client.GRPCConfigOpt
 import tech.figure.block.api.client.Protocol.TLS
 import tech.figure.block.api.client.withApiKey
@@ -122,18 +121,6 @@ fun main(args: Array<String>) {
     val ddHost = ddHostFlag ?: runCatching { System.getenv("DD_AGENT_HOST") }.getOrElse { "localhost" }
     val ddTags = ddTagsFlag ?: runCatching { System.getenv("DD_TAGS") }.getOrElse { "" }
 
-    val properties = Properties().apply {
-        put("user", unwrapEnvOrError("DW_USER"))
-        put("password", unwrapEnvOrError("DW_PASSWORD"))
-        put("warehouse", unwrapEnvOrError("DW_WAREHOUSE"))
-        put("db", unwrapEnvOrError("DW_DATABASE"))
-        put("schema", unwrapEnvOrError("DW_SCHEMA"))
-        put("networkTimeout", "30")
-        put("queryTimeout", "30")
-    }
-
-    val dwUri = "jdbc:snowflake://${unwrapEnvOrError("DW_HOST")}.snowflakecomputing.com"
-
     val environment: Environment =
         envFlag ?: runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
             .getOrElse {
@@ -163,6 +150,9 @@ fun main(args: Array<String>) {
         withManagedChannelConfig(config.blockApi.maxBlockSize)
     )
 
+    Database.connect("jdbc:postgresql://${config.dbConfig.dbHost}:${config.dbConfig.dbPort}/${config.dbConfig.dbName}", "org.postgresql.Driver", config.dbConfig.dbUser, config.dbConfig.dbPassword)
+
+    val dbClient = DBClient()
     val ravenClient = RavenDB(config.dbConfig)
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
@@ -231,21 +221,19 @@ fun main(args: Array<String>) {
             }
         }
 
-        val snowflakeClient = SnowflakeClient(properties, dwUri)
-
         // start api
         async {
-            embeddedServer(Netty, port=8081) {
+            embeddedServer(Netty, port=8080) {
                 install(Routing) {
-                    configureRouting(snowflakeClient, config.dbConfig, config.apiHost)
+                    configureRouting(dbClient, config.dbConfig, config.apiHost)
                 }
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter() ?: 1 , PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter() ?: 1, PREFER.TX_EVENTS)
             EventStreamUploader(
                 blockFlow,
-                snowflakeClient,
+                dbClient,
                 ravenClient,
                 config.hrp,
                 Pair(config.badBlockRange[0], config.badBlockRange[1]),
@@ -253,10 +241,10 @@ fun main(args: Array<String>) {
             )
                 .addExtractor(config.upload.extractors)
                 .upload()
-                .cancelOnSignal(shutDownSignal)
-                .catch {
+                .catch { e ->
                     // Reset on exception so that we can pick up
                     // the last successful checked block height
+                    println(e)
                     exitProcess(1)
                 }
                 .collect { result: UploadResult ->

@@ -9,6 +9,7 @@ plugins {
 
 group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
+java.sourceCompatibility = JavaVersion.VERSION_11
 
 application {
     mainClass.set("tech.figure.aggregator.api.ApplicationKt")
@@ -21,6 +22,7 @@ repositories {
 
 val javaTarget = JavaVersion.VERSION_11
 java.sourceCompatibility = javaTarget
+java.targetCompatibility = javaTarget
 
 dependencies {
     implementation(projects.common)
@@ -40,7 +42,6 @@ dependencies {
 
     implementation(libs.hoplite.core)
     implementation(libs.hoplite.yaml)
-    implementation(libs.snowflake)
 
     implementation(kotlin("stdlib"))
 

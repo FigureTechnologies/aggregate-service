@@ -8,7 +8,6 @@ import tech.figure.aggregate.repository.model.checkpoint.BlockHeightCheckpoint
 import net.ravendb.client.documents.DocumentStore
 import net.ravendb.client.documents.session.IDocumentSession
 import tech.figure.aggregate.common.DBConfig
-import tech.figure.aggregate.common.models.block.StreamBlock
 
 open class RavenDB(dbConfig: DBConfig): RepositoryBase {
 
@@ -16,7 +15,7 @@ open class RavenDB(dbConfig: DBConfig): RepositoryBase {
         const val CHECKPOINT_ID = "BlockHeightCheckpoint"
     }
 
-    private val store = DocumentStore(dbConfig.addr, dbConfig.dbName).also { it.conventions.maxNumberOfRequestsPerSession = dbConfig.dbMaxConnections }.initialize()
+    private val store = DocumentStore(dbConfig.cacheUri, dbConfig.cacheCheckpoint).also { it.conventions.maxNumberOfRequestsPerSession = dbConfig.dbMaxConnections }.initialize()
     private val log = logger()
 
     override suspend fun writeBlockCheckpoint(blockHeight: Long) {

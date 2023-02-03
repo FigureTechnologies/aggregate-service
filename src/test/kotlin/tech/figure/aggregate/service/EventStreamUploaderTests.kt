@@ -1,8 +1,5 @@
 package tech.figure.aggregate.service
 
-import cloud.localstack.ServiceName
-import cloud.localstack.docker.LocalstackDockerExtension
-import cloud.localstack.docker.annotation.LocalstackDockerProperties
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
@@ -22,10 +19,10 @@ import org.slf4j.Logger
 import tech.figure.aggregate.service.utils.installShutdownHook
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.toList
+import org.jetbrains.exposed.sql.Database
 import org.junit.jupiter.api.BeforeAll
-import org.junitpioneer.jupiter.SetEnvironmentVariable
 import tech.figure.aggregate.common.Environment
-import tech.figure.aggregate.common.snowflake.SnowflakeClient
+import tech.figure.aggregate.common.db.DBClient
 import tech.figure.aggregate.service.flow.extensions.cancelOnSignal
 import tech.figure.aggregate.service.test.utils.Defaults.blockData
 import kotlin.time.Duration
@@ -33,48 +30,32 @@ import kotlin.time.ExperimentalTime
 
 @ExperimentalCoroutinesApi
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@LocalstackDockerProperties(services = [ServiceName.S3])
-@SetEnvironmentVariable.SetEnvironmentVariables(
-    SetEnvironmentVariable(
-        key = "ENVIRONMENT",
-        value = "local"
-    ),
-    SetEnvironmentVariable(
-        key = "AWS_ACCESS_KEY_ID",
-        value = "test",
-    ),
-    SetEnvironmentVariable(
-        key = "AWS_SECRET_ACCESS_KEY",
-        value = "test"
-    )
-)
 class EventStreamUploaderTests {
 
     val log: Logger = logger()
     val ravenClient = mockk<RavenDB>()
 
-    lateinit var environment: Environment
+    val environment: Environment = Environment.local
     lateinit var config: Config
 
-    val snowflakeClient = mockk<SnowflakeClient>()
+    val dbClient = mockk<DBClient>()
     val shutDownSignal: Channel<Unit> = installShutdownHook(log)
 
     @BeforeAll
     fun setup() {
 
-        environment = runCatching { Environment.valueOf(System.getenv("ENVIRONMENT")) }
-            .getOrElse {
-                error("Not a valid environment: ${System.getenv("ENVIRONMENT")}")
-            }
+        Database.connect(
+            url = listOf(
+                "jdbc:h2:mem:test",
+                "DB_CLOSE_DELAY=-1",
+                "LOCK_TIMEOUT=10000",
+            ).joinToString(";") + ";",
+            driver = "org.h2.Driver"
+        )
+
         config = ConfigLoaderBuilder.default()
             .addSource(EnvironmentVariablesPropertySource(useUnderscoresAsSeparator = true, allowUppercaseNames = true))
-            .apply {
-                // If in the local environment, override the ${...} envvar values in `application.properties` with
-                // the values provided in the local-specific `local.env.properties` property file:
-                if (environment.isLocal()) {
-                    addPreprocessor(PropsPreprocessor("/local.env.properties"))
-                }
-            }
+            .addPreprocessor(PropsPreprocessor("/local.env.properties"))
             .addSource(PropertySource.resource("/application.yml"))
             .build()
             .loadConfigOrThrow()
@@ -82,12 +63,6 @@ class EventStreamUploaderTests {
 
     @OptIn(ExperimentalTime::class)
     @Test
-    @SetEnvironmentVariable.SetEnvironmentVariables(
-        SetEnvironmentVariable(
-            key = "ENVIRONMENT",
-            value = "local"
-        )
-    )
     fun testEventStreamUploaderSuccess() {
         val blockFlow = blockData()
         var complete = false
@@ -99,7 +74,7 @@ class EventStreamUploaderTests {
             }
             var inspected1 = false
 
-            justRun { snowflakeClient.handleInsert(any(), any())}
+            justRun { dbClient.handleInsert(any(), any())}
 
             var uploadResults1: List<UploadResult> = mutableListOf()
             withTimeoutOrNull(Duration.seconds(4)) {
@@ -107,7 +82,7 @@ class EventStreamUploaderTests {
 
                     uploadResults1 = EventStreamUploader(
                         blockFlow,
-                        snowflakeClient,
+                        dbClient,
                         ravenClient,
                         "tp",
                         Pair(config.badBlockRange[0], config.badBlockRange[1]),

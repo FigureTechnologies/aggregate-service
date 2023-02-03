@@ -1,6 +1,6 @@
 package tech.figure.aggregate.common.models
 
-import tech.figure.aggregate.common.snowflake.Key
+import tech.figure.aggregate.common.db.Key
 
 /**
  * Represents the result of uploading a block to S3.

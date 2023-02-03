@@ -1,4 +1,4 @@
-package tech.figure.aggregate.common.snowflake
+package tech.figure.aggregate.common.db
 
 import java.time.OffsetDateTime
 

@@ -1,7 +1,7 @@
 package tech.figure.aggregate.service.stream.extractors.csv.impl
 
-import tech.figure.aggregate.common.toISOString
 import tech.figure.aggregate.common.models.block.StreamBlock
+import tech.figure.aggregate.common.toISOString
 import tech.figure.aggregate.service.stream.extractors.csv.CSVFileExtractor
 import tech.figure.aggregate.service.stream.models.attribute.EventAttribute
 
@@ -38,8 +38,7 @@ class TxEventAttributes : CSVFileExtractor(
                             record.updatedValue ?: record.value,
                             record.updatedType ?: record.type,
                             record.account,
-                            record.owner,
-                            includeHash = true
+                            record.owner
                         )
                     }
             }

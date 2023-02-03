@@ -26,8 +26,7 @@ class TxFees: CSVFileExtractor(
                         event.blockDateTime,
                         blockTxData.fee.fee,
                         blockTxData.fee.denom,
-                        blockTxData.fee.signerInfo?.incurrAddr,
-                        includeHash = true
+                        blockTxData.fee.signerInfo?.incurrAddr
                     )
                 }
             }

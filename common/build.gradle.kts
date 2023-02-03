@@ -6,7 +6,9 @@ plugins {
 
 group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
-java.sourceCompatibility = JavaVersion.VERSION_11
+val javaTarget = JavaVersion.VERSION_11
+java.sourceCompatibility = javaTarget
+java.targetCompatibility = javaTarget
 
 repositories {
     mavenCentral()
@@ -34,7 +36,13 @@ dependencies {
     implementation(libs.commons.dbutils)
     implementation(libs.apache.commons)
 
-    implementation("tech.figure.block:api-proto:0.1.10")
+    implementation(libs.postgres)
+    
+    implementation(libs.blockapi.proto)
+
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.dao)
+    implementation(libs.exposed.jdbc)
 }
 
 sourceSets {

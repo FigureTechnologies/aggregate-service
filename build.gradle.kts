@@ -12,7 +12,9 @@ plugins {
 
 group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
-java.sourceCompatibility = JavaVersion.VERSION_11
+val javaTarget = JavaVersion.VERSION_11
+java.sourceCompatibility = javaTarget
+java.targetCompatibility = javaTarget
 
 repositories {
     mavenCentral()
@@ -48,6 +50,10 @@ dependencies {
 
     implementation(libs.grpc.core)
     implementation(libs.protobuf.util)
+
+    implementation(libs.exposed.core)
+
+    testImplementation(libs.h2database)
 }
 
 sourceSets {
@@ -62,6 +68,7 @@ sourceSets {
     test {
         java {
             srcDir("$projectDir/src/test/kotlin")
+
         }
     }
 }

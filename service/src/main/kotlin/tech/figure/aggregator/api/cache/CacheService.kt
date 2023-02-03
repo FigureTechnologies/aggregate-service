@@ -1,24 +1,22 @@
 package tech.figure.aggregator.api.cache
 
 import com.google.gson.Gson
-import tech.figure.aggregate.common.snowflake.model.TxCoinTransferData
+import tech.figure.aggregate.common.db.model.TxCoinTransferData
 import tech.figure.aggregator.api.model.TxTotalAmtResponse
-import tech.figure.aggregate.common.snowflake.model.TxFeeData
+import tech.figure.aggregate.common.db.model.TxFeeData
 import tech.figure.aggregator.api.service.AccountService
 import tech.figure.aggregate.common.DBConfig
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.repository.database.RavenDB
 import net.ravendb.client.Constants
 import net.ravendb.client.documents.session.IDocumentSession
-import net.snowflake.client.jdbc.internal.joda.time.DateTime
-import tech.figure.aggregate.common.snowflake.SnowflakeClient
-import tech.figure.aggregate.common.snowflake.SnowflakeJDBC
+import tech.figure.aggregate.common.db.DBClient
 import tech.figure.aggregator.api.model.TxDailyTotal
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
 class CacheService(
-    private val snowflakeClient: SnowflakeClient,
+    private val dbClient: DBClient,
     private val config: DBConfig
 ): RavenDB(
    config
@@ -31,8 +29,6 @@ class CacheService(
         const val DEFAULT_LIMIT = 100
         const val DEFAULT_OFFSET = 0
     }
-
-
 
     /*TODO: clean up the below*/
 
@@ -326,14 +322,14 @@ class CacheService(
      * Reauthenticate with Snowflake every time we query to Snowflake
      */
     private fun loadTxRequestFromDW(address: String, startDate: OffsetDateTime, endDate: OffsetDateTime) =
-        snowflakeClient.getNetResult(address, startDate, endDate)
+        dbClient.getNetResult(address, startDate, endDate)
 
     private fun loadFeeRequestFromDW(address: String, startDate: OffsetDateTime, endDate: OffsetDateTime) =
-        snowflakeClient.getTotalFee(address, startDate, endDate)
+        dbClient.getTotalFee(address, startDate, endDate)
 
     private fun configureEviction(data: Any, session: IDocumentSession) {
         //Evict data after 30 days
-        val expiry = DateTime.now().plusDays(30)
+        val expiry = OffsetDateTime.now().plusDays(30)
         session.advanced().getMetadataFor(data)[Constants.Documents.Metadata.EXPIRES] = expiry
     }
 

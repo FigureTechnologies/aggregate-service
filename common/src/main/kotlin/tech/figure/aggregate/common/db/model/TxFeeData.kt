@@ -1,9 +1,9 @@
-package tech.figure.aggregate.common.snowflake.model
+package tech.figure.aggregate.common.db.model
 
 data class TxFeeData(
     val hash: String,
     val txHash: String,
-    val blockHeight: Double,
+    val blockHeight: Long,
     val blockTimestamp: String,
     val fee: String,
     val feeDenom: String,
@@ -14,7 +14,7 @@ data class TxFeeData(
             TxFeeData(
                 hash = "ABC123",
                 txHash = "123ABC",
-                blockHeight = 1000.0,
+                blockHeight = 1000,
                 blockTimestamp = "2021-04-06T00:00Z",
                 fee = "123",
                 feeDenom = "nhash",
