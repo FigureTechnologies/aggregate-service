@@ -223,9 +223,9 @@ fun main(args: Array<String>) {
 
         // start api
         async {
-            embeddedServer(Netty, port=8080) {
+            embeddedServer(Netty, port=config.apiPort) {
                 install(Routing) {
-                    configureRouting(dbClient, config.dbConfig, config.apiHost)
+                    configureRouting(dbClient, config.dbConfig)
                 }
             }.start(wait = true)
         }

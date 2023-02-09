@@ -43,7 +43,10 @@ fun main(args: Array<String>) {
         put("networkTimeout", "30")
         put("queryTimeout", "30")
     }
-    val dbConnection = DriverManager.getConnection("jdbc:snowflake://${unwrapEnvOrError("DW_HOST")}.snowflakecomputing.com", properties)
+    val dbConnection = DriverManager.getConnection(
+        "jdbc:postgresql://${unwrapEnvOrError("DB_HOST")}:${unwrapEnvOrError("DB_PORT")}/${unwrapEnvOrError("DB_NAME")}",
+        properties
+    )
 
     val provenanceUri = URI(unwrapEnvOrError("PROVENANCE_GRPC_URL"))
     val channel = ManagedChannelBuilder
@@ -56,6 +59,7 @@ fun main(args: Array<String>) {
             }
         }
         .build()
+
     val semaphore = Semaphore(System.getenv("GRPC_CONCURRENCY")?.toInt() ?: Const.DEFAULT_GRPC_CONCURRENCY)
     val provenanceClient = ProvenanceClient(channel, semaphore)
 

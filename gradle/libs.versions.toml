@@ -24,8 +24,6 @@ moshi = "1.13.0"
 hoplite = "2.1.3"
 json = "20210307"
 gson = "2.10.1"
-aws = "2.17.127"
-localstack = "0.2.21"
 grpc = "1.41.0"
 grpcCore = "1.51.1"
 kotlinSerialization = "1.2.2"
@@ -108,14 +106,6 @@ json = { module = "org.json:json", version.ref = "json" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 apache-commons = { module = "org.apache.commons:commons-csv", version.ref = "apache" }
 
-aws-bom = { module = "software.amazon.awssdk:bom", version.ref = "aws"}
-aws-netty = { module = "software.amazon.awssdk:netty-nio-client" }
-aws-s3 = { module = "software.amazon.awssdk:s3" }
-aws-dynamodb = { module = "software.amazon.awssdk:dynamodb" }
-aws-dynamodb-enhanced = { module = "software.amazon.awssdk:dynamodb-enhanced" }
-
-localstack = { module = "cloud.localstack:localstack-utils", version.ref = "localstack"}
-
 grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc"}
 grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc"}
 grpc-netty = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc"}
@@ -154,7 +144,6 @@ mockk = ["mockk"]
 apache-commons = ["commons-lang", "commons-io", "commons-csv"]
 scarlet = ["scarlet-core", "scarlet-stream", "scarlet-websocket", "scarlet-moshi"]
 logback = ["logback-core", "logback-classic"]
-aws = ["aws-netty", "aws-s3", "aws-dynamodb", "aws-dynamodb-enhanced"]
 hoplite = ["hoplite-core", "hoplite-yaml"]
 blockapi = ["blockapi-proto", "blockapi-client"]
 exposed = ["exposed-core", "exposed-dao", "exposed-jdbc"]

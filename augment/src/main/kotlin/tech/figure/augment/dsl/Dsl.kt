@@ -48,10 +48,6 @@ class QueryBuilder {
         output = LoggingOutputBuilder().apply(block).build()
     }
 
-    fun s3Output(block: S3OutputBuilder.() -> Unit) {
-        output = S3OutputBuilder().apply(block).build()
-    }
-
     fun build(): Query = Query(sources, transforms, output)
 }
 
@@ -199,10 +195,10 @@ class LoggingOutput(val columns: List<String>) : Output() {
     }
 }
 @Serializable
-class S3Output(val bucket: String, val tableName: String, val columns: List<String>) : Output() {
+class ResultOutput(val bucket: String, val tableName: String, val columns: List<String>) : Output() {
     override fun equals(other: Any?): Boolean {
         return if (other?.javaClass == javaClass) {
-            val o = (other as S3Output)
+            val o = (other as ResultOutput)
 
             return bucket == o.bucket && tableName == o.tableName && columns.all { o.columns.contains(it) } && columns.size == o.columns.size
         } else {
@@ -237,7 +233,7 @@ class S3OutputBuilder {
         columns.add(block())
     }
 
-    fun build(): S3Output = S3Output(bucket, tableName, columns)
+    fun build(): ResultOutput = ResultOutput(bucket, tableName, columns)
 }
 
 typealias Row = Map<String, String>
