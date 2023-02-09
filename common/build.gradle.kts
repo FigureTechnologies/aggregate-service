@@ -28,9 +28,6 @@ dependencies {
     implementation(libs.moshi.kotlin.codegen)
     implementation(libs.bundles.hoplite)
     implementation(libs.json)
-    implementation(platform(libs.aws.bom))
-    implementation(libs.bundles.aws)
-    implementation(libs.localstack)
     implementation(libs.bundles.hdwallet)
 
     implementation(libs.commons.dbutils)

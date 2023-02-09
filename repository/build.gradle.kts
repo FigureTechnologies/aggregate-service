@@ -19,8 +19,6 @@ dependencies {
     implementation(projects.common)
 
     implementation(libs.bundles.kotlin)
-    implementation(platform(libs.aws.bom))
-    implementation(libs.bundles.aws)
     implementation(libs.bundles.scarlet)
     implementation(libs.jackson.module)
     implementation(libs.raven.db)

@@ -43,7 +43,6 @@ dependencies {
     implementation(libs.hoplite.core)
     implementation(libs.hoplite.yaml)
     implementation(libs.json)
-    implementation(libs.localstack)
 
     implementation(libs.blockapi.client)
     implementation(libs.blockapi.proto)

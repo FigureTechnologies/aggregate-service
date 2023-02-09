@@ -12,9 +12,9 @@ data class Config (
     val wsNode: String,
     val hrp: String,
     val upload: UploadConfig = UploadConfig.empty(),
+    val apiPort: Int,
     val blockApi: BlockApiConfig,
     val dbConfig: DBConfig,
-    val apiHost: String,
     val badBlockRange: List<Long>,
     val msgFeeHeight: Long
 )

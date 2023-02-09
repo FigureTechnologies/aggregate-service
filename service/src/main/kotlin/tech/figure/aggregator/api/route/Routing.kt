@@ -26,7 +26,7 @@ import java.time.format.DateTimeFormatter
 
 private const val OPEN_API_JSON_PATH="/openapi.json"
 
-fun Application.configureRouting(dbClient: DBClient, dbConfig: DBConfig, apiHost: String) {
+fun Application.configureRouting(dbClient: DBClient, dbConfig: DBConfig) {
     val cacheService = CacheService(dbClient, dbConfig)
     install(ContentNegotiation) {
         jackson()

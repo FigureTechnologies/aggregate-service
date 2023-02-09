@@ -34,9 +34,6 @@ dependencies {
     implementation(libs.hoplite.core)
     implementation(libs.hoplite.yaml)
     implementation(libs.json)
-    implementation(platform(libs.aws.bom))
-    implementation(libs.bundles.aws)
-    implementation(libs.localstack)
     implementation(libs.grpc.protobuf)
     implementation(libs.grpc.stub)
     implementation(libs.logback.classic)
@@ -45,10 +42,11 @@ dependencies {
     implementation(libs.kotlin.guava)
     implementation(libs.kotlin.jdk8coroutines)
     implementation(libs.commons.dbutils)
-    implementation(platform(libs.aws.bom))
-    implementation(libs.aws.s3)
+    implementation(libs.exposed.core)
+
     runtimeOnly(libs.grpc.netty)
     testImplementation(libs.kotlin.test)
+
 }
 
 tasks.compileTestKotlin {
