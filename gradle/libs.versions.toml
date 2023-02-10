@@ -35,7 +35,7 @@ ktor = "1.6.8" # A handful of plugins don't support ktor 2.0 yet due diligence b
 okhttp = "4.10.0"
 kodein = "7.17.0"
 swaggerKtor="0.3-beta.3"
-apache = "1.9.0"
+apache = "1.10.0"
 protobufUtil = "3.21.12"
 
 pluginProtobuf = "0.18.7"
