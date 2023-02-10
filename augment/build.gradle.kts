@@ -4,7 +4,7 @@ plugins {
     application
     idea
 
-    kotlin("plugin.serialization") version "1.5.30"
+    kotlin("plugin.serialization") version "1.8.10"
 }
 
 group = "tech.figure.augment"
