@@ -39,7 +39,7 @@ apache = "1.10.0"
 protobufUtil = "3.22.0"
 
 pluginProtobuf = "0.18.7"
-pluginNexusPublishPlugin = "1.1.0"
+pluginNexusPublishPlugin = "1.2.0"
 pluginOpenAPI = "5.4.0"
 
 [libraries]
