@@ -7,7 +7,7 @@ plugins {
     jacoco
     signing
     `maven-publish`
-    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
+    id("io.github.gradle-nexus.publish-plugin") version "1.2.0"
 }
 
 group = "tech.figure.aggregate"
