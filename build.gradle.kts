@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm")
     kotlin("kapt")
-    id("org.openapi.generator") version "5.2.1"
+    id("org.openapi.generator") version "5.4.0"
     application
     idea
     jacoco
