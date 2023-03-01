@@ -2,7 +2,7 @@
 blockApi = "0.1.10"
 eventStream = "0.6.3"
 exposed = "0.41.1"
-h2database = "1.4.200"
+h2database = "2.1.214"
 kotlinxCore = "1.6.4"
 kotlinxCli = "0.3.5"
 kotlinxDateTime = "0.4.0"
