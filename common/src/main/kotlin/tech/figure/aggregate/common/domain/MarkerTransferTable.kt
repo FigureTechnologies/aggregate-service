@@ -1,12 +1,13 @@
 package tech.figure.aggregate.common.domain
 
-import org.jetbrains.exposed.dao.Entity
-import org.jetbrains.exposed.dao.EntityClass
+import org.jetbrains.exposed.dao.UUIDEntity
+import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.IdTable
+import org.jetbrains.exposed.dao.id.UUIDTable
 import java.time.OffsetDateTime
+import java.util.UUID
 
-object MarkerTransferTable: IdTable<String>("marker_transfer") {
+object MarkerTransferTable: UUIDTable("marker_transfer", columnName = "uuid") {
     val hash = text("hash")
     val eventType = text("event_type")
     val blockHeight = double("block_height")
@@ -16,14 +17,9 @@ object MarkerTransferTable: IdTable<String>("marker_transfer") {
     val administrator = text("administrator")
     val toAddress = text("to_address")
     val fromAddress = text("from_address")
-
-    override val id = hash.entityId()
 }
 
-open class MarkerTransferEntityClass: EntityClass<String, MarkerTransferRecord>(MarkerTransferTable) {
-
-    private fun findByHash(hash: String) = find {  MarkerTransferTable.id eq hash }.firstOrNull()
-
+open class MarkerTransferEntityClass: UUIDEntityClass<MarkerTransferRecord>(MarkerTransferTable) {
     fun insert(
         hash: String,
         eventType: String,
@@ -35,7 +31,8 @@ open class MarkerTransferEntityClass: EntityClass<String, MarkerTransferRecord>(
         toAddress: String,
         fromAddress: String
     ) {
-        findByHash(hash) ?: new(hash) {
+        new(UUID.randomUUID()) {
+            this.hash = hash
             this.eventType = eventType
             this.blockHeight = blockHeight
             this.blockTimestamp = blockTimestamp
@@ -48,10 +45,11 @@ open class MarkerTransferEntityClass: EntityClass<String, MarkerTransferRecord>(
     }
 }
 
-class MarkerTransferRecord(hash: EntityID<String>): Entity<String>(hash) {
+class MarkerTransferRecord(uuid: EntityID<UUID>): UUIDEntity(uuid) {
     companion object: MarkerTransferEntityClass()
 
-    var hash by MarkerTransferTable.id
+    var uuid by MarkerTransferTable.id
+    var hash by MarkerTransferTable.hash
     var eventType by MarkerTransferTable.eventType
     var blockHeight by MarkerTransferTable.blockHeight
     var blockTimestamp by MarkerTransferTable.blockTimestamp

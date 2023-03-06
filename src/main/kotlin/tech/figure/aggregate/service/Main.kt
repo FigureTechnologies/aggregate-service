@@ -14,7 +14,6 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import tech.figure.aggregate.common.Config
 import tech.figure.aggregate.common.recordMaxBlockHeight
-import tech.figure.aggregate.common.unwrapEnvOrError
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.UploadResult
 import tech.figure.aggregate.service.stream.consumers.EventStreamUploader
@@ -30,7 +29,6 @@ import tech.figure.aggregate.repository.database.RavenDB
 import tech.figure.block.api.client.BlockAPIClient
 import tech.figure.block.api.proto.BlockServiceOuterClass
 import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
-import java.util.Properties
 import kotlin.time.Duration
 import io.grpc.internal.PickFirstLoadBalancerProvider
 import kotlinx.coroutines.flow.catch

@@ -1,12 +1,13 @@
 package tech.figure.aggregate.common.domain
 
-import org.jetbrains.exposed.dao.Entity
-import org.jetbrains.exposed.dao.EntityClass
+import org.jetbrains.exposed.dao.UUIDEntity
+import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.IdTable
+import org.jetbrains.exposed.dao.id.UUIDTable
 import java.time.OffsetDateTime
+import java.util.UUID
 
-object MarkerSupplyTable: IdTable<String>("marker_supply") {
+object MarkerSupplyTable: UUIDTable("marker_supply", columnName = "uuid") {
     val hash = text("hash")
     val eventType = text("event_type")
     val blockHeight = double("block_height")
@@ -23,14 +24,9 @@ object MarkerSupplyTable: IdTable<String>("marker_supply") {
     val metadataDenomUnits = text("metadata_denom_units")
     val metadataName = text("metadata_name")
     val metadataSymbol = text("metadata_symbol")
-
-    override val id = hash.entityId()
 }
 
-open class MarkerSupplyEntityClass: EntityClass<String, MarkerSupplyRecord>(MarkerSupplyTable) {
-
-    private fun findByHash(hash: String) = find { MarkerSupplyTable.id eq hash }.firstOrNull()
-
+open class MarkerSupplyEntityClass: UUIDEntityClass<MarkerSupplyRecord>(MarkerSupplyTable) {
     fun insert(
         hash: String,
         eventType: String,
@@ -49,7 +45,8 @@ open class MarkerSupplyEntityClass: EntityClass<String, MarkerSupplyRecord>(Mark
         metadataName: String,
         metadataSymbol: String
     ) {
-        findByHash(hash) ?: new(hash) {
+        new(UUID.randomUUID()) {
+            this.hash = hash
             this.eventType = eventType
             this.blockHeight = blockHeight
             this.blockTimestamp = blockTimestamp
@@ -69,11 +66,12 @@ open class MarkerSupplyEntityClass: EntityClass<String, MarkerSupplyRecord>(Mark
     }
 }
 
-class MarkerSupplyRecord(hash: EntityID<String>): Entity<String>(hash) {
+class MarkerSupplyRecord(uuid: EntityID<UUID>): UUIDEntity(uuid) {
 
     companion object: MarkerSupplyEntityClass()
 
-    var hash by MarkerSupplyTable.id
+    var uuid by MarkerSupplyTable.id
+    var hash by MarkerSupplyTable.hash
     var eventType by MarkerSupplyTable.eventType
     var blockHeight by MarkerSupplyTable.blockHeight
     var blockTimestamp by MarkerSupplyTable.blockTimestamp
