@@ -1,13 +1,12 @@
 package tech.figure.aggregate.common.domain
 
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
+import org.jetbrains.exposed.dao.Entity
+import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IdTable
 import java.time.OffsetDateTime
-import java.util.UUID
 
-object MarkerSupplyTable: UUIDTable("marker_supply", columnName = "uuid") {
+object MarkerSupplyTable: IdTable<String>("marker_supply") {
     val hash = text("hash")
     val eventType = text("event_type")
     val blockHeight = double("block_height")
@@ -24,9 +23,14 @@ object MarkerSupplyTable: UUIDTable("marker_supply", columnName = "uuid") {
     val metadataDenomUnits = text("metadata_denom_units")
     val metadataName = text("metadata_name")
     val metadataSymbol = text("metadata_symbol")
+
+    override val id = hash.entityId()
 }
 
-open class MarkerSupplyEntityClass: UUIDEntityClass<MarkerSupplyRecord>(MarkerSupplyTable) {
+open class MarkerSupplyEntityClass: EntityClass<String, MarkerSupplyRecord>(MarkerSupplyTable) {
+
+    private fun findByHash(hash: String) = find { MarkerSupplyTable.id eq hash }.firstOrNull()
+
     fun insert(
         hash: String,
         eventType: String,
@@ -45,8 +49,7 @@ open class MarkerSupplyEntityClass: UUIDEntityClass<MarkerSupplyRecord>(MarkerSu
         metadataName: String,
         metadataSymbol: String
     ) {
-        new(UUID.randomUUID()) {
-            this.hash = hash
+        findByHash(hash) ?: new(hash) {
             this.eventType = eventType
             this.blockHeight = blockHeight
             this.blockTimestamp = blockTimestamp
@@ -66,12 +69,11 @@ open class MarkerSupplyEntityClass: UUIDEntityClass<MarkerSupplyRecord>(MarkerSu
     }
 }
 
-class MarkerSupplyRecord(uuid: EntityID<UUID>): UUIDEntity(uuid) {
+class MarkerSupplyRecord(hash: EntityID<String>): Entity<String>(hash) {
 
     companion object: MarkerSupplyEntityClass()
 
-    var uuid by MarkerSupplyTable.id
-    var hash by MarkerSupplyTable.hash
+    var hash by MarkerSupplyTable.id
     var eventType by MarkerSupplyTable.eventType
     var blockHeight by MarkerSupplyTable.blockHeight
     var blockTimestamp by MarkerSupplyTable.blockTimestamp

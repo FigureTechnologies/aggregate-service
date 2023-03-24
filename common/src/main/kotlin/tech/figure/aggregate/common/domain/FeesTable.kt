@@ -1,13 +1,12 @@
 package tech.figure.aggregate.common.domain
 
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
+import org.jetbrains.exposed.dao.Entity
+import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IdTable
 import java.time.OffsetDateTime
-import java.util.UUID
 
-object FeesTable: UUIDTable("fees", columnName = "uuid") {
+object FeesTable: IdTable<String>("fees") {
     val hash = text("hash")
     val txHash = text("tx_hash")
     val blockHeight = double("block_height")
@@ -15,9 +14,13 @@ object FeesTable: UUIDTable("fees", columnName = "uuid") {
     val fee = text("fee")
     val feeDenom = text("fee_denom")
     val sender = text("sender")
+
+    override val id = hash.entityId()
 }
 
-open class FeeEntityClass: UUIDEntityClass<FeeRecords>(FeesTable) {
+open class FeeEntityClass: EntityClass<String, FeeRecords>(FeesTable) {
+
+    private fun findByHash(hash: String) = find { FeesTable.id eq hash }.firstOrNull()
 
     fun insert(
         hash: String,
@@ -27,22 +30,21 @@ open class FeeEntityClass: UUIDEntityClass<FeeRecords>(FeesTable) {
         fee: String,
         feeDenom: String,
         sender: String
-    ) = new(UUID.randomUUID()) {
-            this.hash = hash
-            this.txHash = txHash
-            this.blockHeight = blockHeight
-            this.blockTimestamp = blockTimestamp
-            this.fee = fee
-            this.feeDenom = feeDenom
-            this.sender = sender
+    ) = findByHash(hash) ?: new(hash) {
+        this.txHash = txHash
+        this.blockHeight = blockHeight
+        this.blockTimestamp = blockTimestamp
+        this.fee = fee
+        this.feeDenom = feeDenom
+        this.sender = sender
     }
+
 }
 
-class FeeRecords (uuid: EntityID<UUID>): UUIDEntity(uuid) {
+class FeeRecords (hash: EntityID<String>): Entity<String>(hash) {
     companion object: FeeEntityClass()
 
-    var uuid by FeesTable.id
-    var hash by FeesTable.hash
+    var hash by FeesTable.id
     var txHash by FeesTable.txHash
     var blockHeight by FeesTable.blockHeight
     var blockTimestamp by FeesTable.blockTimestamp
