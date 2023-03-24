@@ -1,13 +1,12 @@
 package tech.figure.aggregate.common.domain
 
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
+import org.jetbrains.exposed.dao.Entity
+import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IdTable
 import java.time.OffsetDateTime
-import java.util.UUID
 
-object AttributesTable: UUIDTable("attributes", columnName = "uuid") {
+object AttributesTable: IdTable<String>("attributes") {
     val hash = text("hash")
     val eventType = text("event_type")
     val blockHeight = double("block_height")
@@ -17,9 +16,13 @@ object AttributesTable: UUIDTable("attributes", columnName = "uuid") {
     val type = text("type")
     val account = text("account")
     val owner = text("owner")
+
+    override val id = hash.entityId()
 }
 
-open class AttributesEntityClass: UUIDEntityClass<AttributesRecord>(AttributesTable) {
+open class AttributesEntityClass: EntityClass<String, AttributesRecord>(AttributesTable) {
+
+    private fun findByHash(hash: String) = find {  AttributesTable.id eq hash }.firstOrNull()
 
     fun insert(
         hash: String,
@@ -32,8 +35,7 @@ open class AttributesEntityClass: UUIDEntityClass<AttributesRecord>(AttributesTa
         account: String,
         owner: String
     ) {
-        new(UUID.randomUUID()) {
-            this.hash = hash
+        findByHash(hash) ?: new(hash) {
             this.eventType = eventType
             this.blockHeight = blockHeight
             this.blockTimestamp = blockTimestamp
@@ -46,11 +48,10 @@ open class AttributesEntityClass: UUIDEntityClass<AttributesRecord>(AttributesTa
     }
 }
 
-class AttributesRecord(uuid: EntityID<UUID>): UUIDEntity(uuid) {
+class AttributesRecord(hash: EntityID<String>): Entity<String>(hash) {
     companion object: AttributesEntityClass()
 
-    var uuid by AttributesTable.id
-    var hash by AttributesTable.hash
+    var hash by AttributesTable.id
     var eventType by AttributesTable.eventType
     var blockHeight by AttributesTable.blockHeight
     var blockTimestamp by AttributesTable.blockTimestamp

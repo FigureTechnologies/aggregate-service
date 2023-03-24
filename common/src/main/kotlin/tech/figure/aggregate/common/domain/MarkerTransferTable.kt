@@ -1,13 +1,12 @@
 package tech.figure.aggregate.common.domain
 
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
+import org.jetbrains.exposed.dao.Entity
+import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IdTable
 import java.time.OffsetDateTime
-import java.util.UUID
 
-object MarkerTransferTable: UUIDTable("marker_transfer", columnName = "uuid") {
+object MarkerTransferTable: IdTable<String>("marker_transfer") {
     val hash = text("hash")
     val eventType = text("event_type")
     val blockHeight = double("block_height")
@@ -17,9 +16,14 @@ object MarkerTransferTable: UUIDTable("marker_transfer", columnName = "uuid") {
     val administrator = text("administrator")
     val toAddress = text("to_address")
     val fromAddress = text("from_address")
+
+    override val id = hash.entityId()
 }
 
-open class MarkerTransferEntityClass: UUIDEntityClass<MarkerTransferRecord>(MarkerTransferTable) {
+open class MarkerTransferEntityClass: EntityClass<String, MarkerTransferRecord>(MarkerTransferTable) {
+
+    private fun findByHash(hash: String) = find {  MarkerTransferTable.id eq hash }.firstOrNull()
+
     fun insert(
         hash: String,
         eventType: String,
@@ -31,8 +35,7 @@ open class MarkerTransferEntityClass: UUIDEntityClass<MarkerTransferRecord>(Mark
         toAddress: String,
         fromAddress: String
     ) {
-        new(UUID.randomUUID()) {
-            this.hash = hash
+        findByHash(hash) ?: new(hash) {
             this.eventType = eventType
             this.blockHeight = blockHeight
             this.blockTimestamp = blockTimestamp
@@ -45,11 +48,10 @@ open class MarkerTransferEntityClass: UUIDEntityClass<MarkerTransferRecord>(Mark
     }
 }
 
-class MarkerTransferRecord(uuid: EntityID<UUID>): UUIDEntity(uuid) {
+class MarkerTransferRecord(hash: EntityID<String>): Entity<String>(hash) {
     companion object: MarkerTransferEntityClass()
 
-    var uuid by MarkerTransferTable.id
-    var hash by MarkerTransferTable.hash
+    var hash by MarkerTransferTable.id
     var eventType by MarkerTransferTable.eventType
     var blockHeight by MarkerTransferTable.blockHeight
     var blockTimestamp by MarkerTransferTable.blockTimestamp

@@ -1,13 +1,12 @@
 package tech.figure.aggregate.common.domain
 
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
+import org.jetbrains.exposed.dao.Entity
+import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IdTable
 import java.time.OffsetDateTime
-import java.util.UUID
 
-object CoinTransferTable: UUIDTable("coin_transfer", columnName = "uuid") {
+object CoinTransferTable: IdTable<String>("coin_transfer") {
     val hash = text("hash")
     val eventType = text("event_type")
     val blockHeight = double("block_height")
@@ -17,9 +16,13 @@ object CoinTransferTable: UUIDTable("coin_transfer", columnName = "uuid") {
     val sender = text("sender")
     val amount = text("amount")
     val denom = text("denom")
+
+    override val id = hash.entityId()
 }
 
-open class CoinTransferEntityClass: UUIDEntityClass<CoinTransferRecord>(CoinTransferTable) {
+open class CoinTransferEntityClass: EntityClass<String, CoinTransferRecord>(CoinTransferTable) {
+
+    private fun findByHash(hash: String) = find {  CoinTransferTable.id eq hash }.firstOrNull()
 
     fun insert(
         hash: String,
@@ -32,8 +35,7 @@ open class CoinTransferEntityClass: UUIDEntityClass<CoinTransferRecord>(CoinTran
         amount: String,
         denom: String
     ) {
-        new(UUID.randomUUID()) {
-            this.hash = hash
+        findByHash(hash) ?: new(hash) {
             this.eventType = eventType
             this.blockHeight = blockHeight
             this.blockTimestamp = blockTimestamp
@@ -44,13 +46,13 @@ open class CoinTransferEntityClass: UUIDEntityClass<CoinTransferRecord>(CoinTran
             this.denom = denom
         }
     }
+
 }
 
-class CoinTransferRecord(uuid: EntityID<UUID>): UUIDEntity(uuid) {
+class CoinTransferRecord(hash: EntityID<String>): Entity<String>(hash) {
     companion object: CoinTransferEntityClass()
 
-    var uuid by CoinTransferTable.id
-    var hash by CoinTransferTable.hash
+    var hash by CoinTransferTable.id
     var eventType by CoinTransferTable.eventType
     var blockHeight by CoinTransferTable.blockHeight
     var blockTimestamp by CoinTransferTable.blockTimestamp
