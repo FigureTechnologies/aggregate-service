@@ -36,7 +36,7 @@ okhttp = "4.10.0"
 kodein = "7.18.0"
 swaggerKtor="0.3-beta.3"
 apache = "1.10.0"
-protobufUtil = "3.22.0"
+protobufUtil = "3.22.2"
 
 pluginProtobuf = "0.18.7"
 pluginNexusPublishPlugin = "1.2.0"
