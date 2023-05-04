@@ -26,6 +26,7 @@ import tech.figure.aggregate.common.db.DBClient
 import tech.figure.aggregate.service.flow.extensions.cancelOnSignal
 import tech.figure.aggregate.service.test.utils.Defaults.blockData
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 
 @ExperimentalCoroutinesApi
@@ -77,7 +78,7 @@ class EventStreamUploaderTests {
             justRun { dbClient.handleInsert(any(), any())}
 
             var uploadResults1: List<UploadResult> = mutableListOf()
-            withTimeoutOrNull(Duration.seconds(4)) {
+            withTimeoutOrNull(4.seconds) {
                 var inspected1 = false
 
                     uploadResults1 = EventStreamUploader(

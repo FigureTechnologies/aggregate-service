@@ -13,6 +13,7 @@ import kotlinx.datetime.Instant
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 
 /**
@@ -143,7 +144,7 @@ fun <T, R> Flow<T>.windowed(
         val toSkip: Int = max(step - size, 0)
         var skipped: Int = toSkip
         var lastEmittedAt: Instant? = null
-        val pollInterval = Duration.seconds(2)
+        val pollInterval = 2.seconds
         val mutex = Mutex()
         // Are we using a chunk watcher?
         val withChunkWatcher: Boolean = timeout != null
