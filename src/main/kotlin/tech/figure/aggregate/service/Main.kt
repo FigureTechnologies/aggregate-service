@@ -39,6 +39,7 @@ import tech.figure.block.api.client.Protocol.TLS
 import tech.figure.block.api.client.withApiKey
 import tech.figure.block.api.client.withProtocol
 import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Installs a shutdown a handler to clean up resources when the returned Channel receives its one (and only) element.
@@ -191,7 +192,7 @@ fun main(args: Array<String>) {
                     .also { log.info("Maximum block height: ${it ?: "--"}") }
                     ?.let(dogStatsClient::recordMaxBlockHeight)
                     ?.getOrElse { log.error("DD metric failure", it) }
-                delay(Duration.minutes(1))
+                delay(1.minutes)
             }
         }
 
