@@ -21,7 +21,7 @@ import tech.figure.aggregator.api.model.TxTotalAmtResponse
 
 fun NormalOpenAPIRoute.feeRoute(cacheService: CacheService) {
     tag(Tag.Fee) {
-        route("net/fee") {
+        route("api/v1/net/fee") {
             get<TxRequest, TxTotalAmtResponse>(
                 info(
                     summary = "Get the total fee for a given address within a set date range"
@@ -46,7 +46,7 @@ fun NormalOpenAPIRoute.feeRoute(cacheService: CacheService) {
             }
         }
 
-        route("fee") {
+        route("api/v1/fee") {
             get<TxRequest, List<TxFeeData>>(
                 info(
                     summary = "Get all fee transaction for a given address within a set date range"
