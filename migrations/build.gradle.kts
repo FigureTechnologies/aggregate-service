@@ -1,6 +1,6 @@
 plugins {
     java
-    id("org.flywaydb.flyway") version "9.8.1"
+    id("org.flywaydb.flyway") version "7.15.0"
 }
 
 dependencies {
