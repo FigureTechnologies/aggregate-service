@@ -12,9 +12,9 @@ plugins {
 
 group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
-val javaTarget = JavaVersion.VERSION_11
-java.sourceCompatibility = javaTarget
-java.targetCompatibility = javaTarget
+val javaVersion = JavaVersion.VERSION_11
+java.sourceCompatibility = javaVersion
+java.targetCompatibility = javaVersion
 
 repositories {
     mavenCentral()
@@ -78,17 +78,15 @@ application {
 
 tasks.compileKotlin {
     kotlinOptions {
-        freeCompilerArgs += "-Xjsr305=strict"
         freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
-        jvmTarget = "11"
+        jvmTarget = javaVersion.majorVersion
     }
 }
 
 tasks.compileTestKotlin {
     kotlinOptions {
-        freeCompilerArgs += "-Xjsr305=strict"
         freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
-        jvmTarget = "11"
+        jvmTarget = javaVersion.majorVersion
     }
 }
 

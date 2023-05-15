@@ -23,10 +23,10 @@ import tech.figure.aggregator.api.model.TxTotalAmtResponse
 fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
 
     tag(Tag.Transaction) {
-        route("transaction/out") {
+        route("api/v1/transaction/sum/out") {
             get<TxRequest, List<TxDailyTotal>>(
                 info(
-                    summary = "Get the list of daily out total transaction as per date range."
+                    summary = "Get the sum of daily out total transaction for a given date range."
                 ),
                 example = TxDailyTotal.sampleResponse
             ) { param ->
@@ -43,7 +43,25 @@ fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
             }
         }
 
-        route("transaction/raw/out") {
+        route("api/v1/transaction/sum/in") {
+            get<TxRequest, List<TxDailyTotal>>(
+                info(
+                    summary = "Get the sum of daily in total transaction for a given date range."
+                ),
+                example = TxDailyTotal.sampleResponse
+            ) { param ->
+                val result: List<TxDailyTotal> = cacheService.getTxIn(
+                    param.address,
+                    param.startDate.toOffsetDateTime(),
+                    param.endDate.toOffsetDateTime(),
+                    param.limit?.toInt() ?: DEFAULT_LIMIT,
+                    param.offset?.toInt() ?: DEFAULT_OFFSET
+                )
+                respond(result)
+            }
+        }
+
+        route("api/v1/transaction/out") {
             get<TxRequest, List<TxCoinTransferData>>(
                 info(
                     summary = "Get a list of all transaction out data for a given address within a set date range."
@@ -63,7 +81,7 @@ fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
             }
         }
 
-        route("transaction/raw/in/") {
+        route("api/v1/transaction/in") {
             get<TxRequest, List<TxCoinTransferData>>(
                 info(
                     summary = "Get a list of all transaction in data for a given address within a set date range."
@@ -83,28 +101,7 @@ fun NormalOpenAPIRoute.txRoute(cacheService: CacheService){
             }
         }
 
-
-        route("transaction/in") {
-            get<TxRequest, List<TxDailyTotal>>(
-                info(
-                    summary = "Get the list of daily in total transaction as per date range."
-                ),
-                example = TxDailyTotal.sampleResponse
-            ) { param ->
-
-                val result: List<TxDailyTotal> = cacheService.getTxIn(
-                    param.address,
-                    param.startDate.toOffsetDateTime(),
-                    param.endDate.toOffsetDateTime(),
-                    param.limit?.toInt() ?: DEFAULT_LIMIT,
-                    param.offset?.toInt() ?: DEFAULT_OFFSET
-                )
-
-                respond(result)
-            }
-        }
-
-        route("transaction/net") {
+        route("api/v1/transaction/net") {
             get<TxRequest, TxTotalAmtResponse>(
                 info(
                     summary = "Get the net denom transaction for a given address within a set date range"
