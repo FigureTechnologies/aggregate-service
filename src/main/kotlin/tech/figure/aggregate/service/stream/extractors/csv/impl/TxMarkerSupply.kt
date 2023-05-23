@@ -60,7 +60,24 @@ class TxMarkerSupply : CSVFileExtractor(
                                 record.metadataSymbol
                             )
 
-                            syncWriteRecord(markerSupplyData)
+                            syncWriteRecord(
+                                markerSupplyData.eventType,
+                                markerSupplyData.blockHeight,
+                                markerSupplyData.blockTimestamp,
+                                markerSupplyData.coins,
+                                markerSupplyData.denom,
+                                markerSupplyData.amount,
+                                markerSupplyData.administrator,
+                                markerSupplyData.toAddress,
+                                markerSupplyData.fromAddress,
+                                markerSupplyData.metadataBase,
+                                markerSupplyData.metadataDescription,
+                                markerSupplyData.metadataDisplay,
+                                markerSupplyData.metadataDenomUnits,
+                                markerSupplyData.metadataName,
+                                markerSupplyData.metadataSymbol
+                            )
+
                             producer?.publish(MarkerSupplyParam(markerSupplyData))
                         }
                     }

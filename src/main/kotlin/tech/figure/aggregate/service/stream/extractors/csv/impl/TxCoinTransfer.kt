@@ -47,7 +47,17 @@ class TxCoinTransfer : CSVFileExtractor(
                                         amountDenom.denom
                                     )
 
-                                    syncWriteRecord(coinTransferData)
+                                    syncWriteRecord(
+                                        coinTransferData.eventType,
+                                        coinTransferData.blockHeight,
+                                        coinTransferData.blockTimestamp,
+                                        coinTransferData.txHash,
+                                        coinTransferData.recipient,
+                                        coinTransferData.sender,
+                                        coinTransferData.amount,
+                                        coinTransferData.denom
+                                    )
+
                                     producer?.publish(CoinTransferParam(coinTransferData))
                                 }
                             }
