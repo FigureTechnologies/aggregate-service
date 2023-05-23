@@ -65,7 +65,7 @@ data class Batch internal constructor(
      * @param block The block to process.
      */
     suspend fun processBlock(block: StreamBlock) =
-        // Generate a map from the class -> result pairs and save it:,'/.
+        // Generate a map from the class -> result pairs and save it
         withContext(dispatchers.io()) {
             extractors.map { extractor: Extractor ->
                 async {
