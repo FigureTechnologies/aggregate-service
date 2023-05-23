@@ -8,6 +8,8 @@ import tech.figure.aggregate.common.models.BatchId
 import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.service.DispatcherProvider
 import tech.figure.aggregate.service.stream.extractors.Extractor
+import tech.figure.aggregate.service.stream.kafka.BaseKafkaProducer
+import tech.figure.aggregate.service.stream.kafka.KafkaProducerFactory
 import java.io.Closeable
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -22,14 +24,22 @@ import kotlin.reflect.full.primaryConstructor
 data class Batch internal constructor(
     val id: BatchId,
     private val extractors: List<Extractor>,
-    private val dispatchers: DispatcherProvider
+    private val dispatchers: DispatcherProvider,
+    private val kafkaProducers: KafkaProducerFactory?
 ) {
     data class Builder(
         val extractorClassAndArgs: MutableList<Pair<KClass<out Extractor>, Array<out Any>>> = mutableListOf(),
+        var implKafkaProducer: KafkaProducerFactory? = null
     ) {
         var dispatchers: DispatcherProvider? = null
 
         fun dispatchers(value: DispatcherProvider) = apply { dispatchers = value }
+
+        /**
+         * Defaulting and only supporting kafka as the data stream for batches.
+         */
+        fun withStream(producers: KafkaProducerFactory) = apply { implKafkaProducer = producers }
+
         fun withExtractor(extractor: KClass<out Extractor>, vararg args: Any) =
             apply { extractorClassAndArgs.add(Pair(extractor, args)) }
 
@@ -37,7 +47,8 @@ data class Batch internal constructor(
             Batch(
                 BatchId(), // each batch is assigned a unique ID
                 extractorClassAndArgs.mapNotNull { (klass, args) -> klass.primaryConstructor?.call(*args) },
-                dispatchers ?: error("dispatchers must be provided")
+                dispatchers ?: error("dispatchers must be provided"),
+                implKafkaProducer //nullable, we don't need to have a stream
             )
     }
 
@@ -54,12 +65,12 @@ data class Batch internal constructor(
      * @param block The block to process.
      */
     suspend fun processBlock(block: StreamBlock) =
-        // Generate a map from the class -> result pairs and save it:
+        // Generate a map from the class -> result pairs and save it:,'/.
         withContext(dispatchers.io()) {
             extractors.map { extractor: Extractor ->
                 async {
                     runCatching {
-                        extractor.extract(block)
+                        extractor.extract(block, kafkaProducers)
                     }.onFailure { e ->
                             log.error("processing error: ${e.message} ::")
                             for (frame in e.stackTrace) {

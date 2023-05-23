@@ -3,6 +3,7 @@ blockApi = "0.1.10"
 eventStream = "0.6.3"
 exposed = "0.41.1"
 h2database = "2.1.214"
+kafka = "3.4.0"
 kotlinxCore = "1.7.0"
 kotlinxCli = "0.3.5"
 kotlinxDateTime = "0.4.0"
@@ -50,6 +51,9 @@ es-api = { module = "io.provenance.eventstream:es-api", version.ref = "eventStre
 es-core = { module = "io.provenance.eventstream:es-core", version.ref = "eventStream" }
 es-kakfa = { module = "io.provenance.eventstream:es-kafka", version.ref = "eventStream" }
 es-cli = { module = "io.provenance.eventstream:es-cli", version.ref = "eventStream" }
+
+kafka-clients = { group = "org.apache.kafka", name = "kafka-clients", version.ref = "kafka" }
+kafka-core = { group = "org.apache.kafka", name = "kafka_2.13", version.ref = "kafka" }
 
 kotlin-cli = { module = "org.jetbrains.kotlinx:kotlinx-cli-jvm", version.ref = "kotlinxCli" }
 kotlin-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDateTime" }

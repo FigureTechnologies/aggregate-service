@@ -22,6 +22,16 @@ block-api:
   apiKey: ${BLOCK_API_API_KEY}
   maxBlockSize: ${BLOCK_API_MAX_BLOCK_SIZE}
 
+kafka-config:
+  bootstrapServer: ${KAFKA_BOOTSTRAP_SERVER}
+  sasl_jaas_config: "org.apache.kafka.common.security.plain.PlainLoginModule \
+    required username='${KAFKA_CONFLUENT_CLUSTER_API_KEY}' \
+    password='${KAFKA_CONFLUENT_CLUSTER_API_SECRET}';"
+  securityProtocol: ${KAFKA_CONFLUENT_SECURITY_PROTOCOL}
+  confluentClientDnsLookup: ${KAFKA_CONFLUENT_CLIENT_DNS_LOOKUP}
+  coinTxTopicName: ${KAFKA_COIN_TRANSFER_TOPIC}
+  markerSupplyTopicName: ${KAFKA_MARKER_SUPPLY_TOPIC}
+
 hrp: ${HRP}
 # Event stream-specific configuration options:
 event-stream:

@@ -4,6 +4,9 @@ import tech.figure.aggregate.common.toISOString
 import tech.figure.aggregate.common.models.AmountDenom
 import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.service.stream.extractors.csv.CSVFileExtractor
+import tech.figure.aggregate.service.stream.extractors.model.CoinTransfer
+import tech.figure.aggregate.service.stream.kafka.BaseKafkaProducerParam.CoinTransferParam
+import tech.figure.aggregate.service.stream.kafka.KafkaProducerFactory
 import tech.figure.aggregate.service.stream.models.cosmos.Tx as CosmosTx
 
 /**
@@ -24,7 +27,7 @@ class TxCoinTransfer : CSVFileExtractor(
     )
 ) {
 
-    override suspend fun extract(block: StreamBlock) {
+    override suspend fun extract(block: StreamBlock, producer: KafkaProducerFactory?) {
         for(txData in block.blockTxData) {
             for(event in txData.events) {
                 tech.figure.aggregate.service.stream.models.cosmos.Tx.mapper.fromEvent(event)
@@ -33,7 +36,7 @@ class TxCoinTransfer : CSVFileExtractor(
                             is CosmosTx.Transfer -> {
                                 val amountAndDenom: List<AmountDenom>? = record.amountAndDenom?.let { record.splitAmountAndDenom(it)}
                                 amountAndDenom?.map { amountDenom ->
-                                    syncWriteRecord(
+                                    val coinTransferData = CoinTransfer(
                                         event.eventType,
                                         event.blockHeight,
                                         event.blockDateTime?.toISOString(),
@@ -43,6 +46,9 @@ class TxCoinTransfer : CSVFileExtractor(
                                         amountDenom.amount,
                                         amountDenom.denom
                                     )
+
+                                    syncWriteRecord(coinTransferData)
+                                    producer?.publish(CoinTransferParam(coinTransferData))
                                 }
                             }
                         }
