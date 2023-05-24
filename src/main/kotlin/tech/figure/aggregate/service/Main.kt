@@ -29,11 +29,16 @@ import tech.figure.aggregate.repository.database.RavenDB
 import tech.figure.block.api.client.BlockAPIClient
 import tech.figure.block.api.proto.BlockServiceOuterClass
 import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
-import kotlin.time.Duration
 import io.grpc.internal.PickFirstLoadBalancerProvider
 import kotlinx.coroutines.flow.catch
 import org.jetbrains.exposed.sql.Database
+import tech.figure.aggregate.common.KafkaConfig
 import tech.figure.aggregate.common.db.DBClient
+import tech.figure.aggregate.service.stream.kafka.BaseKafkaProducer
+import tech.figure.aggregate.service.stream.kafka.KafkaProducerFactory
+import tech.figure.aggregate.service.stream.kafka.config.KafkaProps
+import tech.figure.aggregate.service.stream.kafka.producer.CoinTxKafkaProducer
+import tech.figure.aggregate.service.stream.kafka.producer.MarkerSupplyKafkaProducer
 import tech.figure.block.api.client.GRPCConfigOpt
 import tech.figure.block.api.client.Protocol.TLS
 import tech.figure.block.api.client.withApiKey
@@ -61,6 +66,15 @@ private fun installShutdownHook(log: Logger): Channel<Unit> {
 private fun withManagedChannelConfig(maxBlockSize: Int): GRPCConfigOpt = {
     channel.maxInboundMessageSize(maxBlockSize)
 }
+
+private fun setKafkaProducers(kafkaProps: KafkaProps, kafkaConfig: KafkaConfig): KafkaProducerFactory =
+    KafkaProducerFactory(
+        listOf(
+            CoinTxKafkaProducer(kafkaProps.producerProperties("coin_transfer"), kafkaConfig.coinTxTopicName),
+            MarkerSupplyKafkaProducer(kafkaProps.producerProperties("marker_supply"), kafkaConfig.markerSupplyTopicName)
+        )
+    )
+
 
 @OptIn(FlowPreview::class, kotlin.time.ExperimentalTime::class)
 @ExperimentalCoroutinesApi
@@ -152,6 +166,8 @@ fun main(args: Array<String>) {
     Database.connect("jdbc:postgresql://${config.dbConfig.dbHost}:${config.dbConfig.dbPort}/${config.dbConfig.dbName}", "org.postgresql.Driver", config.dbConfig.dbUser, config.dbConfig.dbPassword)
 
     val dbClient = DBClient()
+    val kafkaProps = KafkaProps(config.kafkaConfig)
+    val kafkaProducers = setKafkaProducers(kafkaProps, config.kafkaConfig)
     val ravenClient = RavenDB(config.dbConfig)
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
@@ -234,6 +250,7 @@ fun main(args: Array<String>) {
                 blockFlow,
                 dbClient,
                 ravenClient,
+                kafkaProducers,
                 config.hrp,
                 Pair(config.badBlockRange[0], config.badBlockRange[1]),
                 config.msgFeeHeight
@@ -243,7 +260,6 @@ fun main(args: Array<String>) {
                 .catch { e ->
                     // Reset on exception so that we can pick up
                     // the last successful checked block height
-                    println(e)
                     exitProcess(1)
                 }
                 .collect { result: UploadResult ->

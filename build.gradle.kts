@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm")
+    kotlin("plugin.serialization") version "1.8.21"
     kotlin("kapt")
     id("org.openapi.generator") version "5.4.0"
     application
@@ -26,32 +27,31 @@ dependencies {
     implementation(projects.repository)
     implementation(projects.service)
 
-    implementation(libs.ktor.core)
-    implementation(libs.ktor.netty)
-
-    implementation(libs.bundles.kotlin)
-    testImplementation(libs.bundles.junit)
-    testImplementation(libs.kotlin.testcoroutines)
-    testImplementation(libs.bundles.mockk)
+    implementation(libs.blockapi.client)
+    implementation(libs.blockapi.proto)
     implementation(libs.bundles.apache.commons)
+    implementation(libs.bundles.logback)
+    implementation(libs.bundles.kotlin)
     implementation(libs.bundles.scarlet)
     implementation(libs.datadog)
-    implementation(libs.provenance.protos)
-    implementation(libs.bundles.logback)
-    implementation(libs.moshi.kotlin.codegen)
-    kapt(libs.moshi.kotlin.codegen)
+    implementation(libs.exposed.core)
+    implementation(libs.grpc.core)
     implementation(libs.hoplite.core)
     implementation(libs.hoplite.yaml)
     implementation(libs.json)
-
-    implementation(libs.blockapi.client)
-    implementation(libs.blockapi.proto)
-
-    implementation(libs.grpc.core)
+    implementation(libs.kotlin.serialization)
+    implementation(libs.ktor.core)
+    implementation(libs.ktor.netty)
+    implementation(libs.kafka.clients)
+    implementation(libs.moshi.kotlin.codegen)
     implementation(libs.protobuf.util)
+    implementation(libs.provenance.protos)
 
-    implementation(libs.exposed.core)
+    kapt(libs.moshi.kotlin.codegen)
 
+    testImplementation(libs.bundles.junit)
+    testImplementation(libs.kotlin.testcoroutines)
+    testImplementation(libs.bundles.mockk)
     testImplementation(libs.h2database)
 }
 

@@ -2,6 +2,7 @@ package tech.figure.aggregate.service.stream.extractors.csv.impl
 
 import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.service.stream.extractors.csv.CSVFileExtractor
+import tech.figure.aggregate.service.stream.kafka.KafkaProducerFactory
 
 class TxFees: CSVFileExtractor(
     name = "tx_fees",
@@ -16,7 +17,7 @@ class TxFees: CSVFileExtractor(
     )
 ) {
 
-    override suspend fun extract(block: StreamBlock) {
+    override suspend fun extract(block: StreamBlock, producer: KafkaProducerFactory?) {
         for (blockTxData in block.blockTxData) {
             for(event in blockTxData.events) {
                 if(event.eventType == "transfer" || event.eventType == "ERROR") {
