@@ -9,7 +9,7 @@ plugins {
 
 group = "tech.figure.augment"
 version = project.property("version")?.takeIf { it != "unspecified" } ?: "1.0-SNAPSHOT"
-val javaTarget = JavaVersion.VERSION_11
+val javaTarget = JavaVersion.VERSION_17
 java.sourceCompatibility = javaTarget
 java.targetCompatibility = javaTarget
 
@@ -38,7 +38,7 @@ dependencies {
     implementation(libs.grpc.stub)
     implementation(libs.logback.classic)
     implementation(libs.kotlin.serialization)
-    implementation(libs.kotlin.core)
+    implementation(libs.kotlin.coroutine.core)
     implementation(libs.kotlin.guava)
     implementation(libs.kotlin.jdk8coroutines)
     implementation(libs.commons.dbutils)
@@ -53,13 +53,13 @@ tasks.compileTestKotlin {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
         freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 }
 
 tasks.compileKotlin {
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 }
 
@@ -68,7 +68,7 @@ tasks.test {
 }
 
 application {
-    mainClassName = "tech.figure.augment.MainKt"
+    mainClass.set("tech.figure.augment.MainKt")
 }
 
 tasks.withType<Jar> {

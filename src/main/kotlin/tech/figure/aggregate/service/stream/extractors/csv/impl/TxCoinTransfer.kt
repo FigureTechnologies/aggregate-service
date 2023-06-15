@@ -3,8 +3,8 @@ package tech.figure.aggregate.service.stream.extractors.csv.impl
 import tech.figure.aggregate.common.toISOString
 import tech.figure.aggregate.common.models.AmountDenom
 import tech.figure.aggregate.common.models.block.StreamBlock
+import tech.figure.aggregate.common.models.stream.CoinTransfer
 import tech.figure.aggregate.service.stream.extractors.csv.CSVFileExtractor
-import tech.figure.aggregate.service.stream.extractors.model.CoinTransfer
 import tech.figure.aggregate.service.stream.kafka.BaseKafkaProducerParam.CoinTransferParam
 import tech.figure.aggregate.service.stream.kafka.KafkaProducerFactory
 import tech.figure.aggregate.service.stream.models.cosmos.Tx as CosmosTx

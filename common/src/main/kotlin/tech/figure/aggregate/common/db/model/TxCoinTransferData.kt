@@ -1,10 +1,13 @@
 package tech.figure.aggregate.common.db.model
 
+
+import java.sql.Timestamp
+
 data class TxCoinTransferData(
     val hash: String,
     val eventType: String,
     val blockHeight: Long,
-    val blockTimestamp: String,
+    val blockTimestamp: Timestamp,
     val txHash: String,
     val recipient: String,
     val sender: String,
@@ -17,7 +20,7 @@ data class TxCoinTransferData(
                 hash = "123ABC",
                 eventType = "transfer",
                 blockHeight = 123,
-                blockTimestamp = "2022-08-24 00:48:42.245254649",
+                blockTimestamp = Timestamp.valueOf("2021-08-24 06:01:52"),
                 txHash = "ABC123",
                 recipient = "tx123",
                 sender = "tx456",

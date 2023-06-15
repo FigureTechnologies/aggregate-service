@@ -1,4 +1,4 @@
-package tech.figure.aggregate.service.stream.extractors.model
+package tech.figure.aggregate.common.models.stream
 
 import kotlinx.serialization.Serializable
 
@@ -13,3 +13,4 @@ data class CoinTransfer(
     val amount: String,
     val denom: String
 )
+

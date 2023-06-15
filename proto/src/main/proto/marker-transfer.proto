@@ -1,0 +1,14 @@
+syntax = 'proto3';
+
+import "google/protobuf/timestamp.proto";
+
+message MarkerTransfer {
+  uint64 block_height = 1;
+  google.protobuf.Timestamp block_timestamp = 2;
+  string event_type = 3;
+  string amount = 4;
+  string denom = 5;
+  string administrator = 6;
+  string to_address = 7;
+  string from_address = 8;
+}

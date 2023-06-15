@@ -1,4 +1,4 @@
-FROM openjdk:11.0.16
+FROM azul/zulu-openjdk:17
 
 LABEL org.opencontainers.image.source=https://github.com/FigureTechnologies/aggregate-service
 

@@ -1,12 +1,12 @@
-package tech.figure.aggregate.service.stream.extractors.model
+package tech.figure.aggregate.common.db.model
 
-import kotlinx.serialization.Serializable
+import java.sql.Timestamp
 
-@Serializable
-data class MarkerSupply(
+data class TxMarkerSupply(
+    val hash: String,
     val eventType: String?,
     val blockHeight: Long,
-    val blockTimestamp: String?,
+    val blockTimestamp: Timestamp,
     val coins: String?,
     val denom: String?,
     val amount: String?,

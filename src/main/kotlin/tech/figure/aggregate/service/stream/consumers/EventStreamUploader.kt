@@ -23,6 +23,7 @@ import tech.figure.block.api.proto.BlockServiceOuterClass
 import java.time.OffsetDateTime
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 /**
  * An event stream consumer responsible for uploading streamed blocks to S3.
@@ -34,6 +35,7 @@ import kotlin.time.Duration.Companion.seconds
  * @property dispatchers The coroutine dispatchers used to run asynchronous tasks in this consumer.
  * @p
  */
+@OptIn(FlowPreview::class, ExperimentalTime::class)
 @ExperimentalCoroutinesApi
 class EventStreamUploader(
     private val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult>,
@@ -143,7 +145,8 @@ class EventStreamUploader(
                 }
             }
             // Kafka producers for specific class extractor
-            .apply { withStream(kafkaProducers) }
+            //todo: leave commented out for now, might need later
+            //.apply { withStream(kafkaProducers) }
 
         return blockFlow
             .transform { emit(it.toStreamBlock(hrp, badBlockRange, msgFeeHeight)) }

@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+import "coin-transfer.proto";
+import "marker-supply.proto";
+import "marker-transfer.proto";
+
+service TransferService {
+  rpc CoinTransferStream(CoinTransferRequest) returns (stream CoinTransferResponse) { }
+
+  rpc MarkerSupplyStream(MarkerSupplyRequest) returns (stream MarkerSupplyResponse) { }
+
+  rpc MarkerTransferStream(MarkerTransferRequest) returns (stream MarkerTransferResponse) { }
+}
+
+message MarkerSupplyRequest {
+  int64 block_height = 1;
+  repeated string denom = 2;
+}
+
+message MarkerSupplyResponse {
+  MarkerSupply marker_supply_response = 1;
+}
+
+message MarkerTransferRequest {
+  int64 block_height = 1;
+  repeated string denom = 2;
+
+}
+message MarkerTransferResponse {
+  MarkerTransfer marker_transfer_response = 1;
+}
+
+message CoinTransferRequest {
+  int64 block_height = 1;
+  repeated string denom = 2;
+}
+
+message CoinTransferResponse {
+  CoinTransfer coin_transfer_response = 1;
+}
+
+
