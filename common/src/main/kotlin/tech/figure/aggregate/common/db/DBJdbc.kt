@@ -33,8 +33,8 @@ abstract class DBJdbc {
             val firstStmt = "SELECT * FROM COIN_TRANSFER " +
             "WHERE BLOCK_HEIGHT >= $blockHeight AND "
 
-            val denomStmt = denomList.takeWhile { true }.joinToString { "WHERE DENOM = $it" }
-                .replace(",", " AND")
+            val denomStmt = denomList.takeWhile { true }.joinToString { " DENOM = \'$it\'" }
+                .replace(",", " OR")
 
             firstStmt + denomStmt
         }
@@ -49,8 +49,8 @@ abstract class DBJdbc {
             val firstStmt = "SELECT * FROM MARKER_SUPPLY " +
                     "WHERE BLOCK_HEIGHT >= $blockHeight AND "
 
-            val denomStmt = denomList.takeWhile { true }.joinToString { "WHERE DENOM = $it" }
-                .replace(",", " AND")
+            val denomStmt = denomList.takeWhile { true }.joinToString { " DENOM = \'$it\'" }
+                .replace(",", " OR")
 
             firstStmt + denomStmt
         }
@@ -65,8 +65,8 @@ abstract class DBJdbc {
             val firstStmt = "SELECT * FROM MARKER_TRANSFER " +
                     "WHERE BLOCK_HEIGHT >= $blockHeight AND "
 
-            val denomStmt = denomList.takeWhile { true }.joinToString { "WHERE DENOM = $it" }
-                .replace(",", " AND")
+            val denomStmt = denomList.takeWhile { true }.joinToString { " DENOM = \'$it\'" }
+                .replace(",", " OR")
 
             firstStmt + denomStmt
         }
