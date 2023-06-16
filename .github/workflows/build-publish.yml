@@ -216,6 +216,9 @@ jobs:
           java-version: 17
           distribution: 'zulu'
 
+      - name: Gradle dist build
+        run: ./gradlew installDist --refresh-dependencies
+
       - name: Publish Project
         run: ./gradlew publish -Pversion=$VERSION
 
