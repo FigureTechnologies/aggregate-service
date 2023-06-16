@@ -49,8 +49,6 @@ dependencies {
     implementation(libs.bundles.protobuf)
     implementation(libs.bundles.kotlin.coroutines)
     implementation(libs.grpc.kotlin.stub)
-
-    implementation(kotlin("stdlib"))
 }
 
 tasks.getByName<Test>("test") {
@@ -81,18 +79,18 @@ sourceSets {
     }
 }
 
-//tasks.withType<Jar> {
-//    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-//    manifest {
-//        attributes["Main-Class"] = "tech.figure.aggregator.api.job.MainKt"
-//    }
-//    isZip64 = true
-//    from(sourceSets.main.get().output)
-//    dependsOn(configurations.runtimeClasspath)
-//    from({
-//        configurations.runtimeClasspath.get().map { if(it.isDirectory) it else zipTree(it)}
-//    })
-//
-//
-//    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
-//}
+tasks.withType<Jar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes["Main-Class"] = "tech.figure.aggregator.api.job.MainKt"
+    }
+    isZip64 = true
+    from(sourceSets.main.get().output)
+    dependsOn(configurations.runtimeClasspath)
+    from({
+        configurations.runtimeClasspath.get().map { if(it.isDirectory) it else zipTree(it)}
+    })
+
+
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+}

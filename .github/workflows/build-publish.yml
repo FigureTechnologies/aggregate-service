@@ -210,14 +210,12 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: 17
           distribution: 'zulu'
-
-      - name: Gradle dist build
-        run: ./gradlew installDist --refresh-dependencies
 
       - name: Publish Project
         run: ./gradlew publish -Pversion=$VERSION
