@@ -3,7 +3,6 @@ package tech.figure.aggregate.service.stream.extractors.csv.impl
 import tech.figure.aggregate.common.toISOString
 import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.service.stream.extractors.csv.CSVFileExtractor
-import tech.figure.aggregate.service.stream.kafka.KafkaProducerFactory
 import tech.figure.aggregate.service.stream.models.marker.EventMarker
 
 /**
@@ -23,7 +22,7 @@ class TxMarkerTransfer : CSVFileExtractor(
         "from_address"
     )
 ) {
-    override suspend fun extract(block: StreamBlock, producer: KafkaProducerFactory?) {
+    override suspend fun extract(block: StreamBlock) {
         for (blockTxData in block.blockTxData) {
             for(event in blockTxData.events) {
                 EventMarker.mapper.fromEvent(event)

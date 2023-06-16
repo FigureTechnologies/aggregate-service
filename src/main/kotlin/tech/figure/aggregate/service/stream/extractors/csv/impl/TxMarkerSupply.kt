@@ -1,11 +1,8 @@
 package tech.figure.aggregate.service.stream.extractors.csv.impl
 
 import tech.figure.aggregate.common.models.block.StreamBlock
-import tech.figure.aggregate.common.models.stream.MarkerSupply
 import tech.figure.aggregate.common.toISOString
 import tech.figure.aggregate.service.stream.extractors.csv.CSVFileExtractor
-import tech.figure.aggregate.service.stream.kafka.BaseKafkaProducerParam.MarkerSupplyParam
-import tech.figure.aggregate.service.stream.kafka.KafkaProducerFactory
 import tech.figure.aggregate.service.stream.models.marker.EventMarker
 
 /**
@@ -33,7 +30,7 @@ class TxMarkerSupply : CSVFileExtractor(
         "metadata_symbol"
     )
 ) {
-    override suspend fun extract(block: StreamBlock, producer: KafkaProducerFactory?) {
+    override suspend fun extract(block: StreamBlock) {
         for (txData in block.blockTxData) {
             for(event in txData.events) {
                 EventMarker.mapper.fromEvent(event)
@@ -41,8 +38,7 @@ class TxMarkerSupply : CSVFileExtractor(
                     ?.let { record ->
                         // All transfers are processed by `TxMarkerTransfer`
                         if (!record.isTransfer()) {
-
-                            val markerSupplyData = MarkerSupply(
+                            syncWriteRecord(
                                 event.eventType,
                                 event.blockHeight,
                                 event.blockDateTime?.toISOString(),
@@ -59,26 +55,6 @@ class TxMarkerSupply : CSVFileExtractor(
                                 record.metadataName,
                                 record.metadataSymbol
                             )
-
-                            syncWriteRecord(
-                                markerSupplyData.eventType,
-                                markerSupplyData.blockHeight,
-                                markerSupplyData.blockTimestamp,
-                                markerSupplyData.coins,
-                                markerSupplyData.denom,
-                                markerSupplyData.amount,
-                                markerSupplyData.administrator,
-                                markerSupplyData.toAddress,
-                                markerSupplyData.fromAddress,
-                                markerSupplyData.metadataBase,
-                                markerSupplyData.metadataDescription,
-                                markerSupplyData.metadataDisplay,
-                                markerSupplyData.metadataDenomUnits,
-                                markerSupplyData.metadataName,
-                                markerSupplyData.metadataSymbol
-                            )
-
-                            producer?.publish(MarkerSupplyParam(markerSupplyData))
                         }
                     }
             }

@@ -15,7 +15,6 @@ data class Config (
     val apiPort: Int,
     val blockApi: BlockApiConfig,
     val dbConfig: DBConfig,
-    val kafkaConfig: KafkaConfig,
     val badBlockRange: List<Long>,
     val msgFeeHeight: Long
 )
@@ -38,14 +37,4 @@ data class BlockApiConfig(
     val port: Int,
     val apiKey: String,
     val maxBlockSize: Int
-)
-
-data class KafkaConfig(
-    val bootstrapServer: String,
-    val securityProtocol: String,
-    val saslMechanism: String = "PLAINTEXT",
-    val saslJaasConfig: String,
-    val confluentClientDnsLookup: String,
-    val coinTxTopicName: String,
-    val markerSupplyTopicName: String
 )

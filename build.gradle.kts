@@ -42,7 +42,6 @@ dependencies {
     implementation(libs.ktor.core)
     implementation(libs.ktor.jackson)
     implementation(libs.ktor.netty)
-    implementation(libs.kafka.clients)
     implementation(libs.moshi.kotlin.codegen)
     implementation(libs.protobuf.util)
     implementation(libs.provenance.protos)

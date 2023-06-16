@@ -18,7 +18,6 @@ import tech.figure.aggregate.common.models.toStreamBlock
 import tech.figure.aggregate.repository.database.RavenDB
 import tech.figure.aggregate.service.DefaultDispatcherProvider
 import tech.figure.aggregate.service.DispatcherProvider
-import tech.figure.aggregate.service.stream.kafka.KafkaProducerFactory
 import tech.figure.block.api.proto.BlockServiceOuterClass
 import java.time.OffsetDateTime
 import kotlin.reflect.KClass
@@ -41,7 +40,6 @@ class EventStreamUploader(
     private val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult>,
     private val dbClient: DBClient = DBClient(),
     private val ravenClient: RavenDB,
-    private val kafkaProducers: KafkaProducerFactory,
     private val hrp: String,
     private val badBlockRange: Pair<Long, Long>,
     private val msgFeeHeight: Long,
@@ -144,9 +142,6 @@ class EventStreamUploader(
                     withExtractor(cls)
                 }
             }
-            // Kafka producers for specific class extractor
-            //todo: leave commented out for now, might need later
-            //.apply { withStream(kafkaProducers) }
 
         return blockFlow
             .transform { emit(it.toStreamBlock(hrp, badBlockRange, msgFeeHeight)) }
