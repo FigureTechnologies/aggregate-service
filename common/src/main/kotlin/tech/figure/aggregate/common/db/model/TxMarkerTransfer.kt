@@ -1,5 +1,6 @@
 package tech.figure.aggregate.common.db.model
 
+import tech.figure.aggregate.common.db.model.impl.TxResponseData
 import java.sql.Timestamp
 
 data class TxMarkerTransfer(
@@ -12,4 +13,4 @@ data class TxMarkerTransfer(
     val administrator: String,
     val toAddress: String,
     val fromAddress: String
-)
+) : TxResponseData

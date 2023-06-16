@@ -1,6 +1,7 @@
 package tech.figure.aggregate.common.db.model
 
 
+import tech.figure.aggregate.common.db.model.impl.TxResponseData
 import java.sql.Timestamp
 
 data class TxCoinTransferData(
@@ -13,7 +14,7 @@ data class TxCoinTransferData(
     val sender: String,
     val amount: String,
     val denom: String
-) {
+) : TxResponseData {
     companion object{
         val sampleTxResponse = listOf(
             TxCoinTransferData(

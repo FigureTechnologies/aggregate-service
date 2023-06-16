@@ -5,38 +5,36 @@ import "marker-supply.proto";
 import "marker-transfer.proto";
 
 service TransferService {
-  rpc CoinTransferStream(CoinTransferRequest) returns (stream CoinTransferResponse) { }
 
-  rpc MarkerSupplyStream(MarkerSupplyRequest) returns (stream MarkerSupplyResponse) { }
-
-  rpc MarkerTransferStream(MarkerTransferRequest) returns (stream MarkerTransferResponse) { }
-}
-
-message MarkerSupplyRequest {
-  int64 block_height = 1;
-  repeated string denom = 2;
-}
-
-message MarkerSupplyResponse {
-  MarkerSupply marker_supply_response = 1;
-}
-
-message MarkerTransferRequest {
-  int64 block_height = 1;
-  repeated string denom = 2;
+  rpc TransferDataStream(StreamRequest) returns (stream StreamResponse) { }
 
 }
-message MarkerTransferResponse {
-  MarkerTransfer marker_transfer_response = 1;
+
+message StreamRequest {
+  oneof denom_request_type {
+    AllDenomRequest all_denom_request = 1; // Transaction data request for all denom type
+    FilteredDenomRequest filtered_denom_request = 2; // Transaction data request for specific denom type
+  }
+  StreamType stream_type = 3; // Type of transaction that is requested (coin transfer, marker supply or marker transfer)
 }
 
-message CoinTransferRequest {
-  int64 block_height = 1;
-  repeated string denom = 2;
+message StreamResponse {
+    CoinTransfer coin_transfer = 1;
+    MarkerTransfer marker_transfer = 2;
+    MarkerSupply marker_supply = 3;
 }
 
-message CoinTransferResponse {
-  CoinTransfer coin_transfer_response = 1;
+message FilteredDenomRequest {
+  int64 block_height = 1; // The starting block height to stream from
+  repeated string denom = 2; // The denom to be filtered for
 }
 
+message AllDenomRequest {
+  int64 block_height = 1; // The startin block height to stream from
+}
 
+enum StreamType {
+  COIN_TRANSFER = 0;
+  MARKER_TRANSFER = 1;
+  MARKER_SUPPLY = 2;
+}

@@ -1,5 +1,6 @@
 package tech.figure.aggregate.common.db.model
 
+import tech.figure.aggregate.common.db.model.impl.TxResponseData
 import java.sql.Timestamp
 
 data class TxMarkerSupply(
@@ -19,4 +20,4 @@ data class TxMarkerSupply(
     val metadataDenomUnits: String?,
     val metadataName: String?,
     val metadataSymbol: String?
-)
+) : TxResponseData

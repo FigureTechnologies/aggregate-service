@@ -15,9 +15,8 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":proto"))
     implementation(libs.bundles.kotlin)
-    testImplementation(libs.kotlin.testcoroutines)
-    testImplementation(libs.bundles.junit)
     implementation(libs.kotlin.serialization)
 
     implementation(libs.bundles.apache.commons)
@@ -41,6 +40,9 @@ dependencies {
     implementation(libs.exposed.core)
     implementation(libs.exposed.dao)
     implementation(libs.exposed.jdbc)
+
+    testImplementation(libs.kotlin.testcoroutines)
+    testImplementation(libs.bundles.junit)
 }
 
 sourceSets {

@@ -1,5 +1,13 @@
 package tech.figure.aggregate.common.db
 
+import TransferServiceOuterClass.StreamRequest
+import TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.ALL_DENOM_REQUEST
+import TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.DENOMREQUESTTYPE_NOT_SET
+import TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.FILTERED_DENOM_REQUEST
+import TransferServiceOuterClass.StreamType
+import TransferServiceOuterClass.StreamType.COIN_TRANSFER
+import TransferServiceOuterClass.StreamType.MARKER_SUPPLY
+import TransferServiceOuterClass.StreamType.MARKER_TRANSFER
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -7,8 +15,8 @@ import tech.figure.aggregate.common.db.model.TxCoinTransferData
 import tech.figure.aggregate.common.db.model.TxFeeData
 import tech.figure.aggregate.common.db.model.TxMarkerSupply
 import tech.figure.aggregate.common.db.model.TxMarkerTransfer
+import tech.figure.aggregate.common.db.model.impl.TxResponseData
 import tech.figure.aggregate.common.logger
-import tech.figure.aggregate.common.models.stream.CoinTransfer
 import java.sql.Timestamp
 import java.time.OffsetDateTime
 
@@ -25,52 +33,47 @@ abstract class DBJdbc {
     fun getTotalFee(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime) =
         queryFee(addr, startDate, endDate)
 
-    fun streamCoinTransfer(blockHeight: Long, denomList: List<String>): List<TxCoinTransferData> {
-        val queryStmt: String = if(denomList.isEmpty()) {
-            "SELECT * FROM COIN_TRANSFER " +
-            "WHERE BLOCK_HEIGHT >= $blockHeight"
-        } else {
-            val firstStmt = "SELECT * FROM COIN_TRANSFER " +
-            "WHERE BLOCK_HEIGHT >= $blockHeight AND "
-
-            val denomStmt = denomList.takeWhile { true }.joinToString { " DENOM = \'$it\'" }
-                .replace(",", " OR")
-
-            firstStmt + denomStmt
+    fun streamTransfer(streamRequest: StreamRequest): List<TxResponseData> =
+        when(streamRequest.denomRequestTypeCase) {
+            ALL_DENOM_REQUEST -> queryAllHistoricalTxData(
+                streamRequest.allDenomRequest.blockHeight,
+                streamRequest.streamType
+            )
+            FILTERED_DENOM_REQUEST -> queryFilteredDenomHistoricalTxData(
+                streamRequest.filteredDenomRequest.blockHeight,
+                streamRequest.filteredDenomRequest.denomList,
+                streamRequest.streamType
+            )
+            DENOMREQUESTTYPE_NOT_SET -> error("No denom request type was set.")
         }
-        return executeQuery("$queryStmt;").toTxCoinTransferData()
+
+
+    private fun queryAllHistoricalTxData(blockHeight: Long, type: StreamType): List<TxResponseData> {
+        val stmt = "SELECT * FROM $type WHERE BLOCK_HEIGHT >= $blockHeight;"
+        executeQuery(stmt).also {
+            return when(type) {
+                COIN_TRANSFER -> it.toTxCoinTransferData()
+                MARKER_TRANSFER -> it.toTxMarkerTransfer()
+                MARKER_SUPPLY -> it.toTxMarkerSupply()
+                else -> error("Unknown stream type requested.")
+            }
+        }
     }
 
-    fun streamMarkerSupply(blockHeight: Long, denomList: List<String>) : List<TxMarkerSupply> {
-        val queryStmt = if(denomList.isEmpty()) {
-            "SELECT * FROM MARKER_SUPPLY " +
-                    "WHERE BLOCK_HEIGHT >= $blockHeight"
-        } else {
-            val firstStmt = "SELECT * FROM MARKER_SUPPLY " +
-                    "WHERE BLOCK_HEIGHT >= $blockHeight AND "
-
-            val denomStmt = denomList.takeWhile { true }.joinToString { " DENOM = \'$it\'" }
-                .replace(",", " OR")
-
-            firstStmt + denomStmt
+    private fun queryFilteredDenomHistoricalTxData(
+        blockHeight: Long, denomList: List<String>,
+        type: StreamType
+    ): List<TxResponseData> {
+        val stmt = "SELECT * FROM $type WHERE BLOCK_HEIGHT >= $blockHeight AND "
+        val denomStmt = denomList.joinToString(separator = " OR") { " DENOM = \'$it\'" }
+        executeQuery("$stmt$denomStmt;").also {
+            return when(type) {
+                COIN_TRANSFER -> it.toTxCoinTransferData()
+                MARKER_TRANSFER -> it.toTxMarkerTransfer()
+                MARKER_SUPPLY -> it.toTxMarkerSupply()
+                else -> error("Unknown stream type requested.")
+            }
         }
-        return executeQuery("$queryStmt;").toTxMakerSupply()
-    }
-
-    fun streamMarkerTransfer(blockHeight: Long, denomList: List<String>) : List<TxMarkerTransfer> {
-        val queryStmt = if(denomList.isEmpty()) {
-            "SELECT * FROM MARKER_TRANSFER " +
-                    "WHERE BLOCK_HEIGHT >= $blockHeight"
-        } else {
-            val firstStmt = "SELECT * FROM MARKER_TRANSFER " +
-                    "WHERE BLOCK_HEIGHT >= $blockHeight AND "
-
-            val denomStmt = denomList.takeWhile { true }.joinToString { " DENOM = \'$it\'" }
-                .replace(",", " OR")
-
-            firstStmt + denomStmt
-        }
-        return executeQuery("$queryStmt;").toTxMarkerTransfer()
     }
 
     private fun queryFee(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime): List<TxFeeData> {
@@ -140,7 +143,7 @@ fun List<MutableMap<String, Any>>.toTxFeeData() =
         )
     }
 
-fun List<MutableMap<String, Any>>.toTxMakerSupply() =
+fun List<MutableMap<String, Any>>.toTxMarkerSupply() =
     this.map { result ->
         TxMarkerSupply(
             result["HASH"].toString(),

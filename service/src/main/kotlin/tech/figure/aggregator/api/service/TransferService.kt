@@ -1,15 +1,17 @@
 package tech.figure.aggregator.api.service
 
 import TransferServiceGrpcKt.TransferServiceCoroutineImplBase
-import TransferServiceOuterClass.CoinTransferRequest
-import TransferServiceOuterClass.CoinTransferResponse
-import TransferServiceOuterClass.MarkerSupplyRequest
-import TransferServiceOuterClass.MarkerSupplyResponse
-import TransferServiceOuterClass.MarkerTransferRequest
-import TransferServiceOuterClass.MarkerTransferResponse
+import TransferServiceOuterClass.StreamRequest
+import TransferServiceOuterClass.StreamResponse
+import TransferServiceOuterClass.StreamType.COIN_TRANSFER
+import TransferServiceOuterClass.StreamType.MARKER_SUPPLY
+import TransferServiceOuterClass.StreamType.MARKER_TRANSFER
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import tech.figure.aggregate.common.db.DBClient
+import tech.figure.aggregate.common.db.model.TxCoinTransferData
+import tech.figure.aggregate.common.db.model.TxMarkerSupply
+import tech.figure.aggregate.common.db.model.TxMarkerTransfer
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import tech.figure.aggregator.api.service.extension.toCoinTransferResult
@@ -21,21 +23,15 @@ class TransferService(
     coroutineContext: CoroutineContext = EmptyCoroutineContext
 ) : TransferServiceCoroutineImplBase(coroutineContext) {
 
-    override fun coinTransferStream(request: CoinTransferRequest): Flow<CoinTransferResponse> =
-        dbClient.streamCoinTransfer(request.blockHeight, request.denomList).map {
-            it.toCoinTransferResult()
+    override fun transferDataStream(request: StreamRequest): Flow<StreamResponse> =
+        dbClient.streamTransfer(request).map {
+            when(request.streamType) {
+                COIN_TRANSFER -> (it as TxCoinTransferData).toCoinTransferResult()
+                MARKER_TRANSFER -> (it as TxMarkerTransfer).toMarkerTransferResult()
+                MARKER_SUPPLY -> (it as TxMarkerSupply).toMarkerSupplyResult()
+                else -> error("Failed to provide stream type in the request.")
+            }
         }.asFlow()
-
-    override fun markerSupplyStream(request: MarkerSupplyRequest): Flow<MarkerSupplyResponse> =
-        dbClient.streamMarkerSupply(request.blockHeight, request.denomList).map {
-            it.toMarkerSupplyResult()
-        }.asFlow()
-
-    override fun markerTransferStream(request: MarkerTransferRequest): Flow<MarkerTransferResponse> =
-        dbClient.streamMarkerTransfer(request.blockHeight, request.denomList).map {
-            it.toMarkerTransferResult()
-        }.asFlow()
-
 }
 
 

@@ -1,13 +1,11 @@
 package tech.figure.aggregator.api.service.extension
 
 import coinTransfer
-import coinTransferResponse
 import com.google.protobuf.Timestamp
 import com.google.protobuf.util.Timestamps
 import markerSupply
-import markerSupplyResponse
 import markerTransfer
-import markerTransferResponse
+import streamResponse
 import tech.figure.aggregate.common.db.model.TxCoinTransferData
 import tech.figure.aggregate.common.db.model.TxMarkerSupply
 import tech.figure.aggregate.common.db.model.TxMarkerTransfer
@@ -15,16 +13,16 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
-fun TxCoinTransferData.toCoinTransferResult() = coinTransferResponse {
-    coinTransferResponse = this@toCoinTransferResult.toProto()
+fun TxMarkerSupply.toMarkerSupplyResult() = streamResponse {
+    markerSupply = this@toMarkerSupplyResult.toProto()
 }
 
-fun TxMarkerSupply.toMarkerSupplyResult() = markerSupplyResponse {
-    markerSupplyResponse = this@toMarkerSupplyResult.toProto()
+fun TxMarkerTransfer.toMarkerTransferResult() = streamResponse {
+    markerTransfer = this@toMarkerTransferResult.toProto()
 }
 
-fun TxMarkerTransfer.toMarkerTransferResult() = markerTransferResponse {
-    markerTransferResponse = this@toMarkerTransferResult.toProto()
+fun TxCoinTransferData.toCoinTransferResult() = streamResponse {
+     coinTransfer = this@toCoinTransferResult.toProto()
 }
 
 fun TxMarkerTransfer.toProto() = markerTransfer {
