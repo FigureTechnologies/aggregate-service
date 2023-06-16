@@ -216,11 +216,11 @@ jobs:
           java-version: 17
           distribution: 'zulu'
 
-      - name: Build Project
-        run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION
-
       - name: Publish Project
         run: ./gradlew publish -Pversion=$VERSION
+
+      - name: Build Project
+        run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION
 
       - name: Upload aggregate-service artifact
         uses: actions/upload-artifact@v2
