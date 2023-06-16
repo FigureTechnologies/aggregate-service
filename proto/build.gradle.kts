@@ -37,6 +37,14 @@ protobuf {
     }
 }
 
+sourceSets.main {
+    java.srcDirs("build/generated/source/proto/main/java")
+}
+
+tasks.withType<Jar>() {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 dependencies {
     implementation(libs.bundles.grpc)
     implementation(libs.bundles.protobuf)
