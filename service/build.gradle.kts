@@ -21,6 +21,10 @@ repositories {
     maven( url = "https://jitpack.io")
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
 val javaTarget = JavaVersion.VERSION_17
 java.sourceCompatibility = javaTarget
 java.targetCompatibility = javaTarget

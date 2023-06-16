@@ -45,6 +45,10 @@ dependencies {
     testImplementation(libs.bundles.junit)
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
 sourceSets {
     main {
         java {

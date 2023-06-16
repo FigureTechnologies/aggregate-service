@@ -72,6 +72,10 @@ sourceSets {
     }
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
 application {
     mainClass.set("tech.figure.aggregate.service.MainKt")
 }
