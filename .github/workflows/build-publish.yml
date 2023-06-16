@@ -220,7 +220,7 @@ jobs:
         run: ./gradlew publish -Pversion=$VERSION
 
       - name: Build Project
-        run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION --stacktrace
+        run: ./gradlew clean build --refresh-dependencies -Pversion=$VERSION --debug
 
       - name: Upload aggregate-service artifact
         uses: actions/upload-artifact@v2
