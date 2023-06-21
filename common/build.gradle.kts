@@ -6,7 +6,7 @@ plugins {
 
 group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
-val javaTarget = JavaVersion.VERSION_11
+val javaTarget = JavaVersion.VERSION_17
 java.sourceCompatibility = javaTarget
 java.targetCompatibility = javaTarget
 
@@ -15,9 +15,9 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":proto"))
     implementation(libs.bundles.kotlin)
-    testImplementation(libs.kotlin.testcoroutines)
-    testImplementation(libs.bundles.junit)
+    implementation(libs.kotlin.serialization)
 
     implementation(libs.bundles.apache.commons)
     implementation(libs.bundles.scarlet)
@@ -40,6 +40,13 @@ dependencies {
     implementation(libs.exposed.core)
     implementation(libs.exposed.dao)
     implementation(libs.exposed.jdbc)
+
+    testImplementation(libs.kotlin.testcoroutines)
+    testImplementation(libs.bundles.junit)
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 sourceSets {
@@ -66,7 +73,7 @@ tasks.compileKotlin {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
         freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 }
 
@@ -74,7 +81,7 @@ tasks.compileTestKotlin {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
         freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 }
 

@@ -9,24 +9,30 @@ plugins {
 
 group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
-java.sourceCompatibility = JavaVersion.VERSION_11
+java.sourceCompatibility = JavaVersion.VERSION_17
 
 application {
     mainClass.set("tech.figure.aggregator.api.ApplicationKt")
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven( url = "https://jitpack.io")
 }
 
-val javaTarget = JavaVersion.VERSION_11
+kotlin {
+    jvmToolchain(17)
+}
+
+val javaTarget = JavaVersion.VERSION_17
 java.sourceCompatibility = javaTarget
 java.targetCompatibility = javaTarget
 
 dependencies {
     implementation(projects.common)
     implementation(projects.repository)
+    implementation(projects.proto)
 
     implementation(libs.commons.dbutils)
     implementation(libs.raven.db)
@@ -43,10 +49,10 @@ dependencies {
     implementation(libs.hoplite.core)
     implementation(libs.hoplite.yaml)
 
-    implementation(kotlin("stdlib"))
-
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    implementation(libs.bundles.grpc)
+    implementation(libs.bundles.protobuf)
+    implementation(libs.bundles.kotlin.coroutines)
+    implementation(libs.grpc.kotlin.stub)
 }
 
 tasks.getByName<Test>("test") {
@@ -57,7 +63,7 @@ tasks.compileKotlin {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
         freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 }
 

@@ -24,10 +24,8 @@ import org.junit.jupiter.api.BeforeAll
 import tech.figure.aggregate.common.Environment
 import tech.figure.aggregate.common.db.DBClient
 import tech.figure.aggregate.service.flow.extensions.cancelOnSignal
-import tech.figure.aggregate.service.stream.kafka.KafkaProducerFactory
 import tech.figure.aggregate.service.test.utils.Defaults.blockData
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.ExperimentalTime
 
 @ExperimentalCoroutinesApi
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -35,7 +33,6 @@ class EventStreamUploaderTests {
 
     val log: Logger = logger()
     val ravenClient = mockk<RavenDB>()
-    val kafkaPRoducers = mockk<KafkaProducerFactory>()
 
     val environment: Environment = Environment.local
     lateinit var config: Config
@@ -85,7 +82,6 @@ class EventStreamUploaderTests {
                         blockFlow,
                         dbClient,
                         ravenClient,
-                        kafkaPRoducers,
                         "tp",
                         Pair(config.badBlockRange[0], config.badBlockRange[1]),
                         config.msgFeeHeight

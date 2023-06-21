@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package tech.figure.aggregate.proto;
+
+import "coin-transfer.proto";
+import "marker-supply.proto";
+import "marker-transfer.proto";
+
+service TransferService {
+
+  rpc TransferDataStream(StreamRequest) returns (stream StreamResponse) { }
+
+}
+
+message StreamRequest {
+  oneof denom_request_type {
+    AllDenomRequest all_denom_request = 1; // Transaction data request for all denom type
+    FilteredDenomRequest filtered_denom_request = 2; // Transaction data request for specific denom type
+  }
+  StreamType stream_type = 3; // Type of transaction that is requested (coin transfer, marker supply or marker transfer)
+}
+
+message StreamResponse {
+    CoinTransfer coin_transfer = 1;
+    MarkerTransfer marker_transfer = 2;
+    MarkerSupply marker_supply = 3;
+}
+
+message FilteredDenomRequest {
+  int64 block_height = 1; // The starting block height to stream from
+  repeated string denom = 2; // The denom to be filtered for
+}
+
+message AllDenomRequest {
+  int64 block_height = 1; // The startin block height to stream from
+}
+
+enum StreamType {
+  COIN_TRANSFER = 0;
+  MARKER_TRANSFER = 1;
+  MARKER_SUPPLY = 2;
+}

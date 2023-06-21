@@ -1,11 +1,23 @@
 package tech.figure.aggregate.common.db
 
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamRequest
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.ALL_DENOM_REQUEST
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.DENOMREQUESTTYPE_NOT_SET
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.FILTERED_DENOM_REQUEST
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType.COIN_TRANSFER
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType.MARKER_SUPPLY
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType.MARKER_TRANSFER
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import tech.figure.aggregate.common.db.model.TxCoinTransferData
 import tech.figure.aggregate.common.db.model.TxFeeData
+import tech.figure.aggregate.common.db.model.TxMarkerSupply
+import tech.figure.aggregate.common.db.model.TxMarkerTransfer
+import tech.figure.aggregate.common.db.model.impl.TxResponseData
 import tech.figure.aggregate.common.logger
+import java.sql.Timestamp
 import java.time.OffsetDateTime
 
 abstract class DBJdbc {
@@ -20,6 +32,49 @@ abstract class DBJdbc {
 
     fun getTotalFee(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime) =
         queryFee(addr, startDate, endDate)
+
+    fun streamTransfer(streamRequest: StreamRequest): List<TxResponseData> =
+        when(streamRequest.denomRequestTypeCase) {
+            ALL_DENOM_REQUEST -> queryAllHistoricalTxData(
+                streamRequest.allDenomRequest.blockHeight,
+                streamRequest.streamType
+            )
+            FILTERED_DENOM_REQUEST -> queryFilteredDenomHistoricalTxData(
+                streamRequest.filteredDenomRequest.blockHeight,
+                streamRequest.filteredDenomRequest.denomList,
+                streamRequest.streamType
+            )
+            DENOMREQUESTTYPE_NOT_SET -> error("No denom request type was set.")
+        }
+
+
+    private fun queryAllHistoricalTxData(blockHeight: Long, type: StreamType): List<TxResponseData> {
+        val stmt = "SELECT * FROM $type WHERE BLOCK_HEIGHT >= $blockHeight;"
+        executeQuery(stmt).also {
+            return when(type) {
+                COIN_TRANSFER -> it.toTxCoinTransferData()
+                MARKER_TRANSFER -> it.toTxMarkerTransfer()
+                MARKER_SUPPLY -> it.toTxMarkerSupply()
+                else -> error("Unknown stream type requested.")
+            }
+        }
+    }
+
+    private fun queryFilteredDenomHistoricalTxData(
+        blockHeight: Long, denomList: List<String>,
+        type: StreamType
+    ): List<TxResponseData> {
+        val stmt = "SELECT * FROM $type WHERE BLOCK_HEIGHT >= $blockHeight AND "
+        val denomStmt = denomList.joinToString(separator = " OR") { " DENOM = \'$it\'" }
+        executeQuery("$stmt$denomStmt;").also {
+            return when(type) {
+                COIN_TRANSFER -> it.toTxCoinTransferData()
+                MARKER_TRANSFER -> it.toTxMarkerTransfer()
+                MARKER_SUPPLY -> it.toTxMarkerSupply()
+                else -> error("Unknown stream type requested.")
+            }
+        }
+    }
 
     private fun queryFee(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime): List<TxFeeData> {
         val queryFeeStmt = "SELECT * FROM FEES " +
@@ -56,7 +111,6 @@ abstract class DBJdbc {
                     .prepareStatement(stmt, false)
                     .executeQuery()
             }
-
         return MapListHandler().handle(result).toList()
     }
 }
@@ -67,7 +121,7 @@ fun List<MutableMap<String, Any>>.toTxCoinTransferData() =
             result["HASH"].toString(),
             result["EVENT_TYPE"].toString(),
             result["BLOCK_HEIGHT"] as Long,
-            result["BLOCK_TIMESTAMP"].toString(),
+            result["BLOCK_TIMESTAMP"] as Timestamp,
             result["TX_HASH"].toString(),
             result["RECIPIENT"].toString(),
             result["SENDER"].toString(),
@@ -87,4 +141,42 @@ fun List<MutableMap<String, Any>>.toTxFeeData() =
             result["FEE_DENOM"].toString(),
             result["SENDER"].toString()
         )
+    }
+
+fun List<MutableMap<String, Any>>.toTxMarkerSupply() =
+    this.map { result ->
+        TxMarkerSupply(
+            result["HASH"].toString(),
+            result["EVENT_TYPE"].toString(),
+            result["BLOCK_HEIGHT"] as Long,
+            result["BLOCK_TIMESTAMP"] as Timestamp,
+            result["COINS"].toString(),
+            result["DENOM"].toString(),
+            result["AMOUNT"].toString(),
+            result["ADMINISTRATOR"].toString(),
+            result["TO_ADDRESS"].toString(),
+            result["FROM_ADDRESS"].toString(),
+            result["METADATA_BASE"].toString(),
+            result["METADATA_DESCRIPTION"].toString(),
+            result["METADATA_DISPLAY"].toString(),
+            result["METADATA_DENOM_UNITS"].toString(),
+            result["METADATA_NAME"].toString(),
+            result["METADATA_SYMBOL"].toString()
+        )
+    }
+
+fun List<MutableMap<String, Any>>.toTxMarkerTransfer() =
+    this.map { result ->
+        TxMarkerTransfer(
+            result["HASH"].toString(),
+            result["EVENT_TYPE"].toString(),
+            result["BLOCK_HEIGHT"] as Long,
+            result["BLOCK_TIMESTAMP"]as Timestamp,
+            result["AMOUNT"].toString(),
+            result["DENOM"].toString(),
+            result["ADMINISTRATOR"].toString(),
+            result["TO_ADDRESS"].toString(),
+            result["FROM_ADDRESS"].toString()
+        )
+
     }

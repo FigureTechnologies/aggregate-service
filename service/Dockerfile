@@ -1,4 +1,4 @@
-FROM openjdk:11.0.16
+FROM azul/zulu-openjdk:17
 
 ADD ./build/libs/*.jar /service/aggregator-address-loader-job.jar
 

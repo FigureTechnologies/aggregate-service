@@ -8,12 +8,11 @@ plugins {
     jacoco
     signing
     `maven-publish`
-    id("io.github.gradle-nexus.publish-plugin") version "1.2.0"
 }
 
 group = "tech.figure.aggregate"
 version = "0.0.1-SNAPSHOT"
-val javaVersion = JavaVersion.VERSION_11
+val javaVersion = JavaVersion.VERSION_17
 java.sourceCompatibility = javaVersion
 java.targetCompatibility = javaVersion
 
@@ -41,8 +40,8 @@ dependencies {
     implementation(libs.json)
     implementation(libs.kotlin.serialization)
     implementation(libs.ktor.core)
+    implementation(libs.ktor.jackson)
     implementation(libs.ktor.netty)
-    implementation(libs.kafka.clients)
     implementation(libs.moshi.kotlin.codegen)
     implementation(libs.protobuf.util)
     implementation(libs.provenance.protos)
@@ -70,6 +69,10 @@ sourceSets {
 
         }
     }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 application {
@@ -104,18 +107,6 @@ tasks.withType<Jar> {
     })
 
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
-}
-
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-            username.set(findProject("ossrhUsername")?.toString() ?: System.getenv("OSSRH_USERNAME"))
-            password.set(findProject("ossrhPassword")?.toString() ?: System.getenv("OSSRH_PASSWORD"))
-            stagingProfileId.set("858b6e4de4734a") // tech.figure staging id
-        }
-    }
 }
 
 subprojects {

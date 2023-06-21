@@ -1,8 +1,6 @@
 package tech.figure.aggregate.service.stream.extractors
 
 import tech.figure.aggregate.common.models.block.StreamBlock
-import tech.figure.aggregate.service.stream.kafka.BaseKafkaProducer
-import tech.figure.aggregate.service.stream.kafka.KafkaProducerFactory
 
 /**
  * An extractor, as the name implies, is responsible for extracting a subset of data from a stream block, formatting it,
@@ -32,7 +30,7 @@ interface Extractor {
      *
      * @property block The stream block to process.
      */
-    suspend fun extract(block: StreamBlock, producer: KafkaProducerFactory?)
+    suspend fun extract(block: StreamBlock)
 
     /**
      * Run before the results of the extractor is collected.
