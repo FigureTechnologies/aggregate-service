@@ -1,13 +1,13 @@
 package tech.figure.aggregate.common.db
 
-import TransferServiceOuterClass.StreamRequest
-import TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.ALL_DENOM_REQUEST
-import TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.DENOMREQUESTTYPE_NOT_SET
-import TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.FILTERED_DENOM_REQUEST
-import TransferServiceOuterClass.StreamType
-import TransferServiceOuterClass.StreamType.COIN_TRANSFER
-import TransferServiceOuterClass.StreamType.MARKER_SUPPLY
-import TransferServiceOuterClass.StreamType.MARKER_TRANSFER
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamRequest
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.ALL_DENOM_REQUEST
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.DENOMREQUESTTYPE_NOT_SET
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamRequest.DenomRequestTypeCase.FILTERED_DENOM_REQUEST
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType.COIN_TRANSFER
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType.MARKER_SUPPLY
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType.MARKER_TRANSFER
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction

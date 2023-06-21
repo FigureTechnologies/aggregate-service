@@ -1,11 +1,11 @@
 package tech.figure.aggregator.api.service.extension
 
-import coinTransfer
+import tech.figure.aggregate.proto.coinTransfer
 import com.google.protobuf.Timestamp
 import com.google.protobuf.util.Timestamps
-import markerSupply
-import markerTransfer
-import streamResponse
+import tech.figure.aggregate.proto.markerSupply
+import tech.figure.aggregate.proto.markerTransfer
+import tech.figure.aggregate.proto.streamResponse
 import tech.figure.aggregate.common.db.model.TxCoinTransferData
 import tech.figure.aggregate.common.db.model.TxMarkerSupply
 import tech.figure.aggregate.common.db.model.TxMarkerTransfer

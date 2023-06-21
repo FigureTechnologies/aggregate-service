@@ -1,11 +1,11 @@
 package tech.figure.aggregator.api.service
 
-import TransferServiceGrpcKt.TransferServiceCoroutineImplBase
-import TransferServiceOuterClass.StreamRequest
-import TransferServiceOuterClass.StreamResponse
-import TransferServiceOuterClass.StreamType.COIN_TRANSFER
-import TransferServiceOuterClass.StreamType.MARKER_SUPPLY
-import TransferServiceOuterClass.StreamType.MARKER_TRANSFER
+import tech.figure.aggregate.proto.TransferServiceGrpcKt.TransferServiceCoroutineImplBase
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamRequest
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamResponse
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType.COIN_TRANSFER
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType.MARKER_SUPPLY
+import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamType.MARKER_TRANSFER
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import tech.figure.aggregate.common.db.DBClient
