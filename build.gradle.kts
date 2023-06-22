@@ -136,7 +136,7 @@ subprojects {
         withJavadocJar()
     }
 
-    val artifactName = name
+    val artifactName = if (name.startsWith("aggregate")) name else "aggregate-$name"
     val projectVersion = version.toString()
 
     publishing {
