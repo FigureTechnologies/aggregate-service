@@ -4,9 +4,9 @@ name: Publish
 
 # Run on changes to main
 on:
-  pull_request:
-    branches:
-      - main
+  release:
+    types: [created]
+  workflow_dispatch:
 
 jobs:
   java_build:
@@ -40,7 +40,7 @@ jobs:
           echo -n "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | base64 --decode | gpg --batch --import
           gpg --list-secret-keys --keyid-format LONG
           echo -n "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | base64 --decode > $GITHUB_WORKSPACE/release.gpg
-        # if: github.event_name == 'release'
+        if: github.event_name == 'release'
 
       - name: Publish to Maven Central
         run: |
