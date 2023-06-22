@@ -1,13 +1,14 @@
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "1.8.21"
     kotlin("kapt")
-    id("org.openapi.generator") version "5.4.0"
     application
     idea
     jacoco
     signing
     `maven-publish`
+    kotlin("plugin.serialization") version "1.8.21"
+    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
+    id("org.openapi.generator") version "5.4.0"
 }
 
 group = "tech.figure.aggregate"
@@ -54,6 +55,18 @@ dependencies {
     testImplementation(libs.h2database)
 }
 
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username.set(findProject("ossrhUsername")?.toString() ?: System.getenv("OSSRH_USERNAME"))
+            password.set(findProject("ossrhPassword")?.toString() ?: System.getenv("OSSRH_PASSWORD"))
+            stagingProfileId.set("858b6e4de4734a") // tech.figure staging id
+        }
+    }
+}
+
 sourceSets {
     main {
         java {
@@ -66,7 +79,6 @@ sourceSets {
     test {
         java {
             srcDir("$projectDir/src/test/kotlin")
-
         }
     }
 }
@@ -137,7 +149,7 @@ subprojects {
                 from(components["java"])
 
                 pom {
-                    name.set("Aggregate Service")
+                    name.set("Aggregate Service Client")
                     description.set("Block data aggregation service")
                     url.set("https://figure.tech")
 

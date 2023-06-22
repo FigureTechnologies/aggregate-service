@@ -13,4 +13,4 @@ pluginManagement {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-include("common", "repository", "service", "migrations", "proto")
+include("common", "repository", "service", "migrations", "proto", "client")
