@@ -58,14 +58,3 @@ dependencies {
     implementation(libs.protobuf.kotlin)
 
 }
-
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            artifactId = project.name
-            groupId = project.group.toString()
-            version = project.version.toString()
-            from(components["java"])
-        }
-    }
-}
