@@ -143,7 +143,7 @@ protobuf = { id = "com.google.protobuf", version.ref = "pluginProtobuf" }
 openapi-generator = { id = "org.openapi.generator", version.ref = "pluginOpenAPI" }
 
 [bundles]
-grpc = ["grpc-protobuf", "grpc-stub", "grpc-netty", "grpc-core"]
+grpc = ["grpc-protobuf", "grpc-stub", "grpc-netty", "grpc-core", "grpc-kotlin-stub"]
 hdwallet = ["hdwallet-bech32", "hdwallet-common"]
 eventstream = ["es-model", "es-api", "es-core", "es-kakfa", "es-cli"]
 kotlin = ["kotlin-cli", "kotlin-datetime", "kotlin-coroutine-core", "kotlin-jdk8coroutines", "kotlin-reactivecoroutines", "kotlin-stdlib", "kotlin-reflect"]
