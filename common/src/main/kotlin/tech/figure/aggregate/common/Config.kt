@@ -13,6 +13,7 @@ data class Config (
     val hrp: String,
     val upload: UploadConfig = UploadConfig.empty(),
     val apiPort: Int,
+    val streamPort: Int,
     val blockApi: BlockApiConfig,
     val dbConfig: DBConfig,
     val badBlockRange: List<Long>,
