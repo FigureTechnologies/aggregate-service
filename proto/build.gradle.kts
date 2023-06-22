@@ -1,9 +1,9 @@
 import com.google.protobuf.gradle.id
 
-@Suppress("DSL_SCOPE_VIOLATION")
 plugins {
     id("com.google.protobuf") version libs.versions.pluginProtobuf.get()
     idea
+    `maven-publish`
 }
 
 repositories {

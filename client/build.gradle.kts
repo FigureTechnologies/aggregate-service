@@ -5,9 +5,6 @@ plugins{
     idea
 }
 
-group = "tech.figure.aggregate.client"
-version = "1.0-SNAPSHOT"
-
 repositories {
     mavenCentral()
     mavenLocal()
