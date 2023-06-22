@@ -3,6 +3,7 @@ ws_node: ${WS_NODE}
 api_port: ${API_PORT}
 bad_block_range: ${ONE_DOT_ELEVEN_BAD_BLOCK_RANGE}
 msg_fee_height: ${MSG_FEE_HEIGHT}
+stream_port: ${STREAM_PORT:-7777}
 
 dbConfig:
   dbHost: ${DB_HOST}

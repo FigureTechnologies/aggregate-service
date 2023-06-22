@@ -194,7 +194,7 @@ fun main(args: Array<String>) {
         val server = GrpcServer.embeddedServer(
             grpcServices,
             developmentMode = false,
-            connector = Connectors.http("0.0.0.0", port = 8082),
+            connector = Connectors.http("0.0.0.0", port = config.streamPort),
             module = { install(ContentNegotiation) { jackson() } }
         )
 
