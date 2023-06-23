@@ -39,6 +39,7 @@ import tech.figure.aggregator.api.server.Connectors
 import tech.figure.aggregator.api.server.GrpcServer
 import tech.figure.aggregator.api.service.TransferService
 import tech.figure.block.api.client.GRPCConfigOpt
+import tech.figure.block.api.client.Protocol.PLAINTEXT
 import tech.figure.block.api.client.Protocol.TLS
 import tech.figure.block.api.client.withApiKey
 import tech.figure.block.api.client.withProtocol
@@ -148,7 +149,7 @@ fun main(args: Array<String>) {
     val blockApiClient = BlockAPIClient(
         config.blockApi.host,
         config.blockApi.port,
-        withProtocol(TLS),
+        withProtocol(PLAINTEXT),
         withApiKey(config.blockApi.apiKey),
         withManagedChannelConfig(config.blockApi.maxBlockSize)
     )
