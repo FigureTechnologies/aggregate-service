@@ -121,7 +121,6 @@ tasks.withType<Jar> {
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
 }
 
-
 subprojects {
     group="tech.figure.aggregate"
     version = this.findProperty("libraryVersion")?.toString() ?: "1.0-SNAPSHOT"
