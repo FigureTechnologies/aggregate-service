@@ -1,12 +1,13 @@
 plugins{
     kotlin("jvm") version "1.8.21"
     `maven-publish`
+    signing
     java
     idea
 }
 
 group = "tech.figure.aggregate.client"
-version = "1.0-SNAPSHOT"
+version = "1.5-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -15,7 +16,6 @@ repositories {
 
 dependencies {
     api(projects.proto)
-
     api(libs.bundles.grpc)
     api(libs.bundles.protobuf)
     api(libs.bundles.kotlin.coroutines)

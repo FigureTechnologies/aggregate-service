@@ -1,13 +1,26 @@
 import com.google.protobuf.gradle.id
 
-@Suppress("DSL_SCOPE_VIOLATION")
 plugins {
+    java
+    application
+    kotlin("jvm")
     id("com.google.protobuf") version libs.versions.pluginProtobuf.get()
     idea
+    `maven-publish`
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
+}
+
+dependencies {
+    implementation(libs.bundles.grpc)
+    implementation(libs.bundles.protobuf)
+    implementation(libs.bundles.kotlin.coroutines)
+    implementation(libs.grpc.kotlin.stub)
+    implementation(libs.protobuf.java)
+    implementation(libs.protobuf.kotlin)
 }
 
 protobuf {
@@ -35,26 +48,4 @@ protobuf {
             }
         }
     }
-}
-
-kotlin {
-    jvmToolchain(17)
-}
-
-sourceSets.main {
-    java.srcDirs("build/generated/source/proto/main/java")
-}
-
-tasks.withType<Jar>() {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-dependencies {
-    implementation(libs.bundles.grpc)
-    implementation(libs.bundles.protobuf)
-    implementation(libs.bundles.kotlin.coroutines)
-    implementation(libs.grpc.kotlin.stub)
-    implementation(libs.protobuf.java)
-    implementation(libs.protobuf.kotlin)
-
 }
