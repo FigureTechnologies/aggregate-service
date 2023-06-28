@@ -42,6 +42,7 @@ import tech.figure.aggregator.api.server.Connectors
 import tech.figure.aggregator.api.server.GrpcServer
 import tech.figure.aggregator.api.service.TransferService
 import tech.figure.block.api.client.GRPCConfigOpt
+import tech.figure.block.api.client.Protocol.PLAINTEXT
 import tech.figure.block.api.client.withApiKey
 import tech.figure.block.api.client.withProtocol
 import kotlin.system.exitProcess
