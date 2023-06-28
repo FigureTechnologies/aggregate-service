@@ -35,12 +35,14 @@ import io.ktor.jackson.jackson
 import kotlinx.coroutines.flow.catch
 import org.jetbrains.exposed.sql.Database
 import tech.figure.aggregate.common.db.DBClient
+import tech.figure.aggregate.common.models.stream.CoinTransfer
+import tech.figure.aggregate.common.models.stream.MarkerSupply
+import tech.figure.aggregate.common.models.stream.MarkerTransfer
 import tech.figure.aggregator.api.server.Connectors
 import tech.figure.aggregator.api.server.GrpcServer
 import tech.figure.aggregator.api.service.TransferService
 import tech.figure.block.api.client.GRPCConfigOpt
 import tech.figure.block.api.client.Protocol.PLAINTEXT
-import tech.figure.block.api.client.Protocol.TLS
 import tech.figure.block.api.client.withApiKey
 import tech.figure.block.api.client.withProtocol
 import kotlin.system.exitProcess
@@ -158,6 +160,16 @@ fun main(args: Array<String>) {
 
     val dbClient = DBClient()
     val ravenClient = RavenDB(config.dbConfig)
+
+    /**
+     * todo: Handle initializing the channel better, keeping it like this
+     * allows for easier debugging and identifying which channel is
+     * problematic.
+     */
+    val coinTransferChannel = Channel<CoinTransfer>()
+    val markerSupplyChannel = Channel<MarkerSupply>()
+    val markerTransferChannel = Channel<MarkerTransfer>()
+
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
         NonBlockingStatsDClientBuilder()
@@ -171,8 +183,6 @@ fun main(args: Array<String>) {
         log.info("Datadog client disabled.")
         NoOpStatsDClient()
     }
-
-    val shutDownSignal: Channel<Unit> = installShutdownHook(log)
 
     runBlocking {
         log.info(
@@ -190,8 +200,7 @@ fun main(args: Array<String>) {
             """.trimMargin("|")
         )
 
-        val grpcServices = listOf(TransferService(dbClient))
-
+        val grpcServices = listOf(TransferService(dbClient, coinTransferChannel, markerSupplyChannel, markerTransferChannel))
         val server = GrpcServer.embeddedServer(
             grpcServices,
             developmentMode = false,
@@ -249,6 +258,9 @@ fun main(args: Array<String>) {
         EventStreamUploader(
             blockFlow,
             dbClient,
+            coinTransferChannel,
+            markerSupplyChannel,
+            markerTransferChannel,
             ravenClient,
             config.hrp,
             Pair(config.badBlockRange[0], config.badBlockRange[1]),
