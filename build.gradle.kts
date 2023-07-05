@@ -169,9 +169,6 @@ subprojects {
             }
         }
         signing {
-            setRequired {
-                gradle.taskGraph.allTasks.any { it is PublishToMavenLocal }
-            }
             sign(publishing.publications["maven"])
         }
     }

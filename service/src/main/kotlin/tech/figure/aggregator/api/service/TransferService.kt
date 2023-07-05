@@ -120,7 +120,6 @@ fun Flow<MarkerSupply>.toMarkerSupplyStreamResponse(): Flow<StreamResponse> =
         StreamResponse.newBuilder()
             .setMarkerSupply(data)
             .build()
-
     }
 
 fun Flow<MarkerTransfer>.toMarkerTransferStreamResponse(): Flow<StreamResponse> =
@@ -128,7 +127,7 @@ fun Flow<MarkerTransfer>.toMarkerTransferStreamResponse(): Flow<StreamResponse> 
         val data = MarkerTransferOuterClass.MarkerTransfer.newBuilder()
             .setEventType(it.eventType)
             .setBlockHeight(it.blockHeight)
-            .setBlockTimestamp(it.blockTimestamp.toString().toOffsetDateTime().toProtoTimestamp())
+            .setBlockTimestamp(it.blockTimestamp.toOffsetDateTime().toProtoTimestamp())
             .setAmount(it.amount)
             .setDenom(it.denom)
             .setAdministrator(it.administrator)
