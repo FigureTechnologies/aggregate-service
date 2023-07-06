@@ -18,6 +18,7 @@ java.sourceCompatibility = javaVersion
 java.targetCompatibility = javaVersion
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven( url = "https://jitpack.io")
 }
