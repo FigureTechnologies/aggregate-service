@@ -11,16 +11,16 @@ plugins {
     id("org.openapi.generator") version "5.4.0"
 }
 
-group = "tech.figure.aggregate"
-version = "0.0.1-SNAPSHOT"
 val javaVersion = JavaVersion.VERSION_17
 java.sourceCompatibility = javaVersion
 java.targetCompatibility = javaVersion
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven( url = "https://jitpack.io")
+allprojects {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven(url = "https://jitpack.io")
+    }
 }
 
 dependencies {

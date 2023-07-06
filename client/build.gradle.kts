@@ -5,10 +5,6 @@ plugins{
     idea
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     api(projects.proto)
     api(libs.bundles.grpc)
