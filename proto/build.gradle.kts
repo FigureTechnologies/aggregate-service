@@ -9,10 +9,6 @@ plugins {
     `maven-publish`
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation(libs.bundles.grpc)
     implementation(libs.bundles.protobuf)

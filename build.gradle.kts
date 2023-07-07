@@ -11,26 +11,15 @@ plugins {
     id("org.openapi.generator") version "5.4.0"
 }
 
-group = "tech.figure.aggregate"
-version = "0.0.1-SNAPSHOT"
 val javaVersion = JavaVersion.VERSION_17
 java.sourceCompatibility = javaVersion
 java.targetCompatibility = javaVersion
 
-repositories {
-    mavenCentral()
-    maven( url = "https://jitpack.io")
-}
-
-nexusPublishing {
+allprojects {
     repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-            username.set(findProject("ossrhUsername")?.toString() ?: System.getenv("OSSRH_USERNAME"))
-            password.set(findProject("ossrhPassword")?.toString() ?: System.getenv("OSSRH_PASSWORD"))
-            stagingProfileId.set("858b6e4de4734a") // tech.figure staging id
-        }
+        mavenLocal()
+        mavenCentral()
+        maven(url = "https://jitpack.io")
     }
 }
 
@@ -160,6 +149,14 @@ subprojects {
                         }
                     }
 
+                    developers {
+                        developer {
+                            id.set("FigureTechnologies")
+                            name.set("Figure Technologies")
+                            email.set("tech@figure.com")
+                        }
+                    }
+
                     scm {
                         connection.set("git@github.com:FigureTechnologies/aggregate-service.git")
                         developerConnection.set("git@github.com:FigureTechnologies/aggregate-service.git")
@@ -169,10 +166,19 @@ subprojects {
             }
         }
         signing {
-            setRequired {
-                gradle.taskGraph.allTasks.any { it is PublishToMavenLocal }
-            }
             sign(publishing.publications["maven"])
+        }
+    }
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username.set(findProject("ossrhUsername")?.toString() ?: System.getenv("OSSRH_USERNAME"))
+            password.set(findProject("ossrhPassword")?.toString() ?: System.getenv("OSSRH_PASSWORD"))
+            stagingProfileId.set("858b6e4de4734a") // tech.figure staging id
         }
     }
 }

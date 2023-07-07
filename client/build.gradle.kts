@@ -1,16 +1,8 @@
 plugins{
     kotlin("jvm") version "1.8.21"
     `maven-publish`
-    signing
     java
     idea
-}
-
-group = "tech.figure.aggregate.client"
-version = "1.0-SNAPSHOT"
-
-repositories {
-    mavenCentral()
 }
 
 dependencies {
