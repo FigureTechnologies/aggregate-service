@@ -149,6 +149,14 @@ subprojects {
                         }
                     }
 
+                    developers {
+                        developer {
+                            id.set("FigureTechnologies")
+                            name.set("Figure Technologies")
+                            email.set("tech@figure.com")
+                        }
+                    }
+
                     scm {
                         connection.set("git@github.com:FigureTechnologies/aggregate-service.git")
                         developerConnection.set("git@github.com:FigureTechnologies/aggregate-service.git")
