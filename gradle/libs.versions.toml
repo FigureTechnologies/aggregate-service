@@ -38,7 +38,7 @@ okhttp = "4.10.0"
 kodein = "7.18.0"
 swaggerKtor="0.3-beta.3"
 apache = "1.10.0"
-protobufUtil = "3.22.3"
+protobufUtil = "3.23.4"
 protobufVersion = "3.23.0"
 
 pluginProtobuf = "0.9.3"
