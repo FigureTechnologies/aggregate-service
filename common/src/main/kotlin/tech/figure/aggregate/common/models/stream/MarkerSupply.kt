@@ -1,6 +1,7 @@
 package tech.figure.aggregate.common.models.stream
 
 import kotlinx.serialization.Serializable
+import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 
 @Serializable
 data class MarkerSupply(
@@ -19,5 +20,5 @@ data class MarkerSupply(
     val metadataDenomUnits: String?,
     val metadataName: String?,
     val metadataSymbol: String?
-)
+): StreamTypeImpl
 

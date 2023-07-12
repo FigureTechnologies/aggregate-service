@@ -3,6 +3,7 @@ package tech.figure.aggregate.common.db
 import kotlinx.coroutines.channels.Channel
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
+import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.domain.AttributesRecord
 import tech.figure.aggregate.common.domain.CoinTransferRecord
 import tech.figure.aggregate.common.domain.FeeRecords
@@ -12,6 +13,7 @@ import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.stream.CoinTransfer
 import tech.figure.aggregate.common.models.stream.MarkerSupply
 import tech.figure.aggregate.common.models.stream.MarkerTransfer
+import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregate.common.toOffsetDateTime
 import java.io.File
 
@@ -22,9 +24,7 @@ class DBClient: DBJdbc() {
     fun handleInsert(
         name: String,
         csvFile: File,
-        coinTransferChannel: Channel<CoinTransfer>,
-        markerSupplyChannel: Channel<MarkerSupply>,
-        markerTransferChannel: Channel<MarkerTransfer>
+        channel: ChannelImpl<StreamTypeImpl>
     ) {
 
         val csvFile = CSVParser(csvFile.bufferedReader(), CSVFormat.DEFAULT.withFirstRecordAsHeader())
@@ -54,7 +54,7 @@ class DBClient: DBJdbc() {
                         record.denom
                     )
 
-                    coinTransferChannel.trySend(record)
+                    channel.send(record)
                 }
             }
 
@@ -113,7 +113,7 @@ class DBClient: DBJdbc() {
                         record.fromAddress
                     )
 
-                    markerTransferChannel.trySend(record)
+                    channel.send(record)
                 }
             }
 
@@ -157,7 +157,7 @@ class DBClient: DBJdbc() {
                         record.metadataSymbol ?: ""
                     )
 
-                    markerSupplyChannel.trySend(record)
+                    channel.send(record)
                 }
             }
         }

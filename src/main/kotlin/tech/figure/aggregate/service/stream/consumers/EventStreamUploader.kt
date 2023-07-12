@@ -9,15 +9,13 @@ import tech.figure.aggregate.service.stream.extractors.Extractor
 import tech.figure.aggregate.service.stream.extractors.OutputType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow.SUSPEND
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.db.DBClient
 import tech.figure.aggregate.common.models.BatchId
 import tech.figure.aggregate.common.models.block.StreamBlock
-import tech.figure.aggregate.common.models.stream.CoinTransfer
-import tech.figure.aggregate.common.models.stream.MarkerSupply
-import tech.figure.aggregate.common.models.stream.MarkerTransfer
+import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregate.common.models.toStreamBlock
 import tech.figure.aggregate.repository.database.RavenDB
 import tech.figure.aggregate.service.DefaultDispatcherProvider
@@ -43,9 +41,7 @@ import kotlin.time.ExperimentalTime
 class EventStreamUploader(
     private val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult>,
     private val dbClient: DBClient = DBClient(),
-    private val coinTransferChannel: Channel<CoinTransfer>,
-    private val markerSupplyChannel: Channel<MarkerSupply>,
-    private val markerTransferChannel: Channel<MarkerTransfer>,
+    private val channel: ChannelImpl<StreamTypeImpl>,
     private val ravenClient: RavenDB,
     private val hrp: String,
     private val badBlockRange: Pair<Long, Long>,
@@ -192,9 +188,7 @@ class EventStreamUploader(
                                             dbClient.handleInsert(
                                                 extractor.name,
                                                 out.path.toFile(),
-                                                coinTransferChannel,
-                                                markerSupplyChannel,
-                                                markerTransferChannel
+                                                channel
                                             )
                                         }
 

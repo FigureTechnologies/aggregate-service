@@ -1,6 +1,7 @@
 package tech.figure.aggregate.common.models.stream
 
 import kotlinx.serialization.Serializable
+import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 
 @Serializable
 data class CoinTransfer(
@@ -12,5 +13,5 @@ data class CoinTransfer(
     val sender: String?,
     val amount: String,
     val denom: String
-)
+): StreamTypeImpl
 

@@ -1,7 +1,7 @@
 package tech.figure.aggregate.common.models.stream
 
 import kotlinx.serialization.Serializable
-import java.sql.Timestamp
+import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 
 @Serializable
 data class MarkerTransfer(
@@ -13,4 +13,4 @@ data class MarkerTransfer(
     val administrator: String,
     val toAddress: String,
     val fromAddress: String
-)
+): StreamTypeImpl
