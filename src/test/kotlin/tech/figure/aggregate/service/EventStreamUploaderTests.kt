@@ -22,10 +22,12 @@ import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.sql.Database
 import org.junit.jupiter.api.BeforeAll
 import tech.figure.aggregate.common.Environment
+import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.db.DBClient
 import tech.figure.aggregate.common.models.stream.CoinTransfer
 import tech.figure.aggregate.common.models.stream.MarkerSupply
 import tech.figure.aggregate.common.models.stream.MarkerTransfer
+import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregate.service.flow.extensions.cancelOnSignal
 import tech.figure.aggregate.service.test.utils.Defaults.blockData
 import kotlin.time.Duration.Companion.seconds
@@ -36,10 +38,7 @@ class EventStreamUploaderTests {
 
     val log: Logger = logger()
     val ravenClient = mockk<RavenDB>()
-
-    val channelCoinTransfer = mockk<Channel<CoinTransfer>>()
-    val channelMarkerSupply = mockk<Channel<MarkerSupply>>()
-    val channelMarkerTransfer = mockk<Channel<MarkerTransfer>>()
+    val channel = mockk<ChannelImpl<StreamTypeImpl>>()
 
     val environment: Environment = Environment.local
     lateinit var config: Config
@@ -79,7 +78,7 @@ class EventStreamUploaderTests {
             }
             var inspected1 = false
 
-            justRun { dbClient.handleInsert(any(), any(), any(), any(), any())}
+            justRun { dbClient.handleInsert(any(), any(), any())}
 
             var uploadResults1: List<UploadResult> = mutableListOf()
             withTimeoutOrNull(4.seconds) {
@@ -88,9 +87,7 @@ class EventStreamUploaderTests {
                     uploadResults1 = EventStreamUploader(
                         blockFlow,
                         dbClient,
-                        channelCoinTransfer,
-                        channelMarkerSupply,
-                        channelMarkerTransfer,
+                        channel,
                         ravenClient,
                         "tp",
                         Pair(config.badBlockRange[0], config.badBlockRange[1]),

@@ -1,7 +1,6 @@
 package tech.figure.aggregator.api.service
 
 import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.Channel
 import tech.figure.aggregate.proto.TransferServiceGrpcKt.TransferServiceCoroutineImplBase
 import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamRequest
 import tech.figure.aggregate.proto.TransferServiceOuterClass.StreamResponse
@@ -12,8 +11,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.runBlocking
+import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.db.DBClient
 import tech.figure.aggregate.common.db.model.TxCoinTransferData
 import tech.figure.aggregate.common.db.model.TxMarkerSupply
@@ -23,6 +22,7 @@ import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.stream.CoinTransfer
 import tech.figure.aggregate.common.models.stream.MarkerSupply
 import tech.figure.aggregate.common.models.stream.MarkerTransfer
+import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregate.common.toOffsetDateTime
 import tech.figure.aggregate.proto.CoinTransferOuterClass
 import tech.figure.aggregate.proto.MarkerSupplyOuterClass
@@ -37,9 +37,7 @@ import tech.figure.aggregator.api.service.extension.toProtoTimestamp
 
 class TransferService(
     private val dbClient: DBClient,
-    private val coinTransferChannel: Channel<CoinTransfer>,
-    private val markerSupplyChannel: Channel<MarkerSupply>,
-    private val markerTransferChannel: Channel<MarkerTransfer>,
+    private val channel: ChannelImpl<StreamTypeImpl>,
     coroutineContext: CoroutineContext = EmptyCoroutineContext
 ) : TransferServiceCoroutineImplBase(coroutineContext) {
 
@@ -47,15 +45,15 @@ class TransferService(
     override fun transferDataStream(request: StreamRequest): Flow<StreamResponse> {
 
         return runBlocking {
-            val coinTransferResult = async { coinTransferChannel.receiveAsFlow() }
-            val markerSupplyResult = async { markerSupplyChannel.receiveAsFlow() }
-            val markerTransferResult = async { markerTransferChannel.receiveAsFlow() }
+            val coinTransferResult = async { channel.asFlow(COIN_TRANSFER) }.await()
+            val markerSupplyResult = async { channel.asFlow(MARKER_SUPPLY) }.await()
+            val markerTransferResult = async { channel.asFlow(MARKER_TRANSFER) }.await()
 
             val historicalResponse = transferDataStreamHistorical(request)
 
-            val liveCoinTransferFlow = coinTransferResult.await().toCoinTransferStreamResponse()
-            val liveMarkerSupplyFlow = markerSupplyResult.await().toMarkerSupplyStreamResponse()
-            val liveMarkerTransferFlow = markerTransferResult.await().toMarkerTransferStreamResponse()
+            val liveCoinTransferFlow = coinTransferResult.toCoinTransferStreamResponse()
+            val liveMarkerSupplyFlow = markerSupplyResult.toMarkerSupplyStreamResponse()
+            val liveMarkerTransferFlow = markerTransferResult.toMarkerTransferStreamResponse()
 
             return@runBlocking merge(
                 historicalResponse.toTxTypeResultFlow(request.streamType),
@@ -80,8 +78,8 @@ fun List<TxResponseData>.toTxTypeResultFlow(streamType: StreamType) =
         }
     }.asFlow()
 
-fun Flow<CoinTransfer>.toCoinTransferStreamResponse(): Flow<StreamResponse> =
-    this.map {
+fun Flow<StreamTypeImpl>.toCoinTransferStreamResponse(): Flow<StreamResponse> =
+    this.map { it as CoinTransfer
         val data = CoinTransferOuterClass.CoinTransfer.newBuilder()
             .setEventType(it.eventType)
             .setBlockHeight(it.blockHeight)
@@ -98,8 +96,8 @@ fun Flow<CoinTransfer>.toCoinTransferStreamResponse(): Flow<StreamResponse> =
             .build()
     }
 
-fun Flow<MarkerSupply>.toMarkerSupplyStreamResponse(): Flow<StreamResponse> =
-    this.map {
+fun Flow<StreamTypeImpl>.toMarkerSupplyStreamResponse(): Flow<StreamResponse> =
+    this.map {it as MarkerSupply
         val data = MarkerSupplyOuterClass.MarkerSupply.newBuilder()
             .setEventType(it.eventType)
             .setBlockHeight(it.blockHeight)
@@ -122,8 +120,8 @@ fun Flow<MarkerSupply>.toMarkerSupplyStreamResponse(): Flow<StreamResponse> =
             .build()
     }
 
-fun Flow<MarkerTransfer>.toMarkerTransferStreamResponse(): Flow<StreamResponse> =
-    this.map {
+fun Flow<StreamTypeImpl>.toMarkerTransferStreamResponse(): Flow<StreamResponse> =
+    this.map {it as MarkerTransfer
         val data = MarkerTransferOuterClass.MarkerTransfer.newBuilder()
             .setEventType(it.eventType)
             .setBlockHeight(it.blockHeight)
