@@ -2,7 +2,9 @@ package tech.figure.aggregate.common.db
 
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
+import org.jetbrains.exposed.sql.transactions.transaction
 import tech.figure.aggregate.common.domain.AttributesRecord
+import tech.figure.aggregate.common.domain.CheckpointRecord
 import tech.figure.aggregate.common.domain.CoinTransferRecord
 import tech.figure.aggregate.common.domain.FeeRecords
 import tech.figure.aggregate.common.domain.MarkerSupplyRecord
@@ -103,5 +105,13 @@ class DBClient: DBJdbc() {
                 }
             }
         }
+    }
+
+    fun writeCheckpoint(height: Long) {
+        transaction { CheckpointRecord.upsert(height) }
+    }
+
+    fun getLastKnownCheckpoint(): Long? {
+        return transaction { CheckpointRecord.findLastKnownBlockHeight()?.blockHeight }
     }
 }

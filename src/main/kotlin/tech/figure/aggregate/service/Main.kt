@@ -25,7 +25,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import org.slf4j.Logger
 import tech.figure.aggregate.common.Environment
-import tech.figure.aggregate.repository.database.RavenDB
 import tech.figure.block.api.client.BlockAPIClient
 import tech.figure.block.api.proto.BlockServiceOuterClass
 import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
@@ -39,7 +38,7 @@ import tech.figure.aggregator.api.server.Connectors
 import tech.figure.aggregator.api.server.GrpcServer
 import tech.figure.aggregator.api.service.TransferService
 import tech.figure.block.api.client.GRPCConfigOpt
-import tech.figure.block.api.client.Protocol.TLS
+import tech.figure.block.api.client.Protocol.PLAINTEXT
 import tech.figure.block.api.client.withApiKey
 import tech.figure.block.api.client.withProtocol
 import kotlin.system.exitProcess
@@ -148,7 +147,7 @@ fun main(args: Array<String>) {
     val blockApiClient = BlockAPIClient(
         config.blockApi.host,
         config.blockApi.port,
-        withProtocol(TLS),
+        withProtocol(PLAINTEXT),
         withApiKey(config.blockApi.apiKey),
         withManagedChannelConfig(config.blockApi.maxBlockSize)
     )
@@ -156,7 +155,6 @@ fun main(args: Array<String>) {
     Database.connect("jdbc:postgresql://${config.dbConfig.dbHost}:${config.dbConfig.dbPort}/${config.dbConfig.dbName}", "org.postgresql.Driver", config.dbConfig.dbUser, config.dbConfig.dbPassword)
 
     val dbClient = DBClient()
-    val ravenClient = RavenDB(config.dbConfig)
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
         NonBlockingStatsDClientBuilder()
@@ -170,8 +168,6 @@ fun main(args: Array<String>) {
         log.info("Datadog client disabled.")
         NoOpStatsDClient()
     }
-
-    val shutDownSignal: Channel<Unit> = installShutdownHook(log)
 
     runBlocking {
         log.info(
@@ -203,16 +199,16 @@ fun main(args: Array<String>) {
         // Update DataDog with the latest historical block height every minute:
         launch {
             while (true) {
-                ravenClient.getBlockCheckpoint()
-                    .also { log.info("Maximum block height: ${it ?: "--"}") }
+                dbClient.getLastKnownCheckpoint()
+                    .also { log.info("Maximum block height: ${it ?: "1"}") }
                     ?.let(dogStatsClient::recordMaxBlockHeight)
                     ?.getOrElse { log.error("DD metric failure", it) }
                 delay(1.minutes)
             }
         }
 
-        val fromHeightGetter: suspend () -> Long? = {
-            var maxHistoricalHeight: Long? =  ravenClient.getBlockCheckpoint()
+        val fromHeightGetter: suspend () -> Long = {
+            var maxHistoricalHeight: Long? =  dbClient.getLastKnownCheckpoint()
             log.info("Start :: historical max block height = $maxHistoricalHeight")
             if (restart) {
                 if (maxHistoricalHeight == null) {
@@ -230,8 +226,8 @@ fun main(args: Array<String>) {
                 )
                 maxOf(maxHistoricalHeight ?: 1, fromHeight?.toLong() ?: 1)
             } else {
-                log.info("--restart: false, starting from block height ${fromHeight?.toLong()}")
-                fromHeight?.toLong()
+                log.info("--restart: false, starting from block height ${fromHeight?.toLong() ?: 1}")
+                fromHeight?.toLong() ?: 1
             }
         }
 
@@ -244,11 +240,10 @@ fun main(args: Array<String>) {
             }.start(wait = true)
         }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(1, PREFER.TX_EVENTS)
+        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter(), PREFER.TX_EVENTS)
         EventStreamUploader(
             blockFlow,
             dbClient,
-            ravenClient,
             config.hrp,
             Pair(config.badBlockRange[0], config.badBlockRange[1]),
             config.msgFeeHeight
