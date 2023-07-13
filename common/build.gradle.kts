@@ -28,7 +28,7 @@ dependencies {
     implementation(libs.apache.commons)
 
     implementation(libs.postgres)
-    
+
     implementation(libs.blockapi.proto)
 
     implementation(libs.exposed.core)

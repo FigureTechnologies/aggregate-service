@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS CHECKPOINT (
+    name TEXT PRIMARY KEY,
+    block_height BIGINT
+);

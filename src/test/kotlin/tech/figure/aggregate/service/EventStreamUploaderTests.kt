@@ -10,7 +10,6 @@ import io.mockk.mockk
 import tech.figure.aggregate.common.Config
 import tech.figure.aggregate.common.logger
 import tech.figure.aggregate.common.models.UploadResult
-import tech.figure.aggregate.repository.database.RavenDB
 import tech.figure.aggregate.service.stream.consumers.EventStreamUploader
 import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.Test
@@ -24,9 +23,6 @@ import org.junit.jupiter.api.BeforeAll
 import tech.figure.aggregate.common.Environment
 import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.db.DBClient
-import tech.figure.aggregate.common.models.stream.CoinTransfer
-import tech.figure.aggregate.common.models.stream.MarkerSupply
-import tech.figure.aggregate.common.models.stream.MarkerTransfer
 import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregate.service.flow.extensions.cancelOnSignal
 import tech.figure.aggregate.service.test.utils.Defaults.blockData
@@ -37,7 +33,6 @@ import kotlin.time.Duration.Companion.seconds
 class EventStreamUploaderTests {
 
     val log: Logger = logger()
-    val ravenClient = mockk<RavenDB>()
     val channel = mockk<ChannelImpl<StreamTypeImpl>>()
 
     val environment: Environment = Environment.local
@@ -72,7 +67,7 @@ class EventStreamUploaderTests {
         var complete = false
         runBlocking {
             coEvery {
-                ravenClient.writeBlockCheckpoint(any())
+                dbClient.writeCheckpoint(any())
             } answers {
                 complete = true
             }
@@ -88,7 +83,6 @@ class EventStreamUploaderTests {
                         blockFlow,
                         dbClient,
                         channel,
-                        ravenClient,
                         "tp",
                         Pair(config.badBlockRange[0], config.badBlockRange[1]),
                         config.msgFeeHeight

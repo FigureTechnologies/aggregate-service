@@ -107,10 +107,10 @@ abstract class DBJdbc {
 
     private fun executeQuery(stmt: String): List<MutableMap<String, Any>> {
         val result = transaction {
-                TransactionManager.current().connection
-                    .prepareStatement(stmt, false)
-                    .executeQuery()
-            }
+            TransactionManager.current().connection
+                .prepareStatement(stmt, false)
+                .executeQuery()
+        }
         return MapListHandler().handle(result).toList()
     }
 }

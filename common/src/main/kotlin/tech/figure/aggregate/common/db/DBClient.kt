@@ -1,10 +1,11 @@
 package tech.figure.aggregate.common.db
 
-import kotlinx.coroutines.channels.Channel
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
+import org.jetbrains.exposed.sql.transactions.transaction
 import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.domain.AttributesRecord
+import tech.figure.aggregate.common.domain.CheckpointRecord
 import tech.figure.aggregate.common.domain.CoinTransferRecord
 import tech.figure.aggregate.common.domain.FeeRecords
 import tech.figure.aggregate.common.domain.MarkerSupplyRecord
@@ -31,18 +32,18 @@ class DBClient: DBJdbc() {
         when (name) {
             "tx_coin_transfer" -> {
                 csvFile.records.onEach { csvRecord ->
-                     val record = CoinTransfer(
-                         csvRecord["event_type"],
-                         csvRecord["block_height"].toLong(),
-                         csvRecord["block_timestamp"],
-                         csvRecord["tx_hash"],
-                         csvRecord["recipient"],
-                         csvRecord["sender"],
-                         csvRecord["amount"],
-                         csvRecord["denom"]
-                     )
+                    val record = CoinTransfer(
+                        csvRecord["event_type"],
+                        csvRecord["block_height"].toLong(),
+                        csvRecord["block_timestamp"],
+                        csvRecord["tx_hash"],
+                        csvRecord["recipient"],
+                        csvRecord["sender"],
+                        csvRecord["amount"],
+                        csvRecord["denom"]
+                    )
 
-                     CoinTransferRecord.insert(
+                    CoinTransferRecord.insert(
                         csvRecord["hash"],
                         record.eventType.toString(),
                         record.blockHeight.toDouble(),
@@ -161,5 +162,13 @@ class DBClient: DBJdbc() {
                 }
             }
         }
+    }
+
+    fun writeCheckpoint(height: Long) {
+        transaction { CheckpointRecord.upsert(height) }
+    }
+
+    fun getLastKnownCheckpoint(): Long? {
+        return transaction { CheckpointRecord.findLastKnownBlockHeight()?.blockHeight }
     }
 }

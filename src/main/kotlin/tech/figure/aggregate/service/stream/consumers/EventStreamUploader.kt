@@ -17,7 +17,6 @@ import tech.figure.aggregate.common.models.BatchId
 import tech.figure.aggregate.common.models.block.StreamBlock
 import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregate.common.models.toStreamBlock
-import tech.figure.aggregate.repository.database.RavenDB
 import tech.figure.aggregate.service.DefaultDispatcherProvider
 import tech.figure.aggregate.service.DispatcherProvider
 import tech.figure.block.api.proto.BlockServiceOuterClass
@@ -42,7 +41,6 @@ class EventStreamUploader(
     private val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult>,
     private val dbClient: DBClient = DBClient(),
     private val channel: ChannelImpl<StreamTypeImpl>,
-    private val ravenClient: RavenDB,
     private val hrp: String,
     private val badBlockRange: Pair<Long, Long>,
     private val msgFeeHeight: Long,
@@ -179,6 +177,7 @@ class EventStreamUploader(
 
                         batch.complete { batchId: BatchId, extractor: Extractor ->
                             val key: Key = csvKey(batchId, earliestDate, extractor.name)
+
                             when (val out = extractor.output()) {
                                 is OutputType.FilePath -> {
                                     if (extractor.shouldOutput()) {
@@ -192,19 +191,16 @@ class EventStreamUploader(
                                             )
                                         }
 
+                                        val highestBlockHeight = streamBlocks.last().height
+                                        val lowestBlockHeight = streamBlocks.first().height
+
                                         /**
-                                         * We want to track the last successful block height that was processed to S3, so
+                                         * We want to track the last successful block height that was processed, so
                                          * in the event of an exception to the service, the service can restart
                                          * at the last successful processed block height, so we don't lose any data that
                                          * was in the middle of processing.
                                          */
-                                        val highestBlockHeight = streamBlocks.last().height
-                                        val lowestBlockHeight = streamBlocks.first().height
-
-                                        ravenClient.writeBlockCheckpoint(highestBlockHeight!!)
-                                            .also {
-                                                log.info("Checkpoint::Updating max block height to = $highestBlockHeight")
-                                            }
+                                        dbClient.writeCheckpoint(highestBlockHeight!!)
 
                                         UploadResult(
                                             batchId = batch.id,
