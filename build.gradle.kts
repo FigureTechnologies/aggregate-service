@@ -6,7 +6,7 @@ plugins {
     jacoco
     signing
     `maven-publish`
-    kotlin("plugin.serialization") version "1.8.21"
+    kotlin("plugin.serialization") version "1.9.0"
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
     id("org.openapi.generator") version "5.4.0"
 }
