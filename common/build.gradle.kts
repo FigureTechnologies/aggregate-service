@@ -4,15 +4,9 @@ plugins {
     idea
 }
 
-group = "tech.figure.aggregate"
-version = "0.0.1-SNAPSHOT"
 val javaTarget = JavaVersion.VERSION_17
 java.sourceCompatibility = javaTarget
 java.targetCompatibility = javaTarget
-
-repositories {
-    mavenCentral()
-}
 
 dependencies {
     implementation(project(":proto"))
@@ -34,7 +28,7 @@ dependencies {
     implementation(libs.apache.commons)
 
     implementation(libs.postgres)
-    
+
     implementation(libs.blockapi.proto)
 
     implementation(libs.exposed.core)

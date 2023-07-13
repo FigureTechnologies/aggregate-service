@@ -1,4 +1,3 @@
-
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization").version("1.8.21")
@@ -7,18 +6,10 @@ plugins {
     idea
 }
 
-group = "tech.figure.aggregate"
-version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_17
 
 application {
     mainClass.set("tech.figure.aggregator.api.ApplicationKt")
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven( url = "https://jitpack.io")
 }
 
 kotlin {

@@ -48,7 +48,7 @@ abstract class DBJdbc {
         }
 
     private fun queryAllHistoricalTxData(blockHeight: Long, type: StreamType): List<TxResponseData> {
-        val stmt = "SELECT * FROM $type WHERE BLOCK_HEIGHT >= $blockHeight;"
+        val stmt = "SELECT * FROM $type WHERE BLOCK_HEIGHT >= $blockHeight ORDER BY BLOCK_HEIGHT;"
         executeQuery(stmt).also {
             return when(type) {
                 COIN_TRANSFER -> it.toTxCoinTransferData()
@@ -64,8 +64,9 @@ abstract class DBJdbc {
         type: StreamType
     ): List<TxResponseData> {
         val stmt = "SELECT * FROM $type WHERE BLOCK_HEIGHT >= $blockHeight AND "
-        val denomStmt = denomList.joinToString(separator = " OR") { " DENOM = \'$it\'" }
-        executeQuery("$stmt$denomStmt;").also {
+        val denomStmt = denomList.joinToString(separator = " OR") { " DENOM = \'$it\' " }
+        val orderStmt = " ORDER BY BLOCK_HEIGHT;"
+        executeQuery("$stmt$denomStmt$orderStmt").also {
             return when(type) {
                 COIN_TRANSFER -> it.toTxCoinTransferData()
                 MARKER_TRANSFER -> it.toTxMarkerTransfer()
@@ -106,10 +107,10 @@ abstract class DBJdbc {
 
     private fun executeQuery(stmt: String): List<MutableMap<String, Any>> {
         val result = transaction {
-                TransactionManager.current().connection
-                    .prepareStatement(stmt, false)
-                    .executeQuery()
-            }
+            TransactionManager.current().connection
+                .prepareStatement(stmt, false)
+                .executeQuery()
+        }
         return MapListHandler().handle(result).toList()
     }
 }
