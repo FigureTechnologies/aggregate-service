@@ -33,7 +33,9 @@ import io.ktor.features.ContentNegotiation
 import io.ktor.jackson.jackson
 import kotlinx.coroutines.flow.catch
 import org.jetbrains.exposed.sql.Database
+import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.db.DBClient
+import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregator.api.server.Connectors
 import tech.figure.aggregator.api.server.GrpcServer
 import tech.figure.aggregator.api.service.TransferService
@@ -155,6 +157,8 @@ fun main(args: Array<String>) {
     Database.connect("jdbc:postgresql://${config.dbConfig.dbHost}:${config.dbConfig.dbPort}/${config.dbConfig.dbName}", "org.postgresql.Driver", config.dbConfig.dbUser, config.dbConfig.dbPassword)
 
     val dbClient = DBClient()
+    val channel = ChannelImpl<StreamTypeImpl>()
+
     val dogStatsClient = if (ddEnabled) {
         log.info("Initializing Datadog client...")
         NonBlockingStatsDClientBuilder()
@@ -185,8 +189,7 @@ fun main(args: Array<String>) {
             """.trimMargin("|")
         )
 
-        val grpcServices = listOf(TransferService(dbClient))
-
+        val grpcServices = listOf(TransferService(dbClient, channel))
         val server = GrpcServer.embeddedServer(
             grpcServices,
             developmentMode = false,
@@ -244,6 +247,7 @@ fun main(args: Array<String>) {
         EventStreamUploader(
             blockFlow,
             dbClient,
+            channel,
             config.hrp,
             Pair(config.badBlockRange[0], config.badBlockRange[1]),
             config.msgFeeHeight

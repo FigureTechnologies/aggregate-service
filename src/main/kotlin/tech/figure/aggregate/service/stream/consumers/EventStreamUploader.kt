@@ -11,9 +11,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow.SUSPEND
 import kotlinx.coroutines.flow.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.db.DBClient
 import tech.figure.aggregate.common.models.BatchId
 import tech.figure.aggregate.common.models.block.StreamBlock
+import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregate.common.models.toStreamBlock
 import tech.figure.aggregate.service.DefaultDispatcherProvider
 import tech.figure.aggregate.service.DispatcherProvider
@@ -38,6 +40,7 @@ import kotlin.time.ExperimentalTime
 class EventStreamUploader(
     private val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult>,
     private val dbClient: DBClient = DBClient(),
+    private val channel: ChannelImpl<StreamTypeImpl>,
     private val hrp: String,
     private val badBlockRange: Pair<Long, Long>,
     private val msgFeeHeight: Long,
@@ -181,10 +184,11 @@ class EventStreamUploader(
                                         // Handle inserting data into postgres.
                                         // todo: want to return a proper status.
                                         transaction {
-                                            dbClient.handleInsert(extractor.name, out.path.toFile())
-                                                .also {
-                                                    log.info("Writing block data for ${extractor.name}")
-                                                }
+                                            dbClient.handleInsert(
+                                                extractor.name,
+                                                out.path.toFile(),
+                                                channel
+                                            )
                                         }
 
                                         val highestBlockHeight = streamBlocks.last().height

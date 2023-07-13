@@ -33,7 +33,7 @@ abstract class DBJdbc {
     fun getTotalFee(addr: String, startDate: OffsetDateTime, endDate: OffsetDateTime) =
         queryFee(addr, startDate, endDate)
 
-    fun streamTransfer(streamRequest: StreamRequest): List<TxResponseData> =
+    fun streamTransferHistorical(streamRequest: StreamRequest): List<TxResponseData> =
         when(streamRequest.denomRequestTypeCase) {
             ALL_DENOM_REQUEST -> queryAllHistoricalTxData(
                 streamRequest.allDenomRequest.blockHeight,
@@ -46,7 +46,6 @@ abstract class DBJdbc {
             )
             DENOMREQUESTTYPE_NOT_SET -> error("No denom request type was set.")
         }
-
 
     private fun queryAllHistoricalTxData(blockHeight: Long, type: StreamType): List<TxResponseData> {
         val stmt = "SELECT * FROM $type WHERE BLOCK_HEIGHT >= $blockHeight;"

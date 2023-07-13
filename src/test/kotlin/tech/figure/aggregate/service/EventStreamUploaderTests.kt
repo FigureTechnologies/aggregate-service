@@ -21,7 +21,9 @@ import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.sql.Database
 import org.junit.jupiter.api.BeforeAll
 import tech.figure.aggregate.common.Environment
+import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.db.DBClient
+import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregate.service.flow.extensions.cancelOnSignal
 import tech.figure.aggregate.service.test.utils.Defaults.blockData
 import kotlin.time.Duration.Companion.seconds
@@ -31,6 +33,7 @@ import kotlin.time.Duration.Companion.seconds
 class EventStreamUploaderTests {
 
     val log: Logger = logger()
+    val channel = mockk<ChannelImpl<StreamTypeImpl>>()
 
     val environment: Environment = Environment.local
     lateinit var config: Config
@@ -70,7 +73,7 @@ class EventStreamUploaderTests {
             }
             var inspected1 = false
 
-            justRun { dbClient.handleInsert(any(), any())}
+            justRun { dbClient.handleInsert(any(), any(), any())}
 
             var uploadResults1: List<UploadResult> = mutableListOf()
             withTimeoutOrNull(4.seconds) {
@@ -79,6 +82,7 @@ class EventStreamUploaderTests {
                     uploadResults1 = EventStreamUploader(
                         blockFlow,
                         dbClient,
+                        channel,
                         "tp",
                         Pair(config.badBlockRange[0], config.badBlockRange[1]),
                         config.msgFeeHeight

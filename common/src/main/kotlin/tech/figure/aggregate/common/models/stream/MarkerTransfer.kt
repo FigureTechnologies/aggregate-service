@@ -4,14 +4,13 @@ import kotlinx.serialization.Serializable
 import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 
 @Serializable
-data class CoinTransfer(
-    val eventType: String?,
+data class MarkerTransfer(
+    val eventType: String,
     val blockHeight: Long,
-    val blockTimestamp: String?,
-    val txHash: String,
-    val recipient: String?,
-    val sender: String?,
+    val blockTimestamp: String,
     val amount: String,
-    val denom: String
+    val denom: String,
+    val administrator: String,
+    val toAddress: String,
+    val fromAddress: String
 ): StreamTypeImpl
-
