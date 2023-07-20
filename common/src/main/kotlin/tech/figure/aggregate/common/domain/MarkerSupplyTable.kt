@@ -11,6 +11,7 @@ object MarkerSupplyTable: IdTable<String>("marker_supply") {
     val eventType = text("event_type")
     val blockHeight = double("block_height")
     val blockTimestamp = offsetDatetime("block_timestamp")
+    val txHash = text("tx_hash")
     val coins = text("coins")
     val denom = text("denom")
     val amount = text("amount")
@@ -36,6 +37,7 @@ open class MarkerSupplyEntityClass: EntityClass<String, MarkerSupplyRecord>(Mark
         eventType: String,
         blockHeight: Double,
         blockTimestamp: OffsetDateTime,
+        txHash: String,
         coins: String,
         denom: String,
         amount: String,
@@ -53,6 +55,7 @@ open class MarkerSupplyEntityClass: EntityClass<String, MarkerSupplyRecord>(Mark
             this.eventType = eventType
             this.blockHeight = blockHeight
             this.blockTimestamp = blockTimestamp
+            this.txHash = txHash
             this.coins = coins
             this.denom = denom
             this.amount = amount
@@ -77,6 +80,7 @@ class MarkerSupplyRecord(hash: EntityID<String>): Entity<String>(hash) {
     var eventType by MarkerSupplyTable.eventType
     var blockHeight by MarkerSupplyTable.blockHeight
     var blockTimestamp by MarkerSupplyTable.blockTimestamp
+    var txHash by MarkerSupplyTable.txHash
     var coins by MarkerSupplyTable.coins
     var denom by MarkerSupplyTable.denom
     var amount by MarkerSupplyTable.amount

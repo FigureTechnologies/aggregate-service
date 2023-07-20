@@ -8,9 +8,10 @@ message MarkerTransfer {
   uint64 block_height = 1;
   google.protobuf.Timestamp block_timestamp = 2;
   string event_type = 3;
-  string amount = 4;
-  string denom = 5;
-  string administrator = 6;
-  string to_address = 7;
-  string from_address = 8;
+  string tx_hash = 4;
+  string amount = 5;
+  string denom = 6;
+  string administrator = 7;
+  string to_address = 8;
+  string from_address = 9;
 }

@@ -8,6 +8,7 @@ data class MarkerTransfer(
     val eventType: String,
     val blockHeight: Long,
     val blockTimestamp: String,
+    val txHash: String,
     val amount: String,
     val denom: String,
     val administrator: String,

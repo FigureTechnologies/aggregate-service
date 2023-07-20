@@ -8,6 +8,7 @@ data class TxMarkerTransfer(
     val eventType: String,
     val blockHeight: Long,
     val blockTimestamp: Timestamp,
+    val txHash: String,
     val amount: String,
     val denom: String,
     val administrator: String,

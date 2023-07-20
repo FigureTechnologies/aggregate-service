@@ -8,6 +8,7 @@ data class TxMarkerSupply(
     val eventType: String?,
     val blockHeight: Long,
     val blockTimestamp: Timestamp,
+    val txHash: String?,
     val coins: String?,
     val denom: String?,
     val amount: String?,
