@@ -11,6 +11,7 @@ object MarkerTransferTable: IdTable<String>("marker_transfer") {
     val eventType = text("event_type")
     val blockHeight = double("block_height")
     val blockTimestamp = offsetDatetime("block_timestamp")
+    val txHash = text("tx_hash")
     val amount = text("amount")
     val denom = text("denom")
     val administrator = text("administrator")
@@ -29,6 +30,7 @@ open class MarkerTransferEntityClass: EntityClass<String, MarkerTransferRecord>(
         eventType: String,
         blockHeight: Double,
         blockTimestamp: OffsetDateTime,
+        txHash: String,
         amount: String,
         denom: String,
         administrator: String,
@@ -39,6 +41,7 @@ open class MarkerTransferEntityClass: EntityClass<String, MarkerTransferRecord>(
             this.eventType = eventType
             this.blockHeight = blockHeight
             this.blockTimestamp = blockTimestamp
+            this.txHash = txHash
             this.amount = amount
             this.denom = denom
             this.administrator = administrator
@@ -55,6 +58,7 @@ class MarkerTransferRecord(hash: EntityID<String>): Entity<String>(hash) {
     var eventType by MarkerTransferTable.eventType
     var blockHeight by MarkerTransferTable.blockHeight
     var blockTimestamp by MarkerTransferTable.blockTimestamp
+    var txHash by MarkerTransferTable.txHash
     var amount by MarkerTransferTable.amount
     var denom by MarkerTransferTable.denom
     var administrator by MarkerTransferTable.administrator

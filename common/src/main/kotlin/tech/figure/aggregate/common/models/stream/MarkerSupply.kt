@@ -8,6 +8,7 @@ data class MarkerSupply(
     val eventType: String?,
     val blockHeight: Long,
     val blockTimestamp: String?,
+    val txHash: String?,
     val coins: String?,
     val denom: String?,
     val amount: String?,
