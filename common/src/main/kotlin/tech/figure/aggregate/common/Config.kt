@@ -14,6 +14,7 @@ data class Config (
     val upload: UploadConfig = UploadConfig.empty(),
     val apiPort: Int,
     val streamPort: Int,
+    val batchSize: Int,
     val blockApi: BlockApiConfig,
     val dbConfig: DBConfig,
     val badBlockRange: List<Long>,

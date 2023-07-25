@@ -4,6 +4,7 @@ api_port: ${API_PORT}
 bad_block_range: ${ONE_DOT_ELEVEN_BAD_BLOCK_RANGE}
 msg_fee_height: ${MSG_FEE_HEIGHT}
 stream_port: ${STREAM_PORT:-7777}
+batch_size: ${BATCH_SIZE}
 
 dbConfig:
   dbHost: ${DB_HOST}
@@ -29,9 +30,6 @@ event-stream:
   # Configuration of the Tendermint API:
   websocket:
     throttle-duration-ms: 0
-  batch:
-    # Controls the maximum number of blocks that will be bundled into a batch for processing.
-    size: ${BATCH_SIZE}
     # Controls the timeout for a batch. If a batch is incomplete and a new block has not been received within
     # `timeout` milliseconds, the batch will be emitted, despite the fact it has less the `size` blocks.
     # timeout-ms: 10000
