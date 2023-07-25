@@ -42,6 +42,7 @@ class EventStreamUploader(
     private val dbClient: DBClient = DBClient(),
     private val channel: ChannelImpl<StreamTypeImpl>,
     private val hrp: String,
+    private val batchSize: Int,
     private val badBlockRange: Pair<Long, Long>,
     private val msgFeeHeight: Long,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
@@ -158,7 +159,7 @@ class EventStreamUploader(
             }
             .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = SUSPEND)
             .flowOn(dispatchers.io())
-            .chunked(size = 100, timeout = 10.seconds)
+            .chunked(size = batchSize, timeout = 10.seconds)
             .transform { streamBlocks: List<StreamBlock>  ->
                 log.info("collected block chunk size=${streamBlocks.size} and preparing for upload")
                 val batch: Batch = batchBlueprint.build()

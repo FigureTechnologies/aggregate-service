@@ -84,6 +84,7 @@ class EventStreamUploaderTests {
                         dbClient,
                         channel,
                         "tp",
+                        100,
                         Pair(config.badBlockRange[0], config.badBlockRange[1]),
                         config.msgFeeHeight
                     )

@@ -249,6 +249,7 @@ fun main(args: Array<String>) {
             dbClient,
             channel,
             config.hrp,
+            config.batchSize,
             Pair(config.badBlockRange[0], config.badBlockRange[1]),
             config.msgFeeHeight
         )
