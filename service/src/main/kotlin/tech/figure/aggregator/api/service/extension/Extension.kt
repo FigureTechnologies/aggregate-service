@@ -27,8 +27,10 @@ fun TxCoinTransferData.toCoinTransferResult() = streamResponse {
 
 fun TxMarkerTransfer.toProto() = markerTransfer {
     val data = this@toProto
+    eventType = data.eventType
     blockHeight = data.blockHeight
     blockTimestamp = data.blockTimestamp.toInstant().atOffset(ZoneOffset.UTC).toProtoTimestamp()
+    txHash = data.txHash
     amount = data.amount
     denom = data.denom
     administrator = data.administrator
@@ -38,8 +40,10 @@ fun TxMarkerTransfer.toProto() = markerTransfer {
 
 fun TxMarkerSupply.toProto() = markerSupply {
     val data = this@toProto
+    eventType = data.eventType.toString()
     blockHeight = data.blockHeight
     blockTimestamp = data.blockTimestamp.toInstant().atOffset(ZoneOffset.UTC).toProtoTimestamp()
+    txHash = data.txHash.toString()
     coins = data.coins.toString()
     denom = data.denom.toString()
     amount = data.denom.toString()
