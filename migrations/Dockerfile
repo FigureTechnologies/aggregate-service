@@ -1,4 +1,4 @@
-FROM flyway/flyway:9.18-alpine
+FROM flyway/flyway:9.21
 
 LABEL org.opencontainers.image.source=https://github.com/FigureTechnologies/aggregate-service
 
