@@ -150,7 +150,6 @@ fun main(args: Array<String>) {
         config.blockApi.host,
         config.blockApi.port,
         withProtocol(PLAINTEXT),
-        withApiKey(config.blockApi.apiKey),
         withManagedChannelConfig(config.blockApi.maxBlockSize)
     )
 
