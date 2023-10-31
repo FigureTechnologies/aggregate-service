@@ -21,7 +21,6 @@ dbConfig:
 block-api:
   host: ${BLOCK_API_HOST}
   port: ${BLOCK_API_PORT}
-  apiKey: ${BLOCK_API_API_KEY}
   maxBlockSize: ${BLOCK_API_MAX_BLOCK_SIZE}
 
 hrp: ${HRP}
