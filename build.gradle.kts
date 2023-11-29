@@ -112,7 +112,7 @@ tasks.withType<Jar> {
 }
 
 subprojects {
-    group="tech.figure.aggregate"
+    group= "com.figure.aggregate"
     version = this.findProperty("libraryVersion")?.toString() ?: "1.0-SNAPSHOT"
     apply {
         plugin("signing")
@@ -141,7 +141,7 @@ subprojects {
                 pom {
                     name.set("Aggregate Service Client")
                     description.set("Block data aggregation service")
-                    url.set("https://figure.tech")
+                    url.set("https://figure.com")
 
                     licenses {
                         license {
@@ -179,7 +179,7 @@ nexusPublishing {
             snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
             username.set(findProject("ossrhUsername")?.toString() ?: System.getenv("OSSRH_USERNAME"))
             password.set(findProject("ossrhPassword")?.toString() ?: System.getenv("OSSRH_PASSWORD"))
-            stagingProfileId.set("858b6e4de4734a") // tech.figure staging id
+            stagingProfileId.set("83b915e7809a92") // com.figure staging id
         }
     }
 }
