@@ -18,8 +18,12 @@ clean-test:
 build-dist:
 	$(GRADLEW) installDist
 
-run-local:  build-dist
-	ENVIRONMENT=local $(BUILD)/install/$(NAME)/bin/$(NAME) $(ARGS)
+migrate:
+	$(GRADLEW) flywayMigrate
+
+run-local:  build-dist migrate
+	ENVIRONMENT=local $(BUILD)/install/$(NAME)/bin/$(NAME) --restart $(ARGS)
 
 test: clean-test
 	$(GRADLEW) test -i
+

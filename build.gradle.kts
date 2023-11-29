@@ -24,6 +24,7 @@ allprojects {
 }
 
 dependencies {
+    implementation(projects.proto)
     implementation(projects.common)
     implementation(projects.repository)
     implementation(projects.service)
@@ -31,12 +32,12 @@ dependencies {
     implementation(libs.blockapi.client)
     implementation(libs.blockapi.proto)
     implementation(libs.bundles.apache.commons)
+    implementation(libs.bundles.grpc)
     implementation(libs.bundles.logback)
     implementation(libs.bundles.kotlin)
     implementation(libs.bundles.scarlet)
     implementation(libs.datadog)
     implementation(libs.exposed.core)
-    implementation(libs.grpc.core)
     implementation(libs.hoplite.core)
     implementation(libs.hoplite.yaml)
     implementation(libs.json)

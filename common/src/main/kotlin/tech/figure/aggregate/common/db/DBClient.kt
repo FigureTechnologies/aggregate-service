@@ -17,6 +17,7 @@ import tech.figure.aggregate.common.models.stream.MarkerTransfer
 import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregate.common.toOffsetDateTime
 import java.io.File
+import tech.figure.aggregate.common.domain.CheckpointTable
 
 class DBClient: DBJdbc() {
 
@@ -169,10 +170,11 @@ class DBClient: DBJdbc() {
     }
 
     fun writeCheckpoint(height: Long) {
+        log.info("writeCheckpoint($height)")
         transaction { CheckpointRecord.upsert(height) }
     }
 
     fun getLastKnownCheckpoint(): Long? {
-        return transaction { CheckpointRecord.findLastKnownBlockHeight()?.blockHeight }
+        return transaction { CheckpointRecord.findLastKnownBlockHeight()?.let { it[CheckpointTable.blockHeight] } }
     }
 }

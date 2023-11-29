@@ -6,6 +6,7 @@ import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
 import com.sksamuel.hoplite.sources.EnvironmentVariablesPropertySource
 import com.timgroup.statsd.NoOpStatsDClient
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
+import io.grpc.BindableService
 import io.grpc.LoadBalancerRegistry
 import io.grpc.internal.PickFirstLoadBalancerProvider
 import io.grpc.netty.NettyServerBuilder
@@ -182,10 +183,9 @@ fun main(args: Array<String>) {
             """.trimMargin("|")
         )
 
-        val grpcServices = listOf(TransferService(dbClient, channel))
         val server = NettyServerBuilder
             .forPort(config.streamPort)
-            .also { s -> grpcServices.onEach { s.addService(it) } }
+            .addService(TransferService(dbClient, channel))
             .intercept(ExceptionInterceptor())
             .intercept(RequestInterceptor())
             .maxConcurrentCallsPerConnection(200)
@@ -240,7 +240,7 @@ fun main(args: Array<String>) {
         //     }.start(wait = true)
         // }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter(), PREFER.TX_EVENTS)
+        val blockFlow = blockApiClient.streamBlocks(fromHeightGetter(), PREFER.TX_EVENTS)
         EventStreamUploader(
             blockFlow,
             dbClient,
