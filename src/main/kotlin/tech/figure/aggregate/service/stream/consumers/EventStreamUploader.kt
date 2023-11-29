@@ -8,7 +8,6 @@ import tech.figure.aggregate.service.stream.batch.Batch
 import tech.figure.aggregate.service.stream.extractors.Extractor
 import tech.figure.aggregate.service.stream.extractors.OutputType
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.BufferOverflow.SUSPEND
 import kotlinx.coroutines.flow.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import tech.figure.aggregate.common.channel.ChannelImpl
