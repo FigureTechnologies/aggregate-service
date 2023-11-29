@@ -112,7 +112,7 @@ tasks.withType<Jar> {
 }
 
 subprojects {
-    group="tech.figure.aggregate"
+    group= "com.figure.aggregate"
     version = this.findProperty("libraryVersion")?.toString() ?: "1.0-SNAPSHOT"
     apply {
         plugin("signing")
@@ -141,7 +141,7 @@ subprojects {
                 pom {
                     name.set("Aggregate Service Client")
                     description.set("Block data aggregation service")
-                    url.set("https://figure.tech")
+                    url.set("https://figure.com")
 
                     licenses {
                         license {
