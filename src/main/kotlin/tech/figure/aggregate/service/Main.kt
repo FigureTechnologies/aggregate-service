@@ -1,50 +1,45 @@
 package tech.figure.aggregate.service
 
-import tech.figure.aggregator.api.route.configureRouting
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.preprocessor.PropsPreprocessor
 import com.sksamuel.hoplite.sources.EnvironmentVariablesPropertySource
 import com.timgroup.statsd.NoOpStatsDClient
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
+import io.grpc.BindableService
 import io.grpc.LoadBalancerRegistry
-import io.ktor.application.install
-import io.ktor.routing.Routing
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
-import tech.figure.aggregate.common.Config
-import tech.figure.aggregate.common.recordMaxBlockHeight
-import tech.figure.aggregate.common.logger
-import tech.figure.aggregate.common.models.UploadResult
-import tech.figure.aggregate.service.stream.consumers.EventStreamUploader
+import io.grpc.internal.PickFirstLoadBalancerProvider
+import io.grpc.netty.NettyServerBuilder
+import java.util.concurrent.TimeUnit
+import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.minutes
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.default
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import org.slf4j.Logger
-import tech.figure.aggregate.common.Environment
-import tech.figure.block.api.client.BlockAPIClient
-import tech.figure.block.api.proto.BlockServiceOuterClass
-import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
-import io.grpc.internal.PickFirstLoadBalancerProvider
-import io.ktor.features.ContentNegotiation
-import io.ktor.jackson.jackson
 import kotlinx.coroutines.flow.catch
 import org.jetbrains.exposed.sql.Database
+import org.slf4j.Logger
+import tech.figure.aggregate.common.Config
+import tech.figure.aggregate.common.Environment
 import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.db.DBClient
+import tech.figure.aggregate.common.logger
+import tech.figure.aggregate.common.models.UploadResult
 import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
-import tech.figure.aggregator.api.server.Connectors
-import tech.figure.aggregator.api.server.GrpcServer
+import tech.figure.aggregate.common.recordMaxBlockHeight
+import tech.figure.aggregate.service.stream.consumers.EventStreamUploader
+import tech.figure.aggregator.api.server.interceptor.ExceptionInterceptor
+import tech.figure.aggregator.api.server.interceptor.RequestInterceptor
 import tech.figure.aggregator.api.service.TransferService
+import tech.figure.block.api.client.BlockAPIClient
 import tech.figure.block.api.client.GRPCConfigOpt
 import tech.figure.block.api.client.Protocol.PLAINTEXT
-import tech.figure.block.api.client.withApiKey
 import tech.figure.block.api.client.withProtocol
-import kotlin.system.exitProcess
-import kotlin.time.Duration.Companion.minutes
+import tech.figure.block.api.proto.BlockServiceOuterClass
+import tech.figure.block.api.proto.BlockServiceOuterClass.PREFER
 
 /**
  * Installs a shutdown a handler to clean up resources when the returned Channel receives its one (and only) element.
@@ -188,15 +183,18 @@ fun main(args: Array<String>) {
             """.trimMargin("|")
         )
 
-        val grpcServices = listOf(TransferService(dbClient, channel))
-        val server = GrpcServer.embeddedServer(
-            grpcServices,
-            developmentMode = false,
-            connector = Connectors.http("0.0.0.0", port = config.streamPort),
-            module = { install(ContentNegotiation) { jackson() } }
-        )
+        val server = NettyServerBuilder
+            .forPort(config.streamPort)
+            .addService(TransferService(dbClient, channel))
+            .intercept(ExceptionInterceptor())
+            .intercept(RequestInterceptor())
+            .maxConcurrentCallsPerConnection(200)
+            .build()
+            .start()
 
-        launch(Dispatchers.IO) { server.start(wait = true) }
+        Runtime.getRuntime().addShutdownHook(Thread {
+            server.shutdown().awaitTermination(30, TimeUnit.SECONDS)
+        })
 
         // Update DataDog with the latest historical block height every minute:
         launch {
@@ -234,15 +232,15 @@ fun main(args: Array<String>) {
         }
 
         // start api
-        async {
-            embeddedServer(Netty, port=config.apiPort) {
-                install(Routing) {
-                    configureRouting(dbClient, config.dbConfig)
-                }
-            }.start(wait = true)
-        }
+        // async {
+        //     embeddedServer(Netty, port=config.apiPort) {
+        //         install(Routing) {
+        //             configureRouting(dbClient, config.dbConfig)
+        //         }
+        //     }.start(wait = true)
+        // }
 
-        val blockFlow: Flow<BlockServiceOuterClass.BlockStreamResult> = blockApiClient.streamBlocks(fromHeightGetter(), PREFER.TX_EVENTS)
+        val blockFlow = blockApiClient.streamBlocks(fromHeightGetter(), PREFER.TX_EVENTS)
         EventStreamUploader(
             blockFlow,
             dbClient,

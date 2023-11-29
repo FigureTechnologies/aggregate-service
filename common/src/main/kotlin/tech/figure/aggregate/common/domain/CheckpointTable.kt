@@ -1,41 +1,47 @@
 package tech.figure.aggregate.common.domain
 
-import org.jetbrains.exposed.dao.Entity
-import org.jetbrains.exposed.dao.EntityClass
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
-import tech.figure.aggregate.common.logger
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.update
+import org.slf4j.LoggerFactory
 
 object CheckpointTable: IdTable<String>("checkpoint") {
-    val name = text("name")
+    val name = text("name").entityId()
     val blockHeight = long("block_height")
-    override val id = name.entityId()
+    override val id = name
 }
 
-open class CheckpointEntityClass: EntityClass<String, CheckpointRecord>(CheckpointTable) {
+private val log = LoggerFactory.getLogger("db")
 
-    private val log = logger()
 
-    fun findLastKnownBlockHeight() = find { CheckpointTable.id eq "last_known" }.firstOrNull()
+object Checkpoint {
+    fun findLastKnownBlockHeight(): ResultRow? {
+        val record = CheckpointTable.select { CheckpointTable.name eq "last_known" }.firstOrNull()
+        log.info("found record:$record")
+        if (record == null) {
+            log.info("no rec found!")
+            return null
+        }
+        return record
+    }
 
     fun upsert(height: Long) {
         val record = findLastKnownBlockHeight()
-        if(record == null) {
-            new("last_known") {
-                this.blockHeight = height
+        if (record == null) {
+            CheckpointTable.insert {
+                it[name] = "last_known"
+                it[blockHeight] = height
+            }.also {
+                log.info("Checkpoint::creating new record at height: $height")
             }
         } else {
             log.info("Checkpoint::Updating max block height to = $height")
-            record.blockHeight = height
+            record[CheckpointTable.blockHeight] = height
+            CheckpointTable.update({ CheckpointTable.name eq "last_known" }) {
+                it[blockHeight] = height
+            }
         }
     }
-}
-
-class CheckpointRecord(name: EntityID<String>): Entity<String>(name) {
-
-    companion object: CheckpointEntityClass()
-
-    var name by CheckpointTable.name
-    var blockHeight by CheckpointTable.blockHeight
-
 }

@@ -1,11 +1,13 @@
 package tech.figure.aggregate.common.db
 
+import java.io.File
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.jetbrains.exposed.sql.transactions.transaction
 import tech.figure.aggregate.common.channel.ChannelImpl
 import tech.figure.aggregate.common.domain.AttributesRecord
-import tech.figure.aggregate.common.domain.CheckpointRecord
+import tech.figure.aggregate.common.domain.Checkpoint
+import tech.figure.aggregate.common.domain.CheckpointTable
 import tech.figure.aggregate.common.domain.CoinTransferRecord
 import tech.figure.aggregate.common.domain.FeeRecords
 import tech.figure.aggregate.common.domain.MarkerSupplyRecord
@@ -16,7 +18,6 @@ import tech.figure.aggregate.common.models.stream.MarkerSupply
 import tech.figure.aggregate.common.models.stream.MarkerTransfer
 import tech.figure.aggregate.common.models.stream.impl.StreamTypeImpl
 import tech.figure.aggregate.common.toOffsetDateTime
-import java.io.File
 
 class DBClient: DBJdbc() {
 
@@ -169,10 +170,11 @@ class DBClient: DBJdbc() {
     }
 
     fun writeCheckpoint(height: Long) {
-        transaction { CheckpointRecord.upsert(height) }
+        log.info("writeCheckpoint($height)")
+        transaction { Checkpoint.upsert(height) }
     }
 
     fun getLastKnownCheckpoint(): Long? {
-        return transaction { CheckpointRecord.findLastKnownBlockHeight()?.blockHeight }
+        return transaction { Checkpoint.findLastKnownBlockHeight()?.let { it[CheckpointTable.blockHeight] } }
     }
 }

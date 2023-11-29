@@ -8,7 +8,6 @@ import tech.figure.aggregate.service.stream.batch.Batch
 import tech.figure.aggregate.service.stream.extractors.Extractor
 import tech.figure.aggregate.service.stream.extractors.OutputType
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.BufferOverflow.SUSPEND
 import kotlinx.coroutines.flow.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import tech.figure.aggregate.common.channel.ChannelImpl
@@ -106,6 +105,15 @@ class EventStreamUploader(
         extractorClassNames.addAll(fqClassNames)
     }
 
+    val batchBlueprint: Batch.Builder = Batch.Builder()
+        .dispatchers(dispatchers)
+        // Extractors are specified via their Kotlin class, along with any arguments to pass to the constructor:
+        .apply {
+            for (cls in loadExtractorClasses(extractorClassNames)) {
+                withExtractor(cls)
+            }
+        }
+
     /**
      * Run the upload action. The steps for uploading are as follows:
      *
@@ -147,6 +155,21 @@ class EventStreamUploader(
 
         return blockFlow
             .transform { emit(it.toStreamBlock(hrp, badBlockRange, msgFeeHeight)) }
+            .onEach {
+                /**
+                 * We want to track the last successful block height that was processed, so
+                 * in the event of an exception to the service, the service can restart
+                 * at the last successful processed block height, so we don't lose any data that
+                 * was in the middle of processing.
+                 */
+                if (it.height == null) {
+                    return@onEach
+                }
+
+                if (it.height!! % 100L == 0L) {
+                    dbClient.writeCheckpoint(it.height!!)
+                }
+            }
             .filter { streamBlock ->
                 !streamBlock.blockTxData.isEmpty().also {
                     log.info(
@@ -157,8 +180,6 @@ class EventStreamUploader(
                     )
                 }
             }
-            .buffer(STREAM_BUFFER_CAPACITY, onBufferOverflow = SUSPEND)
-            .flowOn(dispatchers.io())
             .chunked(size = batchSize, timeout = 10.seconds)
             .transform { streamBlocks: List<StreamBlock>  ->
                 log.info("collected block chunk size=${streamBlocks.size} and preparing for upload")
@@ -194,14 +215,6 @@ class EventStreamUploader(
 
                                         val highestBlockHeight = streamBlocks.last().height
                                         val lowestBlockHeight = streamBlocks.first().height
-
-                                        /**
-                                         * We want to track the last successful block height that was processed, so
-                                         * in the event of an exception to the service, the service can restart
-                                         * at the last successful processed block height, so we don't lose any data that
-                                         * was in the middle of processing.
-                                         */
-                                        dbClient.writeCheckpoint(highestBlockHeight!!)
 
                                         UploadResult(
                                             batchId = batch.id,
