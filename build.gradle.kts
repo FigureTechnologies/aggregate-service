@@ -7,8 +7,8 @@ plugins {
     signing
     `maven-publish`
     kotlin("plugin.serialization") version "1.9.0"
-    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
-    id("org.openapi.generator") version "5.4.0"
+    alias(libs.plugins.openapi.generator)
+    alias(libs.plugins.publish.nexus)
 }
 
 val javaVersion = JavaVersion.VERSION_17
