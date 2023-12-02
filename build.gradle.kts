@@ -6,7 +6,7 @@ plugins {
     jacoco
     signing
     `maven-publish`
-    kotlin("plugin.serialization") version "1.9.0"
+    kotlin("plugin.serialization") version "1.9.21"
     alias(libs.plugins.openapi.generator)
     alias(libs.plugins.publish.nexus)
 }
