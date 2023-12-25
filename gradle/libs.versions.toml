@@ -1,5 +1,5 @@
 [versions]
-blockApi = "0.2.1"
+blockApi = "0.2.3"
 eventStream = "0.6.3"
 exposed = "0.41.1"
 h2database = "2.1.214"
