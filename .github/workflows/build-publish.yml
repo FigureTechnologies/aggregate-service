@@ -16,7 +16,7 @@ on:
 jobs:
   java_api_job_build:
     name: Build API Job Jar
-    runs-on: ubuntu-latest
+    runs-on: figure-linux-standard
     steps:
       - uses: actions/checkout@v2
       - name: Get Version
@@ -50,7 +50,7 @@ jobs:
     name: Push to Docker Hub
     if: github.event_name == 'release'
     needs: java_api_job_build
-    runs-on: ubuntu-latest
+    runs-on: figure-linux-standard
     steps:
       - uses: actions/checkout@v2
       - name: Get Version
@@ -105,7 +105,7 @@ jobs:
 
   java_service_build:
     name: Build Service Jar
-    runs-on: ubuntu-latest
+    runs-on: figure-linux-standard
     steps:
       - uses: actions/checkout@v2
       - name: Get Version
@@ -137,7 +137,7 @@ jobs:
     name: Push to Docker Hub
     if: github.event_name == 'release'
     needs: java_service_build
-    runs-on: ubuntu-latest
+    runs-on: figure-linux-standard
     steps:
       - uses: actions/checkout@v2
       - name: Get Version
@@ -192,7 +192,7 @@ jobs:
 
   migration_build:
     name: Build Migration
-    runs-on: ubuntu-latest
+    runs-on: figure-linux-standard
     steps:
       - uses: actions/checkout@v2
       - name: Get Version
@@ -226,7 +226,7 @@ jobs:
     name: Push to Docker Hub
     if: github.event_name == 'release'
     needs: migration_build
-    runs-on: ubuntu-latest
+    runs-on: figure-linux-standard
     steps:
       - uses: actions/checkout@v2
       - name: Get Version
