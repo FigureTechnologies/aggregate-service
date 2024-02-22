@@ -26,7 +26,6 @@ dependencies {
     implementation(projects.proto)
 
     implementation(libs.commons.dbutils)
-    implementation(libs.raven.db)
     implementation(libs.okhttp)
     implementation(libs.gson)
 

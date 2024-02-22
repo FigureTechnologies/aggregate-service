@@ -32,21 +32,7 @@ Run a postgres docker image:
 $ docker run --name postgresdb -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password1 -e POSTGRES_DB=aggregate -d postgres
 ```
 
-### 2. Block Caching
-
-The aggregate service also supports the ability to cache block data within a local NoSQL database if a cloud data warehouse is not desired.
-
-The aggregator currently supports [RavenDB](https://ravendb.net/) but can support others if necessary.
-
-To run RavenDB locally:
-```bash
-$ docker run -p 8080:8080 ravendb/ravendb:ubuntu-latest
-```
-Once ravenDB is running could access its GUI interface to set up the database at http://localhost:8080, then you could make changes to the [local.env.properties](https://github.com/FigureTechnologies/aggregate-service/blob/main/src/main/resources/local.env.properties) to support the desired configurations.
-
----
-
-### 3. Running
+### 2. Running
 
 The service can be run locally:
 
@@ -70,7 +56,7 @@ $ docker pull figuretechnologies/aggregate-service:latest
 ```
 ---
 
-### 4. Deployment
+### 3. Deployment
 
 #### Github Actions
 
