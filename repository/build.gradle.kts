@@ -14,7 +14,6 @@ dependencies {
     implementation(libs.bundles.kotlin)
     implementation(libs.bundles.scarlet)
     implementation(libs.jackson.module)
-    implementation(libs.raven.db)
     implementation(libs.bundles.logback)
     implementation(libs.bundles.eventstream)
 }
